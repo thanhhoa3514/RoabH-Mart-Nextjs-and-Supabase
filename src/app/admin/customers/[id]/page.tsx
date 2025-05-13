@@ -169,43 +169,42 @@ const Tab = ({ label, active, onClick }: { label: string; active: boolean; onCli
 // Order item component
 const OrderItem = ({ order }: { order: any }) => {
     return (
-        <motion.div 
-            variants={itemVariants}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4"
-        >
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                <div className="mb-2 md:mb-0">
-                    <div className="flex items-center">
-                        <Link href={`/admin/orders/${order.id}`}>
-                            <span className="font-medium text-amber-600">{order.id}</span>
-                        </Link>
-                        <span className="mx-2 text-gray-300">•</span>
-                        <span className="text-sm text-gray-500">{order.date}</span>
-                    </div>
-                    <div className="text-sm mt-1">
-                        {order.items} {order.items === 1 ? 'item' : 'items'} • ${order.total}
-                    </div>
-                </div>
-                
+        <tr className="border-b hover:bg-gray-50">
+            <td className="py-4 px-3">
                 <div className="flex items-center">
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                        order.status === 'Delivered' 
-                            ? 'bg-green-100 text-green-800' 
-                            : order.status === 'Processing'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-amber-100 text-amber-800'
-                    }`}>
-                        {order.status}
-                    </div>
-                    
                     <Link href={`/admin/orders/${order.id}`}>
-                        <button className="ml-4 text-sm text-amber-600 hover:text-amber-500">
-                            View Details
-                        </button>
+                        <span className="font-medium text-amber-600">{order.id}</span>
                     </Link>
                 </div>
-            </div>
-        </motion.div>
+            </td>
+            <td className="py-4 px-3 text-sm text-gray-500">
+                {order.date}
+            </td>
+            <td className="py-4 px-3 text-sm">
+                {order.items} {order.items === 1 ? 'item' : 'items'}
+            </td>
+            <td className="py-4 px-3 text-sm font-medium">
+                ${order.total}
+            </td>
+            <td className="py-4 px-3">
+                <div className={`px-3 py-1 rounded-full text-xs font-medium inline-block ${
+                    order.status === 'Delivered' 
+                        ? 'bg-green-100 text-green-800' 
+                        : order.status === 'Processing'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-amber-100 text-amber-800'
+                }`}>
+                    {order.status}
+                </div>
+            </td>
+            <td className="py-4 px-3 text-right">
+                <Link href={`/admin/orders/${order.id}`}>
+                    <button className="text-sm text-amber-600 hover:text-amber-500">
+                        View Details
+                    </button>
+                </Link>
+            </td>
+        </tr>
     );
 };
 
@@ -620,10 +619,36 @@ export default function CustomerDetailPage() {
                             <h3 className="font-medium mb-4">Order History</h3>
                             
                             {customer.orderHistory.length > 0 ? (
-                                <div className="space-y-4">
-                                    {customer.orderHistory.map((order: any) => (
-                                        <OrderItem key={order.id} order={order} />
-                                    ))}
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Order ID
+                                                </th>
+                                                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Date
+                                                </th>
+                                                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Items
+                                                </th>
+                                                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Total
+                                                </th>
+                                                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Status
+                                                </th>
+                                                <th scope="col" className="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Actions
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {customer.orderHistory.map((order: any) => (
+                                                <OrderItem key={order.id} order={order} />
+                                            ))}
+                                        </tbody>
+                                    </table>
                                 </div>
                             ) : (
                                 <div className="text-center py-8 text-gray-500">
