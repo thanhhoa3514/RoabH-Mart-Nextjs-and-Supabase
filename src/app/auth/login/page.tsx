@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation';
 import { signIn } from '@/lib/supabase';
 import { Lock, Mail } from 'lucide-react';
 import Cookies from 'js-cookie';
+import { useAlert } from '@/lib/context/alert-context';
 
 export default function LoginPage() {
     const router = useRouter();
+    const { showAlert } = useAlert();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [redirectPath, setRedirectPath] = useState<string | null>(null);
 
     // Check for redirect cookie on component mount
@@ -29,22 +30,26 @@ export default function LoginPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        setError(null);
 
         try {
             const { data, error } = await signIn(email, password);
-
+            
             if (error) {
                 throw error;
             }
 
+            // Show success alert
+            showAlert('success', 'Login successful! Redirecting...', 2000);
+
             // Successfully logged in
             // Redirect to the stored path or default to account
-            router.push(redirectPath || '/account');
-            router.refresh();
+            setTimeout(() => {
+                router.push(redirectPath || '/account');
+                router.refresh();
+            }, 1000);
         } catch (err) {
             console.error('Login error:', err);
-            setError('Invalid email or password. Please try again.');
+            showAlert('error', 'Invalid email or password. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -55,12 +60,6 @@ export default function LoginPage() {
             <div className="max-w-md mx-auto">
                 <div className="bg-white rounded-lg shadow-md p-8">
                     <h1 className="text-2xl font-bold text-center mb-6">Login to Your Account</h1>
-
-                    {error && (
-                        <div className="bg-red-50 text-red-600 p-3 rounded-md mb-6">
-                            {error}
-                        </div>
-                    )}
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>
