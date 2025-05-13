@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RoabH Mart - E-commerce Platform
 
-## Getting Started
+## Project Overview
+RoabH Mart is a modern e-commerce platform built with Next.js, React, Tailwind CSS, and Supabase. The platform features a green-themed UI and includes all essential e-commerce functionalities.
 
-First, run the development server:
+## Core Features
+- Product browsing and search
+- Product details view
+- Shopping cart functionality
+- User authentication and profiles
+- Order processing and history
+- Product categorization
+- Responsive design
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Tech Stack
+- **Frontend**: Next.js 14 (App Router), React, Tailwind CSS
+- **UI Components**: Custom components with Tailwind CSS
+- **Animation**: Framer Motion
+- **State Management**: React Context API, nuqs for URL state
+- **Backend**: Supabase (Authentication, Database, Storage)
+- **Styling**: Tailwind CSS with custom green theme
+
+## Project Structure
+```
+/src
+  /app - Next.js App Router pages
+    /products - Product listing and details
+    /cart - Shopping cart
+    /checkout - Checkout process
+    /account - User account management
+    /auth - Authentication pages
+  /components - Reusable components
+    /ui - Basic UI components
+    /layout - Layout components
+    /products - Product-related components
+    /cart - Cart-related components
+    /checkout - Checkout components
+  /lib - Utility functions and hooks
+    /supabase - Supabase client and helpers
+    /utils - General utility functions
+    /hooks - Custom React hooks
+  /types - TypeScript type definitions
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Implementation Steps
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Completed
+- Set up Next.js project with TypeScript and Tailwind CSS
+- Created project structure
+- Implemented custom green theme with Tailwind CSS
+- Created TypeScript interfaces for data models
+- Created Supabase client configuration
+- Implemented layout components (Header, Footer)
+- Created homepage with featured products and categories
+- Implemented product listing page with filtering and sorting
+- Created product detail page with gallery and related products
+- Implemented shopping cart functionality
+- Created user account pages with profile management
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Next Steps
+1. **Complete Supabase Integration**
+   - Create Supabase project
+   - Set up database tables (products, users, orders, etc.)
+   - Configure authentication
+   - Replace mock data with actual Supabase queries
 
-## Learn More
+2. **Implement Authentication**
+   - Create login and registration pages
+   - Implement protected routes
+   - Add user session management
 
-To learn more about Next.js, take a look at the following resources:
+3. **Complete Checkout Process**
+   - Create checkout form
+   - Implement order submission
+   - Add payment integration
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+4. **Add Advanced Features**
+   - Implement search functionality
+   - Add product recommendations
+   - Create reviews and ratings system
+   - Implement order tracking
+   - Add admin dashboard
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+5. **Optimization and Testing**
+   - Performance optimization
+   - Responsive design testing
+   - Cross-browser compatibility
+   - Accessibility improvements
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+6. **Deployment**
+   - Configure production environment
+   - Deploy to hosting platform
+   - Set up monitoring and analytics
