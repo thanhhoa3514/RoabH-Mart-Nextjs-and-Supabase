@@ -112,7 +112,6 @@ const CustomerCard = ({ customer, onView }: {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             className="bg-amber-100 text-amber-600 px-4 py-2 rounded-md text-sm flex items-center"
-                            onClick={() => onView(customer.id)}
                         >
                             <Eye className="h-4 w-4 mr-2" />
                             View Profile
@@ -451,62 +450,78 @@ export default function CustomersPage() {
                                 />
                             ))
                         ) : (
-                            // List view
-                            sortedCustomers.map((customer) => (
-                                <motion.div
-                                    key={customer.id}
-                                    variants={itemVariants}
-                                    className="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
-                                >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center">
-                                            <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 font-bold mr-4">
-                                                {customer.name.split(' ').map((n: string) => n[0]).join('')}
-                                            </div>
-                                            <div>
-                                                <h3 className="font-medium">{customer.name}</h3>
-                                                <div className="text-sm text-gray-500">{customer.email}</div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="hidden md:flex items-center space-x-8">
-                                            <div>
-                                                <div className="text-xs text-gray-500">Orders</div>
-                                                <div className="font-medium">{customer.orders}</div>
-                                            </div>
-                                            <div>
-                                                <div className="text-xs text-gray-500">Total Spent</div>
-                                                <div className="font-medium">${customer.totalSpent}</div>
-                                            </div>
-                                            <div>
-                                                <div className="text-xs text-gray-500">Joined</div>
-                                                <div className="font-medium">{customer.joinDate}</div>
-                                            </div>
-                                            <div>
-                                                <div className={`px-2 py-1 text-xs rounded-full ${
+                            // List view - using proper table structure
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Customer
+                                        </th>
+                                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                                            Orders
+                                        </th>
+                                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                                            Total Spent
+                                        </th>
+                                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                                            Joined
+                                        </th>
+                                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                                            Status
+                                        </th>
+                                        <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Actions
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {sortedCustomers.map((customer) => (
+                                        <tr key={customer.id} className="hover:bg-gray-50">
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="flex items-center">
+                                                    <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 font-bold mr-4">
+                                                        {customer.name.split(' ').map((n: string) => n[0]).join('')}
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-medium">{customer.name}</h3>
+                                                        <div className="text-sm text-gray-500">{customer.email}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap hidden md:table-cell">
+                                                <div className="text-sm font-medium">{customer.orders}</div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap hidden md:table-cell">
+                                                <div className="text-sm font-medium">${customer.totalSpent}</div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap hidden md:table-cell">
+                                                <div className="text-sm">{customer.joinDate}</div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap hidden md:table-cell">
+                                                <div className={`px-2 py-1 text-xs rounded-full inline-block ${
                                                     customer.status === 'Active' 
                                                         ? 'bg-green-100 text-green-800' 
                                                         : 'bg-gray-100 text-gray-800'
                                                 }`}>
                                                     {customer.status}
                                                 </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <Link href={`/admin/customers/${customer.id}`}>
-                                            <motion.button
-                                                whileHover={{ scale: 1.05 }}
-                                                whileTap={{ scale: 0.95 }}
-                                                className="bg-amber-100 text-amber-600 px-3 py-1 rounded-md text-sm flex items-center"
-                                                onClick={() => handleViewCustomer(customer.id)}
-                                            >
-                                                <Eye className="h-4 w-4 mr-2" />
-                                                View
-                                            </motion.button>
-                                        </Link>
-                                    </div>
-                                </motion.div>
-                            ))
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap text-right">
+                                                <Link href={`/admin/customers/${customer.id}`}>
+                                                    <motion.button
+                                                        whileHover={{ scale: 1.05 }}
+                                                        whileTap={{ scale: 0.95 }}
+                                                        className="bg-amber-100 text-amber-600 px-3 py-1 rounded-md text-sm flex items-center ml-auto"
+                                                    >
+                                                        <Eye className="h-4 w-4 mr-2" />
+                                                        View
+                                                    </motion.button>
+                                                </Link>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         )}
                     </motion.div>
                 ) : (
