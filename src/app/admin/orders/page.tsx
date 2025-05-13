@@ -154,11 +154,101 @@ export default function OrdersPage() {
     };
 
     const handleExportOrders = () => {
-        showAlert('success', 'Orders exported successfully', 2000);
+        // Simulate processing time
+        showAlert('info', 'Preparing orders for export...', 2000);
+        
+        setTimeout(() => {
+            // Create a CSV string with order data
+            const headers = ['Order ID', 'Date', 'Customer', 'Total', 'Status'];
+            let csvContent = headers.join(',') + '\n';
+            
+            filteredOrders.forEach(order => {
+                const row = [
+                    order.id,
+                    order.date,
+                    order.customer,
+                    `$${order.total}`,
+                    order.status
+                ];
+                csvContent += row.join(',') + '\n';
+            });
+            
+            // Create a Blob and download link
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            const timestamp = new Date().toISOString().split('T')[0];
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `orders-export-${timestamp}.csv`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showAlert('success', 'Orders exported successfully as CSV', 2000);
+        }, 1000);
     };
 
     const handleInvoiceDownload = (orderId: string) => {
-        showAlert('success', `Invoice for order ${orderId} downloaded`, 2000);
+        // Simulate processing time
+        showAlert('info', `Generating invoice for order ${orderId}...`, 1500);
+        
+        setTimeout(() => {
+            // In a real application, this would generate a PDF invoice
+            // Here we'll simulate the process
+            
+            // Find the order data
+            const order = orders.find(o => o.id === orderId);
+            
+            if (!order) {
+                showAlert('error', `Order ${orderId} not found`, 2000);
+                return;
+            }
+            
+            // Create a simple text representation of an invoice
+            const invoiceText = `
+INVOICE
+==============================
+RoabH Mart
+123 Commerce Street
+Business City, 12345
+
+Order ID: ${order.id}
+Date: ${order.date}
+Customer: ${order.customer}
+Email: customer@example.com
+
+Items:
+${Array(order.items).fill(0).map((_, i) => `Item ${i + 1}: Product Name - $${(parseFloat(order.total) / order.items).toFixed(2)}`).join('\n')}
+
+Subtotal: $${order.total}
+Tax (10%): $${(parseFloat(order.total) * 0.1).toFixed(2)}
+Total: $${(parseFloat(order.total) * 1.1).toFixed(2)}
+
+Payment Status: Paid
+Shipping Status: ${order.status}
+
+Thank you for your business!
+==============================
+            `;
+            
+            // Create a Blob and download link
+            const blob = new Blob([invoiceText], { type: 'text/plain;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `invoice-${orderId}.txt`);
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showAlert('success', `Invoice for order ${orderId} downloaded`, 2000);
+        }, 1000);
     };
 
     // Filter orders based on search query and filters
