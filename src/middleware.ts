@@ -31,9 +31,22 @@ export async function middleware(req: NextRequest) {
 
     if (isProtectedRoute && !session) {
         // Redirect to login page if trying to access a protected route without authentication
+        // Store the intended destination in a cookie instead of URL parameter
         const redirectUrl = new URL('/auth/login', req.url);
-        redirectUrl.searchParams.set('redirectTo', pathname);
-        return NextResponse.redirect(redirectUrl);
+        const response = NextResponse.redirect(redirectUrl);
+        
+        // Store the redirect path in a secure cookie
+        if (pathname !== '/auth/login') {
+            response.cookies.set('redirectPath', pathname, {
+                path: '/',
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 60 * 10 // 10 minutes
+            });
+        }
+        
+        return response;
     }
 
     // Check if the user is already authenticated and trying to access auth routes

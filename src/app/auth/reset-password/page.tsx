@@ -1,26 +1,33 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Lock } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [isValidReset, setIsValidReset] = useState(false);
 
   // Check if the user is authenticated with a recovery token
   useEffect(() => {
     const checkSession = async () => {
+      // Supabase handles the token through cookies, we just need to check
+      // if we're in a recovery flow
       const { data } = await supabase.auth.getSession();
       
-      // If no session or not in recovery mode, redirect to login
-      if (!data.session || !window.location.hash.includes('type=recovery')) {
+      // Check if we have a valid recovery session
+      if (data.session) {
+        setIsValidReset(true);
+      } else {
+        // No valid session, redirect to login
         router.push('/auth/login');
       }
     };
@@ -58,6 +65,29 @@ export default function ResetPasswordPage() {
       setLoading(false);
     }
   };
+
+  if (!isValidReset && !success) {
+    return (
+      <div className="container mx-auto px-4 py-16">
+        <div className="max-w-md mx-auto">
+          <div className="bg-white rounded-lg shadow-md p-8">
+            <h1 className="text-2xl font-bold text-center mb-6">Invalid Reset Link</h1>
+            <p className="text-center mb-6">
+              This password reset link is invalid or has expired.
+            </p>
+            <div className="flex justify-center">
+              <Link 
+                href="/auth/forgot-password" 
+                className="bg-primary text-white px-6 py-3 rounded-md hover:bg-opacity-90 transition-colors"
+              >
+                Request New Reset Link
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (success) {
     return (

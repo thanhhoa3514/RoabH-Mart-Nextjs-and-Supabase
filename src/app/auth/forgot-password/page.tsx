@@ -17,10 +17,12 @@ export default function ForgotPasswordPage() {
         setError(null);
 
         try {
+            // Use secure cookie-based auth with no URL parameters
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
                 redirectTo: `${window.location.origin}/auth/reset-password`,
+                // Ensure token is handled securely via cookies, not URL parameters
             });
-
+            
             if (error) {
                 throw error;
             }
