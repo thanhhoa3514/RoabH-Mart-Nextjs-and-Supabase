@@ -65,13 +65,13 @@ export default function CategoriesPage() {
                 const { error } = await deleteCategory(categoryToDelete.id);
                 if (error) throw new Error(error.message);
                 
-                showAlert('success', `Category "${categoryToDelete.name}" deleted successfully`, 3000);
+            showAlert('success', `Category "${categoryToDelete.name}" deleted successfully`, 3000);
                 setCategories(categories.filter(cat => cat.category_id !== categoryToDelete.id));
             } catch (err) {
                 showAlert('error', 'Failed to delete category', 5000);
             } finally {
-                setIsDeleteModalOpen(false);
-                setCategoryToDelete(null);
+            setIsDeleteModalOpen(false);
+            setCategoryToDelete(null);
             }
         }
     };
@@ -136,72 +136,72 @@ export default function CategoriesPage() {
                         </button>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <motion.table
-                            className="min-w-full"
-                            variants={containerVariants}
-                            initial="hidden"
-                            animate="visible"
-                        >
-                            <thead>
-                                <tr className="bg-gray-50 border-b">
-                                    <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                                    <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <div className="overflow-x-auto">
+                    <motion.table
+                        className="min-w-full"
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="visible"
+                    >
+                        <thead>
+                            <tr className="bg-gray-50 border-b">
+                                <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                                     <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
                                     <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th className="py-3 px-6 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredCategories.map((category) => (
-                                    <motion.tr
+                                <th className="py-3 px-6 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredCategories.map((category) => (
+                                <motion.tr
                                         key={category.category_id}
-                                        variants={itemVariants}
-                                        className="border-b hover:bg-gray-50"
-                                    >
+                                    variants={itemVariants}
+                                    className="border-b hover:bg-gray-50"
+                                >
                                         <td className="py-4 px-6 text-sm font-medium text-gray-900">{category.category_id}</td>
-                                        <td className="py-4 px-6 text-sm text-gray-500">{category.name}</td>
+                                    <td className="py-4 px-6 text-sm text-gray-500">{category.name}</td>
                                         <td className="py-4 px-6 text-sm text-gray-500">{category.description || '-'}</td>
                                         <td className="py-4 px-6 text-sm">
                                             <span className={`px-2 py-1 rounded-full text-xs ${category.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                                                 {category.is_active ? 'Active' : 'Inactive'}
                                             </span>
                                         </td>
-                                        <td className="py-4 px-6 text-sm font-medium text-right">
-                                            <div className="flex justify-end space-x-2">
+                                    <td className="py-4 px-6 text-sm font-medium text-right">
+                                        <div className="flex justify-end space-x-2">
                                                 <Link href={`/admin/categories/${category.category_id}`}>
-                                                    <motion.button
-                                                        whileHover={{ scale: 1.1 }}
-                                                        whileTap={{ scale: 0.9 }}
-                                                        className="text-amber-600 hover:text-amber-900"
-                                                    >
-                                                        <Eye className="h-5 w-5" />
-                                                    </motion.button>
-                                                </Link>
-                                                <Link href={`/admin/categories/${category.category_id}`}>
-                                                    <motion.button
-                                                        whileHover={{ scale: 1.1 }}
-                                                        whileTap={{ scale: 0.9 }}
-                                                        className="text-blue-600 hover:text-blue-900"
-                                                    >
-                                                        <Edit className="h-5 w-5" />
-                                                    </motion.button>
-                                                </Link>
                                                 <motion.button
                                                     whileHover={{ scale: 1.1 }}
                                                     whileTap={{ scale: 0.9 }}
-                                                    className="text-red-600 hover:text-red-900"
-                                                    onClick={() => handleDelete(category.category_id, category.name)}
+                                                    className="text-amber-600 hover:text-amber-900"
                                                 >
-                                                    <Trash2 className="h-5 w-5" />
+                                                    <Eye className="h-5 w-5" />
                                                 </motion.button>
-                                            </div>
-                                        </td>
-                                    </motion.tr>
-                                ))}
-                            </tbody>
-                        </motion.table>
-                    </div>
+                                            </Link>
+                                                <Link href={`/admin/categories/${category.category_id}`}>
+                                                <motion.button
+                                                    whileHover={{ scale: 1.1 }}
+                                                    whileTap={{ scale: 0.9 }}
+                                                    className="text-blue-600 hover:text-blue-900"
+                                                >
+                                                    <Edit className="h-5 w-5" />
+                                                </motion.button>
+                                            </Link>
+                                            <motion.button
+                                                whileHover={{ scale: 1.1 }}
+                                                whileTap={{ scale: 0.9 }}
+                                                className="text-red-600 hover:text-red-900"
+                                                    onClick={() => handleDelete(category.category_id, category.name)}
+                                            >
+                                                <Trash2 className="h-5 w-5" />
+                                            </motion.button>
+                                        </div>
+                                    </td>
+                                </motion.tr>
+                            ))}
+                        </tbody>
+                    </motion.table>
+                </div>
                 )}
                 
                 {!loading && !error && filteredCategories.length === 0 && (
