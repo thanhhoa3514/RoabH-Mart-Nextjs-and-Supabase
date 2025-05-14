@@ -21,10 +21,15 @@ import {
     Home,
     FileText,
     MessageSquare,
-    Send
+    Send,
+    Loader2,
+    Plus,
+    Eye
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAlert } from '@/lib/context/alert-context';
+import { getCustomerById, getCustomerStats, getCustomerOrders, getCustomerAddresses } from '@/lib/supabase/customers/customers.model';
+import { DbCustomer } from '@/types/user/customer.model';
 
 // Animation variants
 const containerVariants = {
@@ -40,114 +45,6 @@ const containerVariants = {
 const itemVariants = {
     hidden: { opacity: 0, y: 10 },
     visible: { opacity: 1, y: 0 }
-};
-
-// Mock customer data - in a real app, you would fetch this from an API
-const getCustomerData = (id: number) => {
-    return {
-        id,
-        name: 'John Doe',
-        email: 'john.doe@example.com',
-        phone: '+1 (555) 123-4567',
-        location: 'New York, USA',
-        joinDate: '2023-08-15',
-        status: 'Active',
-        orders: 12,
-        totalSpent: '1,549.99',
-        lastOrder: '2023-11-20',
-        tags: ['Loyal', 'Premium'],
-        addresses: [
-            {
-                id: 1,
-                type: 'Billing',
-                street: '123 Main Street',
-                city: 'New York',
-                state: 'NY',
-                zipCode: '10001',
-                country: 'USA',
-                isDefault: true
-            },
-            {
-                id: 2,
-                type: 'Shipping',
-                street: '456 Park Avenue',
-                city: 'New York',
-                state: 'NY',
-                zipCode: '10002',
-                country: 'USA',
-                isDefault: true
-            }
-        ],
-        paymentMethods: [
-            {
-                id: 1,
-                type: 'Credit Card',
-                last4: '4242',
-                brand: 'Visa',
-                expiryDate: '12/25',
-                isDefault: true
-            },
-            {
-                id: 2,
-                type: 'Credit Card',
-                last4: '1234',
-                brand: 'Mastercard',
-                expiryDate: '09/24',
-                isDefault: false
-            }
-        ],
-        orderHistory: [
-            {
-                id: 'ORD-001',
-                date: '2023-11-20',
-                total: '249.99',
-                status: 'Delivered',
-                items: 3
-            },
-            {
-                id: 'ORD-002',
-                date: '2023-10-15',
-                total: '189.50',
-                status: 'Delivered',
-                items: 2
-            },
-            {
-                id: 'ORD-003',
-                date: '2023-09-28',
-                total: '349.99',
-                status: 'Delivered',
-                items: 4
-            },
-            {
-                id: 'ORD-004',
-                date: '2023-08-17',
-                total: '99.95',
-                status: 'Delivered',
-                items: 1
-            },
-            {
-                id: 'ORD-005',
-                date: '2023-07-30',
-                total: '159.99',
-                status: 'Delivered',
-                items: 2
-            }
-        ],
-        notes: [
-            {
-                id: 1,
-                date: '2023-11-22',
-                author: 'Admin',
-                content: 'Customer requested information about upcoming sales.'
-            },
-            {
-                id: 2,
-                date: '2023-10-15',
-                author: 'Support',
-                content: 'Resolved issue with last order delivery.'
-            }
-        ]
-    };
 };
 
 // Tab component
@@ -309,8 +206,67 @@ export default function CustomerDetailPage() {
     // Get customer ID from URL params
     const customerId = typeof params.id === 'string' ? parseInt(params.id, 10) : 0;
     
-    // Get customer data
-    const customer = getCustomerData(customerId);
+    // State for customer data
+    const [customer, setCustomer] = useState<DbCustomer | null>(null);
+    const [customerStats, setCustomerStats] = useState<{
+        totalOrders: number;
+        totalSpent: number;
+        lastOrderDate: string | null;
+    } | null>(null);
+    const [orders, setOrders] = useState<any[]>([]);
+    const [addresses, setAddresses] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    
+    // Fetch customer data
+    useEffect(() => {
+        async function fetchCustomerData() {
+            setLoading(true);
+            setError(null);
+            
+            try {
+                // Fetch customer details
+                const { data: customerData, error: customerError } = await getCustomerById(customerId);
+                
+                if (customerError) throw new Error(customerError.message);
+                if (!customerData) throw new Error('Customer not found');
+                
+                setCustomer(customerData);
+                
+                // Fetch customer stats
+                const { data: statsData, error: statsError } = await getCustomerStats(customerId);
+                
+                if (statsError) throw new Error(statsError.message);
+                setCustomerStats(statsData);
+                
+                // Fetch customer orders
+                const { data: ordersData, error: ordersError } = await getCustomerOrders(customerId);
+                
+                if (ordersError) throw new Error(ordersError.message);
+                setOrders(ordersData || []);
+                
+                // Fetch customer addresses
+                const { data: addressesData, error: addressesError } = await getCustomerAddresses(customerId);
+                
+                if (addressesError) {
+                    console.error('Error fetching addresses:', addressesError);
+                } else {
+                    setAddresses(addressesData || []);
+                    console.log('Fetched addresses:', addressesData);
+                }
+                
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to fetch customer data');
+                showAlert('error', 'Failed to fetch customer data', 3000);
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        if (customerId) {
+            fetchCustomerData();
+        }
+    }, [customerId, showAlert]);
     
     const handleEdit = () => {
         showAlert('info', 'Edit customer functionality would be implemented here', 2000);
@@ -329,6 +285,77 @@ export default function CustomerDetailPage() {
         }
     };
 
+    // Loading state
+    if (loading) {
+        return (
+            <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
+                <Loader2 className="h-12 w-12 text-amber-500 animate-spin mb-4" />
+                <p className="text-gray-500">Loading customer data...</p>
+            </div>
+        );
+    }
+
+    // Error state
+    if (error || !customer) {
+        return (
+            <div className="p-6">
+                <button 
+                    onClick={() => router.back()}
+                    className="flex items-center text-gray-600 hover:text-amber-500 mb-4"
+                >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Customers
+                </button>
+                
+                <div className="bg-red-50 text-red-600 p-6 rounded-lg shadow-md">
+                    <h2 className="text-xl font-bold mb-2">Error Loading Customer</h2>
+                    <p>{error || 'Customer not found'}</p>
+                    <button 
+                        className="mt-4 px-4 py-2 bg-red-100 rounded-md hover:bg-red-200 text-red-700"
+                        onClick={() => window.location.reload()}
+                    >
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // Format name for initials
+    const initials = customer.first_name && customer.last_name 
+        ? `${customer.first_name[0]}${customer.last_name[0]}` 
+        : customer.username.substring(0, 2).toUpperCase();
+    
+    // Format display name
+    const displayName = customer.first_name && customer.last_name 
+        ? `${customer.first_name} ${customer.last_name}` 
+        : customer.username;
+
+    // Format address for display from customer object
+    const customerAddress = [
+        customer.address,
+        customer.city,
+        customer.state,
+        customer.postal_code,
+        customer.country
+    ].filter(Boolean).join(', ');
+    
+    // Check if we have addresses from the addresses table
+    const hasAddressesFromTable = addresses && addresses.length > 0;
+    
+    // Debug address information
+    console.log('Customer address data:', {
+        customerObj: {
+            address: customer.address,
+            city: customer.city,
+            state: customer.state,
+            postal_code: customer.postal_code,
+            country: customer.country,
+            formattedAddress: customerAddress
+        },
+        addressesFromTable: addresses
+    });
+
     return (
         <div className="p-6">
             {/* Back button and header */}
@@ -345,11 +372,11 @@ export default function CustomerDetailPage() {
                     <div className="mb-4 md:mb-0">
                         <h1 className="text-2xl font-bold flex items-center">
                             <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 font-bold mr-3">
-                                {customer.name.split(' ').map((n: string) => n[0]).join('')}
+                                {initials}
                             </div>
-                            {customer.name}
+                            {displayName}
                         </h1>
-                        <p className="text-gray-500 text-sm">Customer ID: {customer.id}</p>
+                        <p className="text-gray-500 text-sm">Customer ID: {customer.user_id}</p>
                     </div>
                     
                     <div className="flex space-x-3">
@@ -383,9 +410,9 @@ export default function CustomerDetailPage() {
                         <span className="text-sm text-gray-500 mb-1">Status</span>
                         <div className="flex items-center">
                             <div className={`h-2 w-2 rounded-full mr-2 ${
-                                customer.status === 'Active' ? 'bg-green-500' : 'bg-gray-400'
+                                customer.is_active ? 'bg-green-500' : 'bg-gray-400'
                             }`}></div>
-                            <span className="font-medium">{customer.status}</span>
+                            <span className="font-medium">{customer.is_active ? 'Active' : 'Inactive'}</span>
                         </div>
                     </div>
                     
@@ -393,7 +420,7 @@ export default function CustomerDetailPage() {
                         <span className="text-sm text-gray-500 mb-1">Member Since</span>
                         <div className="flex items-center">
                             <Calendar className="h-4 w-4 text-gray-400 mr-2" />
-                            <span className="font-medium">{customer.joinDate}</span>
+                            <span className="font-medium">{new Date(customer.created_at).toLocaleDateString()}</span>
                         </div>
                     </div>
                     
@@ -401,7 +428,7 @@ export default function CustomerDetailPage() {
                         <span className="text-sm text-gray-500 mb-1">Total Orders</span>
                         <div className="flex items-center">
                             <ShoppingBag className="h-4 w-4 text-gray-400 mr-2" />
-                            <span className="font-medium">{customer.orders}</span>
+                            <span className="font-medium">{customerStats?.totalOrders || 0}</span>
                         </div>
                     </div>
                     
@@ -409,7 +436,7 @@ export default function CustomerDetailPage() {
                         <span className="text-sm text-gray-500 mb-1">Total Spent</span>
                         <div className="flex items-center">
                             <CreditCard className="h-4 w-4 text-gray-400 mr-2" />
-                            <span className="font-medium">${customer.totalSpent}</span>
+                            <span className="font-medium">${customerStats?.totalSpent.toFixed(2) || '0.00'}</span>
                         </div>
                     </div>
                 </div>
@@ -430,9 +457,13 @@ export default function CustomerDetailPage() {
                             <span className="text-sm text-gray-500 mb-1">Phone</span>
                             <div className="flex items-center">
                                 <Phone className="h-4 w-4 text-gray-400 mr-2" />
+                                {customer.phone ? (
                                 <a href={`tel:${customer.phone}`} className="text-amber-600 hover:underline">
                                     {customer.phone}
                                 </a>
+                                ) : (
+                                    <span className="text-gray-500">Not provided</span>
+                                )}
                             </div>
                         </div>
                         
@@ -440,22 +471,22 @@ export default function CustomerDetailPage() {
                             <span className="text-sm text-gray-500 mb-1">Location</span>
                             <div className="flex items-center">
                                 <MapPin className="h-4 w-4 text-gray-400 mr-2" />
-                                <span>{customer.location}</span>
+                                {customerAddress ? (
+                                    <span>{customerAddress}</span>
+                                ) : hasAddressesFromTable && addresses[0] ? (
+                                    <span>
+                                        {[
+                                            addresses[0].city,
+                                            addresses[0].state,
+                                            addresses[0].country
+                                        ].filter(Boolean).join(', ')}
+                                    </span>
+                                ) : (
+                                    <span className="text-gray-500">No address provided</span>
+                                )}
                             </div>
                         </div>
                     </div>
-                </div>
-                
-                <div className="mt-6 flex flex-wrap gap-2">
-                    {customer.tags.map((tag: string, index: number) => (
-                        <span 
-                            key={index} 
-                            className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs flex items-center"
-                        >
-                            <Tag className="h-3 w-3 mr-1" />
-                            {tag}
-                        </span>
-                    ))}
                 </div>
             </div>
             
@@ -474,14 +505,9 @@ export default function CustomerDetailPage() {
                             onClick={() => setActiveTab('orders')} 
                         />
                         <Tab 
-                            label="Addresses" 
-                            active={activeTab === 'addresses'} 
-                            onClick={() => setActiveTab('addresses')} 
-                        />
-                        <Tab 
-                            label="Payment Methods" 
-                            active={activeTab === 'payment'} 
-                            onClick={() => setActiveTab('payment')} 
+                            label="Address" 
+                            active={activeTab === 'address'} 
+                            onClick={() => setActiveTab('address')} 
                         />
                         <Tab 
                             label="Notes" 
@@ -500,111 +526,90 @@ export default function CustomerDetailPage() {
                             animate="visible"
                         >
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <motion.div variants={itemVariants} className="bg-gray-50 rounded-lg p-4">
-                                    <h3 className="font-medium mb-3 flex items-center">
-                                        <ShoppingBag className="h-4 w-4 mr-2" />
-                                        Recent Orders
-                                    </h3>
-                                    
-                                    {customer.orderHistory.slice(0, 3).map((order: any) => (
-                                        <div key={order.id} className="mb-3 last:mb-0">
-                                            <div className="flex justify-between items-center">
-                                                <Link href={`/admin/orders/${order.id}`}>
-                                                    <span className="text-sm font-medium text-amber-600">{order.id}</span>
-                                                </Link>
-                                                <span className="text-xs text-gray-500">{order.date}</span>
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                                ${order.total} • {order.status}
-                                            </div>
+                                <div>
+                                    <h3 className="text-lg font-medium mb-4">Customer Information</h3>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm text-gray-500 mb-1">Username</label>
+                                            <p>{customer.username}</p>
                                         </div>
-                                    ))}
-                                    
-                                    <button 
-                                        className="text-sm text-amber-600 mt-2 hover:underline"
-                                        onClick={() => setActiveTab('orders')}
-                                    >
-                                        View all orders
-                                    </button>
-                                </motion.div>
-                                
-                                <motion.div variants={itemVariants} className="bg-gray-50 rounded-lg p-4">
-                                    <h3 className="font-medium mb-3 flex items-center">
-                                        <Home className="h-4 w-4 mr-2" />
-                                        Default Addresses
-                                    </h3>
-                                    
-                                    {customer.addresses
-                                        .filter((address: any) => address.isDefault)
-                                        .map((address: any) => (
-                                            <div key={address.id} className="mb-3 last:mb-0">
-                                                <div className="text-sm font-medium">{address.type}</div>
-                                                <div className="text-xs text-gray-500">
-                                                    {address.street}, {address.city}, {address.state} {address.zipCode}
+                                        <div>
+                                            <label className="block text-sm text-gray-500 mb-1">Full Name</label>
+                                            <p>{customer.first_name && customer.last_name 
+                                                ? `${customer.first_name} ${customer.last_name}` 
+                                                : 'Not provided'}</p>
+                                            </div>
+                                        <div>
+                                            <label className="block text-sm text-gray-500 mb-1">Email</label>
+                                            <p>{customer.email}</p>
+                                            </div>
+                                        <div>
+                                            <label className="block text-sm text-gray-500 mb-1">Phone</label>
+                                            <p>{customer.phone || 'Not provided'}</p>
+                                        </div>
                                                 </div>
                                             </div>
-                                        ))
-                                    }
-                                    
-                                    <button 
-                                        className="text-sm text-amber-600 mt-2 hover:underline"
-                                        onClick={() => setActiveTab('addresses')}
-                                    >
-                                        Manage addresses
-                                    </button>
-                                </motion.div>
                                 
-                                <motion.div variants={itemVariants} className="bg-gray-50 rounded-lg p-4">
-                                    <h3 className="font-medium mb-3 flex items-center">
-                                        <MessageSquare className="h-4 w-4 mr-2" />
-                                        Recent Notes
-                                    </h3>
-                                    
-                                    {customer.notes.slice(0, 2).map((note: any) => (
-                                        <div key={note.id} className="mb-3 last:mb-0">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm font-medium">{note.author}</span>
-                                                <span className="text-xs text-gray-500">{note.date}</span>
+                                <div>
+                                    <h3 className="text-lg font-medium mb-4">Address</h3>
+                                    {customerAddress ? (
+                                        <div className="border rounded-lg p-4">
+                                            <p>{customer.address}</p>
+                                            <p>{customer.city}, {customer.state} {customer.postal_code}</p>
+                                            <p>{customer.country}</p>
                                             </div>
-                                            <div className="text-xs text-gray-500">
-                                                {note.content}
-                                            </div>
+                                    ) : hasAddressesFromTable && addresses[0] ? (
+                                        <div className="border rounded-lg p-4">
+                                            <p>{addresses[0].street_address}</p>
+                                            <p>{addresses[0].city}, {addresses[0].state} {addresses[0].postal_code}</p>
+                                            <p>{addresses[0].country}</p>
                                         </div>
-                                    ))}
-                                    
-                                    <button 
-                                        className="text-sm text-amber-600 mt-2 hover:underline"
-                                        onClick={() => setActiveTab('notes')}
-                                    >
-                                        View all notes
-                                    </button>
-                                </motion.div>
-                                
-                                <motion.div variants={itemVariants} className="bg-gray-50 rounded-lg p-4">
-                                    <h3 className="font-medium mb-3 flex items-center">
-                                        <CreditCard className="h-4 w-4 mr-2" />
-                                        Payment Methods
-                                    </h3>
-                                    
-                                    {customer.paymentMethods
-                                        .filter((payment: any) => payment.isDefault)
-                                        .map((payment: any) => (
-                                            <div key={payment.id} className="mb-3 last:mb-0">
-                                                <div className="text-sm font-medium">{payment.brand}</div>
-                                                <div className="text-xs text-gray-500">
-                                                    •••• {payment.last4} • Expires {payment.expiryDate}
+                                    ) : (
+                                        <p className="text-gray-500">No address information provided</p>
+                                    )}
                                                 </div>
                                             </div>
-                                        ))
-                                    }
-                                    
-                                    <button 
-                                        className="text-sm text-amber-600 mt-2 hover:underline"
-                                        onClick={() => setActiveTab('payment')}
-                                    >
-                                        Manage payment methods
-                                    </button>
-                                </motion.div>
+                            
+                            <div className="mt-8">
+                                <h3 className="text-lg font-medium mb-4">Recent Orders</h3>
+                                {orders.length > 0 ? (
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-gray-200">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Order ID
+                                                    </th>
+                                                    <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Date
+                                                    </th>
+                                                    <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Items
+                                                    </th>
+                                                    <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Total
+                                                    </th>
+                                                    <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                        Status
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-gray-200">
+                                                {orders.slice(0, 5).map((order) => (
+                                                    <OrderItem key={order.order_id} order={{
+                                                        id: order.order_id,
+                                                        date: new Date(order.order_date).toLocaleDateString(),
+                                                        items: order.item_count || 0,
+                                                        total: order.total_amount.toFixed(2),
+                                                        status: order.status
+                                                    }} />
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-500">No order history found</p>
+                                )}
                             </div>
                         </motion.div>
                     )}
@@ -616,9 +621,8 @@ export default function CustomerDetailPage() {
                             initial="hidden"
                             animate="visible"
                         >
-                            <h3 className="font-medium mb-4">Order History</h3>
-                            
-                            {customer.orderHistory.length > 0 ? (
+                            <h3 className="text-lg font-medium mb-4">Order History</h3>
+                            {orders.length > 0 ? (
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-gray-200">
                                         <thead className="bg-gray-50">
@@ -644,71 +648,138 @@ export default function CustomerDetailPage() {
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-200">
-                                            {customer.orderHistory.map((order: any) => (
-                                                <OrderItem key={order.id} order={order} />
+                                            {orders.map((order) => (
+                                                <tr key={order.order_id} className="border-b hover:bg-gray-50">
+                                                    <td className="py-4 px-3">
+                                                        <div className="flex items-center">
+                                                            <Link href={`/admin/orders/${order.order_id}`}>
+                                                                <span className="font-medium text-amber-600">#{order.order_id}</span>
+                                                            </Link>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-4 px-3 text-sm text-gray-500">
+                                                        {new Date(order.order_date).toLocaleDateString()}
+                                                    </td>
+                                                    <td className="py-4 px-3 text-sm">
+                                                        {order.item_count || 0} items
+                                                    </td>
+                                                    <td className="py-4 px-3 text-sm font-medium">
+                                                        ${order.total_amount.toFixed(2)}
+                                                    </td>
+                                                    <td className="py-4 px-3">
+                                                        <div className={`px-3 py-1 rounded-full text-xs font-medium inline-block ${
+                                                            order.status === 'Delivered' 
+                                                                ? 'bg-green-100 text-green-800' 
+                                                                : order.status === 'Processing'
+                                                                    ? 'bg-blue-100 text-blue-800'
+                                                                    : 'bg-amber-100 text-amber-800'
+                                                        }`}>
+                                                            {order.status}
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-4 px-3 text-right">
+                                                        <Link href={`/admin/orders/${order.order_id}`}>
+                                                            <button className="text-amber-600 hover:text-amber-800">
+                                                                <Eye className="h-5 w-5" />
+                                                            </button>
+                                                        </Link>
+                                                    </td>
+                                                </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 </div>
                             ) : (
-                                <div className="text-center py-8 text-gray-500">
-                                    No orders found for this customer
+                                <div className="text-center py-12">
+                                    <ShoppingBag className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                                    <h3 className="text-lg font-medium text-gray-700">No orders yet</h3>
+                                    <p className="text-gray-500 mt-1">This customer hasn't placed any orders</p>
                                 </div>
                             )}
                         </motion.div>
                     )}
                     
-                    {/* Addresses Tab */}
-                    {activeTab === 'addresses' && (
+                    {/* Address Tab */}
+                    {activeTab === 'address' && (
                         <motion.div
                             variants={containerVariants}
                             initial="hidden"
                             animate="visible"
                         >
                             <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-medium">Saved Addresses</h3>
-                                
+                                <h3 className="text-lg font-medium">Address Information</h3>
                                 <motion.button
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                     className="bg-amber-100 text-amber-600 px-3 py-1 rounded-md text-sm flex items-center"
+                                    onClick={() => showAlert('info', 'Add address functionality would be implemented here', 2000)}
                                 >
+                                    <Plus className="h-4 w-4 mr-2" />
                                     Add Address
                                 </motion.button>
                             </div>
                             
+                            {hasAddressesFromTable ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {customer.addresses.map((address: any) => (
-                                    <AddressCard key={address.id} address={address} />
+                                    {addresses.map((address) => (
+                                        <div key={address.address_id} className="border rounded-lg p-6 relative">
+                                            <div className="absolute top-4 right-4 flex space-x-2">
+                                                <button className="text-gray-400 hover:text-amber-500">
+                                                    <Edit className="h-4 w-4" />
+                                                </button>
+                            </div>
+                                            <div className="flex items-start mb-4">
+                                                <Home className="h-5 w-5 text-gray-400 mr-3 mt-1" />
+                                                <div>
+                                                    <h4 className="font-medium">{address.address_type || 'Address'}</h4>
+                                                    {address.is_default && (
+                                                        <p className="text-sm text-gray-500">Default</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="ml-8">
+                                                <p>{address.street_address}</p>
+                                                <p>{address.city}, {address.state} {address.postal_code}</p>
+                                                <p>{address.country}</p>
+                                            </div>
+                            </div>
                                 ))}
                             </div>
-                        </motion.div>
-                    )}
-                    
-                    {/* Payment Methods Tab */}
-                    {activeTab === 'payment' && (
-                        <motion.div
-                            variants={containerVariants}
-                            initial="hidden"
-                            animate="visible"
-                        >
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-medium">Payment Methods</h3>
-                                
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    className="bg-amber-100 text-amber-600 px-3 py-1 rounded-md text-sm flex items-center"
-                                >
-                                    Add Payment Method
-                                </motion.button>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {customer.paymentMethods.map((paymentMethod: any) => (
-                                    <PaymentMethodCard key={paymentMethod.id} paymentMethod={paymentMethod} />
-                                ))}
-                            </div>
+                            ) : customerAddress ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="border rounded-lg p-6 relative">
+                                        <div className="absolute top-4 right-4 flex space-x-2">
+                                            <button className="text-gray-400 hover:text-amber-500">
+                                                <Edit className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                        <div className="flex items-start mb-4">
+                                            <Home className="h-5 w-5 text-gray-400 mr-3 mt-1" />
+                                            <div>
+                                                <h4 className="font-medium">Primary Address</h4>
+                                                <p className="text-sm text-gray-500">Shipping & Billing</p>
+                                            </div>
+                                        </div>
+                                        <div className="ml-8">
+                                            <p>{customer.address}</p>
+                                            <p>{customer.city}, {customer.state} {customer.postal_code}</p>
+                                            <p>{customer.country}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center py-12">
+                                    <MapPin className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                                    <h3 className="text-lg font-medium text-gray-700">No address found</h3>
+                                    <p className="text-gray-500 mt-1">This customer hasn't added any addresses yet</p>
+                                    <button 
+                                        className="mt-4 px-4 py-2 bg-amber-100 rounded-md text-amber-600 hover:bg-amber-200"
+                                        onClick={() => showAlert('info', 'Add address functionality would be implemented here', 2000)}
+                                    >
+                                        Add New Address
+                                    </button>
+                                </div>
+                            )}
                         </motion.div>
                     )}
                     
@@ -719,39 +790,31 @@ export default function CustomerDetailPage() {
                             initial="hidden"
                             animate="visible"
                         >
-                            <h3 className="font-medium mb-4">Customer Notes</h3>
+                            <h3 className="text-lg font-medium mb-4">Customer Notes</h3>
                             
                             <div className="mb-6">
                                 <div className="flex">
                                     <textarea
-                                        className="flex-grow border rounded-l-md p-2 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                                        className="flex-grow border rounded-l-md p-3 focus:outline-none focus:ring-2 focus:ring-amber-300"
                                         placeholder="Add a note about this customer..."
-                                        rows={2}
+                                        rows={3}
                                         value={newNote}
                                         onChange={(e) => setNewNote(e.target.value)}
                                     ></textarea>
-                                    <motion.button
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
+                                    <button
                                         className="bg-amber-500 text-white px-4 rounded-r-md flex items-center"
                                         onClick={handleAddNote}
                                     >
-                                        <Send className="h-4 w-4" />
-                                    </motion.button>
+                                        <Send className="h-5 w-5" />
+                                    </button>
                                 </div>
                             </div>
                             
-                            {customer.notes.length > 0 ? (
-                                <div className="space-y-4">
-                                    {customer.notes.map((note: any) => (
-                                        <NoteItem key={note.id} note={note} />
-                                    ))}
+                            <div className="text-center py-12">
+                                <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                                <h3 className="text-lg font-medium text-gray-700">No notes yet</h3>
+                                <p className="text-gray-500 mt-1">Add your first note about this customer</p>
                                 </div>
-                            ) : (
-                                <div className="text-center py-8 text-gray-500">
-                                    No notes found for this customer
-                                </div>
-                            )}
                         </motion.div>
                     )}
                 </div>
