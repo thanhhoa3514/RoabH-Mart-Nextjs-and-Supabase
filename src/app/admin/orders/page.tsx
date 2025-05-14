@@ -427,110 +427,110 @@ Thank you for your business!
                     </div>
                 ) : (
                     <>
-                        {/* Orders Table */}
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full">
-                                <thead>
-                                    <tr className="bg-gray-50 border-b">
-                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
-                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
-                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {sortedOrders.length > 0 ? (
-                                        <motion.div
-                                            variants={containerVariants}
-                                            initial="hidden"
-                                            animate="visible"
-                                            className="contents"
+                {/* Orders Table */}
+                <div className="overflow-x-auto">
+                    <table className="min-w-full">
+                        <thead>
+                            <tr className="bg-gray-50 border-b">
+                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
+                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sortedOrders.length > 0 ? (
+                                <motion.div
+                                    variants={containerVariants}
+                                    initial="hidden"
+                                    animate="visible"
+                                    className="contents"
+                                >
+                                    {sortedOrders.map((order, index) => (
+                                        <motion.tr
+                                            key={order.id}
+                                            variants={itemVariants}
+                                            className="border-b hover:bg-gray-50"
                                         >
-                                            {sortedOrders.map((order, index) => (
-                                                <motion.tr
-                                                    key={order.id}
-                                                    variants={itemVariants}
-                                                    className="border-b hover:bg-gray-50"
-                                                >
-                                                    <td className="py-4 px-4 whitespace-nowrap">
-                                                        <div className="font-medium text-gray-900">{order.id}</div>
+                                            <td className="py-4 px-4 whitespace-nowrap">
+                                                <div className="font-medium text-gray-900">{order.id}</div>
                                                         <div className="text-xs text-gray-500">{order.items || 'N/A'} items</div>
-                                                    </td>
-                                                    <td className="py-4 px-4 whitespace-nowrap">
-                                                        <div className="font-medium text-gray-900">{order.customer}</div>
-                                                        <div className="text-xs text-gray-500">{order.email || 'N/A'}</div>
-                                                    </td>
-                                                    <td className="py-4 px-4 whitespace-nowrap">
-                                                        <div className="flex items-center">
-                                                            <Calendar className="h-4 w-4 text-gray-400 mr-1" />
-                                                            <span className="text-sm text-gray-900">{order.date}</span>
-                                                        </div>
-                                                        <div className="flex items-center text-xs text-gray-500 mt-1">
-                                                            <Clock className="h-3 w-3 text-gray-400 mr-1" />
-                                                            <span>{order.time}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-4 px-4 whitespace-nowrap">
-                                                        <StatusBadge status={order.status} />
-                                                    </td>
-                                                    <td className="py-4 px-4 whitespace-nowrap">
-                                                        <div className="font-medium text-gray-900">{order.total}</div>
-                                                        <div className="text-xs text-gray-500">{order.paymentMethod || 'N/A'}</div>
-                                                    </td>
-                                                    <td className="py-4 px-4 whitespace-nowrap">
-                                                        <div className="flex space-x-2">
-                                                            <Link href={`/admin/orders/${order.orderId}`}>
-                                                                <motion.button
-                                                                    whileHover={{ scale: 1.1 }}
-                                                                    whileTap={{ scale: 0.9 }}
-                                                                    className="p-1 bg-amber-100 rounded text-amber-600"
-                                                                    title="View Order"
-                                                                >
-                                                                    <Eye className="h-4 w-4" />
-                                                                </motion.button>
-                                                            </Link>
-
-                                                            <motion.button
-                                                                whileHover={{ scale: 1.1 }}
-                                                                whileTap={{ scale: 0.9 }}
-                                                                className="p-1 bg-gray-100 rounded text-gray-600"
-                                                                title="Download Invoice"
-                                                                onClick={() => handleInvoiceDownload(order.id)}
-                                                            >
-                                                                <FileText className="h-4 w-4" />
-                                                            </motion.button>
-                                                        </div>
-                                                    </td>
-                                                </motion.tr>
-                                            ))}
-                                        </motion.div>
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={6} className="py-8 text-center text-gray-500">
-                                                No orders found matching your criteria
                                             </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                                            <td className="py-4 px-4 whitespace-nowrap">
+                                                <div className="font-medium text-gray-900">{order.customer}</div>
+                                                        <div className="text-xs text-gray-500">{order.email || 'N/A'}</div>
+                                            </td>
+                                            <td className="py-4 px-4 whitespace-nowrap">
+                                                <div className="flex items-center">
+                                                    <Calendar className="h-4 w-4 text-gray-400 mr-1" />
+                                                    <span className="text-sm text-gray-900">{order.date}</span>
+                                                </div>
+                                                <div className="flex items-center text-xs text-gray-500 mt-1">
+                                                    <Clock className="h-3 w-3 text-gray-400 mr-1" />
+                                                    <span>{order.time}</span>
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-4 whitespace-nowrap">
+                                                <StatusBadge status={order.status} />
+                                            </td>
+                                            <td className="py-4 px-4 whitespace-nowrap">
+                                                <div className="font-medium text-gray-900">{order.total}</div>
+                                                        <div className="text-xs text-gray-500">{order.paymentMethod || 'N/A'}</div>
+                                            </td>
+                                            <td className="py-4 px-4 whitespace-nowrap">
+                                                <div className="flex space-x-2">
+                                                            <Link href={`/admin/orders/${order.orderId}`}>
+                                                        <motion.button
+                                                            whileHover={{ scale: 1.1 }}
+                                                            whileTap={{ scale: 0.9 }}
+                                                            className="p-1 bg-amber-100 rounded text-amber-600"
+                                                            title="View Order"
+                                                        >
+                                                            <Eye className="h-4 w-4" />
+                                                        </motion.button>
+                                                    </Link>
+
+                                                    <motion.button
+                                                        whileHover={{ scale: 1.1 }}
+                                                        whileTap={{ scale: 0.9 }}
+                                                        className="p-1 bg-gray-100 rounded text-gray-600"
+                                                        title="Download Invoice"
+                                                        onClick={() => handleInvoiceDownload(order.id)}
+                                                    >
+                                                        <FileText className="h-4 w-4" />
+                                                    </motion.button>
+                                                </div>
+                                            </td>
+                                        </motion.tr>
+                                    ))}
+                                </motion.div>
+                            ) : (
+                                <tr>
+                                    <td colSpan={6} className="py-8 text-center text-gray-500">
+                                        No orders found matching your criteria
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
 
                         {/* Pagination */}
-                        <div className="mt-6 flex justify-between items-center">
-                            <div className="text-sm text-gray-500">
+                <div className="mt-6 flex justify-between items-center">
+                    <div className="text-sm text-gray-500">
                                 Showing <span className="font-medium">{sortedOrders.length}</span> of <span className="font-medium">{totalOrders}</span> orders
-                            </div>
+                    </div>
 
-                            <div className="flex space-x-1">
+                    <div className="flex space-x-1">
                                 <button 
                                     className={`px-3 py-1 border rounded-md ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                                     onClick={() => handlePageChange(currentPage - 1)}
                                     disabled={currentPage === 1}
                                 >
-                                    Previous
-                                </button>
+                            Previous
+                        </button>
                                 
                                 {Array.from({ length: Math.min(totalPages, 3) }, (_, i) => {
                                     // Show current page and adjacent pages
@@ -552,7 +552,7 @@ Thank you for your business!
                                             onClick={() => handlePageChange(pageNum)}
                                         >
                                             {pageNum}
-                                        </button>
+                        </button>
                                     );
                                 })}
                                 
@@ -561,10 +561,10 @@ Thank you for your business!
                                     onClick={() => handlePageChange(currentPage + 1)}
                                     disabled={currentPage === totalPages}
                                 >
-                                    Next
-                                </button>
-                            </div>
-                        </div>
+                            Next
+                        </button>
+                    </div>
+                </div>
                     </>
                 )}
             </div>
