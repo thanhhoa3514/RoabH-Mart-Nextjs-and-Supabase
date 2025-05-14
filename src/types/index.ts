@@ -100,4 +100,44 @@ export interface Subcategory {
     image: string | null;
     is_active: boolean;
     display_order: number;
-} 
+}
+
+// // Database Order types
+// export interface DbOrder {
+//     order_id: number;
+//     user_id: number;
+//     order_number: string;
+//     total_amount: number;
+//     status: string;
+//     order_date: string;
+// }
+
+// export interface DbOrderItem {
+//     order_item_id: number;
+//     order_id: number;
+//     product_id: number;
+//     quantity: number;
+//     unit_price: number;
+//     subtotal: number;
+// }
+
+// export interface DbPayment {
+//     payment_id: number;
+//     order_id: number;
+//     amount: number;
+//     payment_method: string;
+//     transaction_id: string | null;
+//     status: string;
+//     payment_date: string;
+// }
+
+// export interface DbShippingInfo {
+//     shipping_id: number;
+//     order_id: number;
+//     shipping_method: string;
+//     shipping_cost: number;
+//     tracking_number: string | null;
+//     status: string;
+//     estimated_delivery: string | null;
+//     actual_delivery: string | null;
+// } 
