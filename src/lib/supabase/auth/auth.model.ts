@@ -1,19 +1,57 @@
 import { supabase } from '../client/client.model';
 
 export async function signUp(email: string, password: string) {
-    const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-    });
-    return { data, error };
+    console.log('Auth model: signUp called for email:', email);
+    
+    try {
+        // Sign up with Supabase Auth - ensuring email verification is enabled
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+                emailRedirectTo: `${window.location.origin}/auth/callback`,
+                data: {
+                    email_confirmation_sent: true
+                }
+            }
+        });
+        
+        if (error) {
+            console.error('Auth model: signUp error:', error);
+        } else {
+            console.log('Auth model: signUp successful. User ID:', data?.user?.id);
+            console.log('Auth model: verification email should be sent to:', email);
+        }
+        
+        return { data, error };
+    } catch (err) {
+        console.error('Auth model: unexpected error during signUp:', err);
+        return { data: null, error: err };
+    }
 }
 
 export async function signIn(email: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-    });
-    return { data, error };
+    try {
+        // Sign in with email/password, which will automatically store tokens in cookies
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
+
+        if (error) {
+            console.error('Auth model: signIn error:', error);
+        } else {
+            console.log('Auth model: signIn successful for user:', data?.user?.email);
+            
+            // The tokens are automatically handled by Supabase client
+            // with the configuration from client.model.ts
+        }
+
+        return { data, error };
+    } catch (err) {
+        console.error('Auth model: unexpected error during signIn:', err);
+        return { data: null, error: err };
+    }
 }
 
 export async function signOut() {
