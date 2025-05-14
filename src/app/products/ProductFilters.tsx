@@ -1,7 +1,9 @@
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { getCategories } from '@/lib/supabase/categories/categories.model';
+import { Category } from '@/types';
 
 interface ProductFiltersProps {
   selectedCategory?: string;
@@ -11,13 +13,36 @@ interface ProductFiltersProps {
 export default function ProductFilters({ selectedCategory, selectedSort = 'newest' }: ProductFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const categories = [
-    { id: 'all', name: 'All Products' },
-    { id: 'electronics', name: 'Electronics' },
-    { id: 'clothing', name: 'Clothing' },
-    { id: 'home', name: 'Home & Garden' },
-  ];
+  // Fetch categories from Supabase
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const { data, error } = await getCategories();
+        if (error) {
+          console.error('Error fetching categories:', error);
+          return;
+        }
+        
+        if (data) {
+          // Filter to only active categories and sort by display order
+          const activeCategories = data
+            .filter(cat => cat.is_active)
+            .sort((a, b) => a.display_order - b.display_order);
+          
+          setCategories(activeCategories);
+        }
+      } catch (err) {
+        console.error('Error in categories fetch:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchCategories();
+  }, []);
 
   const sortOptions = [
     { id: 'newest', name: 'Newest' },
@@ -56,20 +81,44 @@ export default function ProductFilters({ selectedCategory, selectedSort = 'newes
       <div>
         <h3 className="text-lg font-medium mb-4">Categories</h3>
         <div className="space-y-2">
-          {categories.map((category) => (
-            <div key={category.id} className="flex items-center">
-              <button
-                className={`text-left w-full py-2 px-3 rounded-md transition-colors ${
-                  (category.id === 'all' && !selectedCategory) || category.id === selectedCategory
-                    ? 'bg-primary text-white'
-                    : 'hover:bg-secondary'
-                }`}
-                onClick={() => handleCategoryChange(category.id)}
-              >
-                {category.name}
-              </button>
+          {/* Always show "All Products" option */}
+          <div className="flex items-center">
+            <button
+              className={`text-left w-full py-2 px-3 rounded-md transition-colors ${
+                !selectedCategory
+                  ? 'bg-primary text-white'
+                  : 'hover:bg-secondary'
+              }`}
+              onClick={() => handleCategoryChange('all')}
+            >
+              All Products
+            </button>
+          </div>
+          
+          {loading ? (
+            // Show loading state for categories
+            <div className="animate-pulse space-y-2">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-10 bg-gray-200 rounded-md"></div>
+              ))}
             </div>
-          ))}
+          ) : (
+            // Show fetched categories
+            categories.map((category) => (
+              <div key={category.category_id} className="flex items-center">
+                <button
+                  className={`text-left w-full py-2 px-3 rounded-md transition-colors ${
+                    category.name.toLowerCase() === selectedCategory
+                      ? 'bg-primary text-white'
+                      : 'hover:bg-secondary'
+                  }`}
+                  onClick={() => handleCategoryChange(category.name.toLowerCase())}
+                >
+                  {category.name}
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

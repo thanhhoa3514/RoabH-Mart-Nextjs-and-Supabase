@@ -3,123 +3,61 @@
 import { useEffect, useState } from 'react';
 import ProductCard from '@/components/products/ProductCard';
 import { Product } from '@/types';
+import { getProducts } from '@/lib/supabase/products/client/product.query';
 
 interface ProductListProps {
   category?: string;
   search?: string;
   sort?: string;
   page: number;
+  initialData?: Product[];
 }
 
-export default function ProductList({ category, search, sort = 'newest', page = 1 }: ProductListProps) {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function ProductList({ 
+  category, 
+  search, 
+  sort = 'newest', 
+  page = 1,
+  initialData = []
+}: ProductListProps) {
+  const [products, setProducts] = useState<Product[]>(initialData);
+  const [loading, setLoading] = useState(initialData.length === 0);
+  const [totalCount, setTotalCount] = useState(0);
 
-  // In a real app, this would fetch from an API
   useEffect(() => {
-    // Simulating API call with mock data
-    setLoading(true);
-    
-    // Mock data
-    const mockProducts: Product[] = [
-      {
-        id: '1',
-        name: 'Wireless Earbuds',
-        description: 'High-quality wireless earbuds with noise cancellation',
-        price: 79.99,
-        images: ['https://placekitten.com/300/300'],
-        category: 'electronics',
-        stock: 15,
-        createdAt: '2023-01-15',
-        updatedAt: '2023-01-15'
-      },
-      {
-        id: '2',
-        name: 'Cotton T-Shirt',
-        description: 'Comfortable cotton t-shirt, perfect for everyday wear',
-        price: 24.99,
-        images: ['https://placekitten.com/301/300'],
-        category: 'clothing',
-        stock: 50,
-        createdAt: '2023-02-10',
-        updatedAt: '2023-02-10'
-      },
-      {
-        id: '3',
-        name: 'Smart Watch',
-        description: 'Feature-rich smart watch with health monitoring',
-        price: 199.99,
-        images: ['https://placekitten.com/302/300'],
-        category: 'electronics',
-        stock: 8,
-        createdAt: '2023-03-05',
-        updatedAt: '2023-03-05'
-      },
-      {
-        id: '4',
-        name: 'Kitchen Blender',
-        description: 'Powerful kitchen blender for smoothies and food prep',
-        price: 89.99,
-        images: ['https://placekitten.com/303/300'],
-        category: 'home',
-        stock: 12,
-        createdAt: '2023-01-20',
-        updatedAt: '2023-01-20'
-      },
-      {
-        id: '5',
-        name: 'Denim Jeans',
-        description: 'Classic denim jeans with comfortable fit',
-        price: 49.99,
-        images: ['https://placekitten.com/304/300'],
-        category: 'clothing',
-        stock: 30,
-        createdAt: '2023-02-15',
-        updatedAt: '2023-02-15'
-      },
-      {
-        id: '6',
-        name: 'LED TV',
-        description: '4K Ultra HD Smart LED TV with HDR',
-        price: 599.99,
-        images: ['https://placekitten.com/305/300'],
-        category: 'electronics',
-        stock: 5,
-        createdAt: '2023-03-10',
-        updatedAt: '2023-03-10'
-      },
-    ];
-    
-    // Filter by category if provided
-    let filteredProducts = mockProducts;
-    if (category) {
-      filteredProducts = mockProducts.filter(product => product.category === category);
-    }
-    
-    // Filter by search term if provided
-    if (search) {
-      const searchLower = search.toLowerCase();
-      filteredProducts = filteredProducts.filter(product => 
-        product.name.toLowerCase().includes(searchLower) || 
-        product.description.toLowerCase().includes(searchLower)
-      );
-    }
-    
-    // Sort products
-    if (sort === 'price-low') {
-      filteredProducts.sort((a, b) => a.price - b.price);
-    } else if (sort === 'price-high') {
-      filteredProducts.sort((a, b) => b.price - a.price);
-    } else if (sort === 'newest') {
-      filteredProducts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    }
-    
-    // Simulate loading delay
-    setTimeout(() => {
-      setProducts(filteredProducts);
-      setLoading(false);
-    }, 500);
-  }, [category, search, sort, page]);
+    const fetchProducts = async () => {
+      // If parameter changes or we don't have initial data, fetch new data
+      if (initialData.length === 0 || products !== initialData) {
+        setLoading(true);
+      }
+
+      try {
+        // Fetch products from Supabase
+        const { data, error, count } = await getProducts({
+          category,
+          search,
+          sort,
+          page,
+          limit: 9 // Display 9 products per page
+        });
+
+        if (error) {
+          console.error('Error fetching products:', error);
+          setProducts([]);
+        } else if (data) {
+          setProducts(data);
+          if (count !== null) setTotalCount(count);
+        }
+      } catch (err) {
+        console.error('Error in products fetch:', err);
+        setProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [category, search, sort, page, initialData]);
 
   if (loading) {
     return (

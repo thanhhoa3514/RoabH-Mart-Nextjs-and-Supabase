@@ -1,6 +1,8 @@
 import { Suspense } from 'react';
 import ProductList from './ProductList';
 import ProductFilters from './ProductFilters';
+import { getProducts } from '@/lib/supabase/products/client/product.query';
+import { getCategories } from '@/lib/supabase/categories/categories.model';
 
 interface ProductsPageProps {
   searchParams: {
@@ -11,8 +13,25 @@ interface ProductsPageProps {
   };
 }
 
-export default function ProductsPage({ searchParams }: ProductsPageProps) {
+export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const { category, search, sort = 'newest', page = '1' } = searchParams;
+  
+  // Prefetch initial data to hydrate page - this improves SEO and initial load time
+  const initialProductsPromise = getProducts({
+    category,
+    search,
+    sort,
+    page: parseInt(page),
+    limit: 9
+  });
+  
+  const initialCategoriesPromise = getCategories();
+  
+  // Wait for both promises to resolve
+  const [productsResult, categoriesResult] = await Promise.all([
+    initialProductsPromise,
+    initialCategoriesPromise
+  ]);
   
   return (
     <div className="container mx-auto px-4 py-8">
@@ -40,6 +59,7 @@ export default function ProductsPage({ searchParams }: ProductsPageProps) {
               search={search}
               sort={sort}
               page={parseInt(page)}
+              initialData={productsResult.data || []}
             />
           </Suspense>
         </div>
