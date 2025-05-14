@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
     Search, 
@@ -16,10 +16,13 @@ import {
     MapPin,
     CreditCard,
     Tag,
-    Plus
+    Plus,
+    Loader2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAlert } from '@/lib/context/alert-context';
+import { getCustomers, searchCustomers } from '@/lib/supabase/customers/customers.model';
+import { DbCustomer } from '@/types/user/customer.model';
 
 // Animation variants
 const containerVariants = {
@@ -39,9 +42,22 @@ const itemVariants = {
 
 // Customer card component
 const CustomerCard = ({ customer, onView }: { 
-    customer: any, 
+    customer: DbCustomer, 
     onView: (id: number) => void 
 }) => {
+    // Format name for initials
+    const initials = customer.first_name && customer.last_name 
+        ? `${customer.first_name[0]}${customer.last_name[0]}` 
+        : customer.username.substring(0, 2).toUpperCase();
+    
+    // Format display name
+    const displayName = customer.first_name && customer.last_name 
+        ? `${customer.first_name} ${customer.last_name}` 
+        : customer.username;
+
+    // Format join date
+    const joinDate = new Date(customer.created_at).toLocaleDateString();
+    
     return (
         <motion.div
             variants={itemVariants}
@@ -51,10 +67,10 @@ const CustomerCard = ({ customer, onView }: {
                 <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center">
                         <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 font-bold text-lg mr-4">
-                            {customer.name.split(' ').map((n: string) => n[0]).join('')}
+                            {initials}
                         </div>
                         <div>
-                            <h3 className="font-medium text-lg">{customer.name}</h3>
+                            <h3 className="font-medium text-lg">{displayName}</h3>
                             <div className="flex items-center text-sm text-gray-500">
                                 <Mail className="h-3 w-3 mr-1" />
                                 <span>{customer.email}</span>
@@ -62,52 +78,31 @@ const CustomerCard = ({ customer, onView }: {
                         </div>
                     </div>
                     <div className={`px-2 py-1 text-xs rounded-full ${
-                        customer.status === 'Active' 
+                        customer.is_active 
                             ? 'bg-green-100 text-green-800' 
                             : 'bg-gray-100 text-gray-800'
                     }`}>
-                        {customer.status}
+                        {customer.is_active ? 'Active' : 'Inactive'}
                     </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="flex items-center text-sm">
                         <Phone className="h-4 w-4 text-gray-400 mr-2" />
-                        <span>{customer.phone}</span>
+                        <span>{customer.phone || 'Not provided'}</span>
                     </div>
                     <div className="flex items-center text-sm">
                         <Calendar className="h-4 w-4 text-gray-400 mr-2" />
-                        <span>Joined {customer.joinDate}</span>
+                        <span>Joined {joinDate}</span>
                     </div>
                     <div className="flex items-center text-sm">
-                        <ShoppingBag className="h-4 w-4 text-gray-400 mr-2" />
-                        <span>{customer.orders} orders</span>
+                        <MapPin className="h-4 w-4 text-gray-400 mr-2" />
+                        <span>{customer.city ? `${customer.city}, ${customer.country || ''}` : 'No address provided'}</span>
                     </div>
-                    <div className="flex items-center text-sm">
-                        <CreditCard className="h-4 w-4 text-gray-400 mr-2" />
-                        <span>${customer.totalSpent}</span>
-                    </div>
-                </div>
-                
-                <div className="flex items-center mt-2 text-sm text-gray-500">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    <span>{customer.location}</span>
-                </div>
-                
-                <div className="mt-4 flex flex-wrap gap-2">
-                    {customer.tags.map((tag: string, index: number) => (
-                        <span 
-                            key={index} 
-                            className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs flex items-center"
-                        >
-                            <Tag className="h-3 w-3 mr-1" />
-                            {tag}
-                        </span>
-                    ))}
                 </div>
                 
                 <div className="mt-4 pt-4 border-t flex justify-end">
-                    <Link href={`/admin/customers/${customer.id}`}>
+                    <Link href={`/admin/customers/${customer.user_id}`}>
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
@@ -128,118 +123,51 @@ export default function CustomersPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedStatus, setSelectedStatus] = useState('All');
     const [selectedJoinDate, setSelectedJoinDate] = useState('All Time');
-    const [selectedSpendRange, setSelectedSpendRange] = useState('All');
     const [sortBy, setSortBy] = useState('newest');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [viewType, setViewType] = useState('grid'); // 'grid' or 'list'
     
-    // Mock customers data
-    const customers = [
-        {
-            id: 1,
-            name: 'John Doe',
-            email: 'john.doe@example.com',
-            phone: '+1 (555) 123-4567',
-            location: 'New York, USA',
-            joinDate: '2023-08-15',
-            status: 'Active',
-            orders: 12,
-            totalSpent: '1,549.99',
-            lastOrder: '2023-11-20',
-            tags: ['Loyal', 'Premium']
-        },
-        {
-            id: 2,
-            name: 'Jane Smith',
-            email: 'jane.smith@example.com',
-            phone: '+1 (555) 987-6543',
-            location: 'Los Angeles, USA',
-            joinDate: '2023-09-22',
-            status: 'Active',
-            orders: 8,
-            totalSpent: '879.50',
-            lastOrder: '2023-11-15',
-            tags: ['New Customer']
-        },
-        {
-            id: 3,
-            name: 'Robert Johnson',
-            email: 'robert.j@example.com',
-            phone: '+1 (555) 234-5678',
-            location: 'Chicago, USA',
-            joinDate: '2023-05-10',
-            status: 'Inactive',
-            orders: 3,
-            totalSpent: '299.95',
-            lastOrder: '2023-07-05',
-            tags: ['Inactive']
-        },
-        {
-            id: 4,
-            name: 'Emily Wilson',
-            email: 'emily.w@example.com',
-            phone: '+1 (555) 876-5432',
-            location: 'Miami, USA',
-            joinDate: '2023-10-05',
-            status: 'Active',
-            orders: 5,
-            totalSpent: '459.90',
-            lastOrder: '2023-11-18',
-            tags: ['New Customer']
-        },
-        {
-            id: 5,
-            name: 'Michael Brown',
-            email: 'michael.b@example.com',
-            phone: '+1 (555) 345-6789',
-            location: 'Seattle, USA',
-            joinDate: '2023-04-18',
-            status: 'Active',
-            orders: 20,
-            totalSpent: '2,349.75',
-            lastOrder: '2023-11-22',
-            tags: ['Loyal', 'Premium', 'Wholesale']
-        },
-        {
-            id: 6,
-            name: 'Sarah Davis',
-            email: 'sarah.d@example.com',
-            phone: '+1 (555) 765-4321',
-            location: 'Boston, USA',
-            joinDate: '2023-07-30',
-            status: 'Active',
-            orders: 7,
-            totalSpent: '689.45',
-            lastOrder: '2023-11-10',
-            tags: ['Returning']
-        },
-        {
-            id: 7,
-            name: 'David Miller',
-            email: 'david.m@example.com',
-            phone: '+1 (555) 456-7890',
-            location: 'Denver, USA',
-            joinDate: '2023-03-12',
-            status: 'Inactive',
-            orders: 2,
-            totalSpent: '149.99',
-            lastOrder: '2023-05-20',
-            tags: ['Inactive']
-        },
-        {
-            id: 8,
-            name: 'Lisa Taylor',
-            email: 'lisa.t@example.com',
-            phone: '+1 (555) 654-3210',
-            location: 'Austin, USA',
-            joinDate: '2023-11-01',
-            status: 'Active',
-            orders: 1,
-            totalSpent: '79.99',
-            lastOrder: '2023-11-05',
-            tags: ['New Customer']
+    // Pagination state
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [totalCustomers, setTotalCustomers] = useState(0);
+    
+    // Data fetching state
+    const [customers, setCustomers] = useState<DbCustomer[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    
+    // Fetch customers data
+    useEffect(() => {
+        async function fetchCustomers() {
+            setLoading(true);
+            setError(null);
+            
+            try {
+                let result;
+                
+                if (searchQuery) {
+                    result = await searchCustomers(searchQuery, page, pageSize);
+                } else {
+                    result = await getCustomers(page, pageSize);
+                }
+                
+                if (result.error) {
+                    throw new Error(result.error.message);
+                }
+                
+                setCustomers(result.data || []);
+                setTotalCustomers(result.count || 0);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to fetch customers');
+                showAlert('error', 'Failed to fetch customers', 3000);
+            } finally {
+                setLoading(false);
+            }
         }
-    ];
+        
+        fetchCustomers();
+    }, [page, pageSize, searchQuery, showAlert]);
 
     const handleViewCustomer = (customerId: number) => {
         showAlert('info', `Viewing customer profile ${customerId}`, 2000);
@@ -251,49 +179,40 @@ export default function CustomersPage() {
 
     // Filter customers based on search query and filters
     const filteredCustomers = customers.filter(customer => {
-        // Search filter
-        const matchesSearch = 
-            searchQuery === '' || 
-            customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            customer.phone.includes(searchQuery);
-        
         // Status filter
-        const matchesStatus = 
-            selectedStatus === 'All' || 
-            customer.status === selectedStatus;
-        
-        // Spend range filter - simplified for demo
-        let matchesSpend = true;
-        const totalSpent = parseFloat(customer.totalSpent.replace(',', ''));
-        
-        if (selectedSpendRange === 'Under $100') {
-            matchesSpend = totalSpent < 100;
-        } else if (selectedSpendRange === '$100 - $500') {
-            matchesSpend = totalSpent >= 100 && totalSpent <= 500;
-        } else if (selectedSpendRange === '$500 - $1000') {
-            matchesSpend = totalSpent > 500 && totalSpent <= 1000;
-        } else if (selectedSpendRange === 'Over $1000') {
-            matchesSpend = totalSpent > 1000;
+        if (selectedStatus !== 'All') {
+            const isActive = selectedStatus === 'Active';
+            if (customer.is_active !== isActive) return false;
         }
         
         // Join date filter - simplified for demo
-        // In a real app, you would implement proper date filtering
-        const matchesJoinDate = true;
+        if (selectedJoinDate !== 'All Time') {
+            const customerDate = new Date(customer.created_at);
+            const now = new Date();
+            
+            if (selectedJoinDate === 'Last 30 Days') {
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(now.getDate() - 30);
+                if (customerDate < thirtyDaysAgo) return false;
+            } else if (selectedJoinDate === 'Last 90 Days') {
+                const ninetyDaysAgo = new Date();
+                ninetyDaysAgo.setDate(now.getDate() - 90);
+                if (customerDate < ninetyDaysAgo) return false;
+            } else if (selectedJoinDate === 'This Year') {
+                const firstDayOfYear = new Date(now.getFullYear(), 0, 1);
+                if (customerDate < firstDayOfYear) return false;
+            }
+        }
         
-        return matchesSearch && matchesStatus && matchesSpend && matchesJoinDate;
+        return true;
     });
 
     // Sort customers
     const sortedCustomers = [...filteredCustomers].sort((a, b) => {
         if (sortBy === 'newest') {
-            return new Date(b.joinDate) > new Date(a.joinDate) ? 1 : -1;
+            return new Date(b.created_at) > new Date(a.created_at) ? 1 : -1;
         } else if (sortBy === 'oldest') {
-            return new Date(a.joinDate) > new Date(b.joinDate) ? 1 : -1;
-        } else if (sortBy === 'highest-spend') {
-            return parseFloat(b.totalSpent.replace(',', '')) - parseFloat(a.totalSpent.replace(',', ''));
-        } else if (sortBy === 'most-orders') {
-            return b.orders - a.orders;
+            return new Date(a.created_at) > new Date(b.created_at) ? 1 : -1;
         }
         return 0;
     });
@@ -399,21 +318,6 @@ export default function CustomersPage() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Total Spend</label>
-                            <select
-                                className="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-300"
-                                value={selectedSpendRange}
-                                onChange={(e) => setSelectedSpendRange(e.target.value)}
-                            >
-                                <option>All</option>
-                                <option>Under $100</option>
-                                <option>$100 - $500</option>
-                                <option>$500 - $1000</option>
-                                <option>Over $1000</option>
-                            </select>
-                        </div>
-
-                        <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
                             <select
                                 className="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-300"
@@ -422,15 +326,46 @@ export default function CustomersPage() {
                             >
                                 <option value="newest">Newest Customers</option>
                                 <option value="oldest">Oldest Customers</option>
-                                <option value="highest-spend">Highest Spend</option>
-                                <option value="most-orders">Most Orders</option>
                             </select>
                         </div>
                     </motion.div>
                 )}
 
+                {/* Loading State */}
+                {loading && (
+                    <div className="flex justify-center items-center py-12">
+                        <Loader2 className="h-8 w-8 text-amber-500 animate-spin" />
+                        <span className="ml-2 text-gray-500">Loading customers...</span>
+                    </div>
+                )}
+
+                {/* Error State */}
+                {error && !loading && (
+                    <div className="bg-red-50 text-red-600 p-4 rounded-md my-4">
+                        <p className="font-medium">Failed to load customers</p>
+                        <p className="text-sm">{error}</p>
+                        <button 
+                            className="mt-2 text-sm bg-red-100 px-3 py-1 rounded-md hover:bg-red-200"
+                            onClick={() => window.location.reload()}
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                )}
+
+                {/* Empty State */}
+                {!loading && !error && sortedCustomers.length === 0 && (
+                    <div className="text-center py-12">
+                        <User className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-700">No customers found</h3>
+                        <p className="text-gray-500 mt-1">
+                            {searchQuery ? 'Try a different search term' : 'Add your first customer to get started'}
+                        </p>
+                    </div>
+                )}
+
                 {/* Customers Grid/List View */}
-                {sortedCustomers.length > 0 ? (
+                {!loading && !error && sortedCustomers.length > 0 && (
                     <motion.div
                         variants={containerVariants}
                         initial="hidden"
@@ -444,7 +379,7 @@ export default function CustomersPage() {
                             // Grid view
                             sortedCustomers.map((customer) => (
                                 <CustomerCard 
-                                    key={customer.id} 
+                                    key={customer.user_id} 
                                     customer={customer} 
                                     onView={handleViewCustomer} 
                                 />
@@ -458,10 +393,10 @@ export default function CustomersPage() {
                                             Customer
                                         </th>
                                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
-                                            Orders
+                                            Email
                                         </th>
                                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
-                                            Total Spent
+                                            Location
                                         </th>
                                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
                                             Joined
@@ -476,46 +411,46 @@ export default function CustomersPage() {
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {sortedCustomers.map((customer) => (
-                                        <tr key={customer.id} className="hover:bg-gray-50">
+                                        <tr key={customer.user_id} className="hover:bg-gray-50">
                                             <td className="px-4 py-4 whitespace-nowrap">
                                                 <div className="flex items-center">
                                                     <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 font-bold mr-4">
-                                                        {customer.name.split(' ').map((n: string) => n[0]).join('')}
+                                                        {customer.first_name && customer.last_name 
+                                                            ? `${customer.first_name[0]}${customer.last_name[0]}` 
+                                                            : customer.username.substring(0, 2).toUpperCase()}
                                                     </div>
                                                     <div>
-                                                        <h3 className="font-medium">{customer.name}</h3>
-                                                        <div className="text-sm text-gray-500">{customer.email}</div>
+                                                        <h3 className="font-medium">
+                                                            {customer.first_name && customer.last_name 
+                                                                ? `${customer.first_name} ${customer.last_name}` 
+                                                                : customer.username}
+                                                        </h3>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap hidden md:table-cell">
-                                                <div className="text-sm font-medium">{customer.orders}</div>
+                                                <div className="text-sm">{customer.email}</div>
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap hidden md:table-cell">
-                                                <div className="text-sm font-medium">${customer.totalSpent}</div>
+                                                <div className="text-sm">{customer.city ? `${customer.city}, ${customer.country || ''}` : 'No address provided'}</div>
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap hidden md:table-cell">
-                                                <div className="text-sm">{customer.joinDate}</div>
+                                                <div className="text-sm">{new Date(customer.created_at).toLocaleDateString()}</div>
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap hidden md:table-cell">
-                                                <div className={`px-2 py-1 text-xs rounded-full inline-block ${
-                                                    customer.status === 'Active' 
+                                                <div className={`px-2 py-1 text-xs inline-block rounded-full ${
+                                                    customer.is_active 
                                                         ? 'bg-green-100 text-green-800' 
                                                         : 'bg-gray-100 text-gray-800'
                                                 }`}>
-                                                    {customer.status}
+                                                    {customer.is_active ? 'Active' : 'Inactive'}
                                                 </div>
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap text-right">
-                                                <Link href={`/admin/customers/${customer.id}`}>
-                                                    <motion.button
-                                                        whileHover={{ scale: 1.05 }}
-                                                        whileTap={{ scale: 0.95 }}
-                                                        className="bg-amber-100 text-amber-600 px-3 py-1 rounded-md text-sm flex items-center ml-auto"
-                                                    >
-                                                        <Eye className="h-4 w-4 mr-2" />
-                                                        View
-                                                    </motion.button>
+                                                <Link href={`/admin/customers/${customer.user_id}`}>
+                                                    <button className="text-amber-600 hover:text-amber-800">
+                                                        <Eye className="h-5 w-5" />
+                                                    </button>
                                                 </Link>
                                             </td>
                                         </tr>
@@ -524,30 +459,27 @@ export default function CustomersPage() {
                             </table>
                         )}
                     </motion.div>
-                ) : (
-                    <div className="py-12 text-center text-gray-500">
-                        No customers found matching your criteria
-                    </div>
                 )}
-
-                {/* Pagination - simplified for demo */}
-                {sortedCustomers.length > 0 && (
-                    <div className="mt-8 flex justify-between items-center">
+                
+                {/* Pagination */}
+                {!loading && !error && totalCustomers > 0 && (
+                    <div className="mt-6 flex justify-between items-center">
                         <div className="text-sm text-gray-500">
-                            Showing <span className="font-medium">{sortedCustomers.length}</span> of <span className="font-medium">{customers.length}</span> customers
+                            Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, totalCustomers)} of {totalCustomers} customers
                         </div>
-                        
-                        <div className="flex space-x-1">
-                            <button className="px-3 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-50">
+                        <div className="flex space-x-2">
+                            <button 
+                                className={`px-3 py-1 rounded-md ${page === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-amber-100 text-amber-600 hover:bg-amber-200'}`}
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                            >
                                 Previous
                             </button>
-                            <button className="px-3 py-1 border rounded-md bg-amber-500 text-white">
-                                1
-                            </button>
-                            <button className="px-3 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-50">
-                                2
-                            </button>
-                            <button className="px-3 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-50">
+                            <button 
+                                className={`px-3 py-1 rounded-md ${page * pageSize >= totalCustomers ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-amber-100 text-amber-600 hover:bg-amber-200'}`}
+                                onClick={() => setPage(p => p + 1)}
+                                disabled={page * pageSize >= totalCustomers}
+                            >
                                 Next
                             </button>
                         </div>
