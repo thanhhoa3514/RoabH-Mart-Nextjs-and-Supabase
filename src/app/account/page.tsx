@@ -5,13 +5,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { User, Package, CreditCard, Heart, LogOut } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { Profile } from '@/types';
-
+    
 export default function AccountPage() {
     const [activeTab, setActiveTab] = useState('profile');
-    const { user, signOut } = useAuth();
-    const [profile, setProfile] = useState<Profile | null>(null);
+    const { user, userData, signOut } = useAuth();
     const [loading, setLoading] = useState(true);
 
     // Mock order data
@@ -33,37 +30,11 @@ export default function AccountPage() {
     ];
 
     useEffect(() => {
-        const fetchProfile = async () => {
-            if (!user) return;
-
-            try {
-                // In a real app, this would fetch from Supabase
-                // const { data, error } = await supabase
-                //   .from('profiles')
-                //   .select('*')
-                //   .eq('user_id', user.id)
-                //   .single();
-
-                // For now, use mock data
-                const mockProfile: Profile = {
-                    id: '123',
-                    userId: user.id,
-                    fullName: user.user_metadata?.full_name || 'John Doe',
-                    address: '123 Main St, City, Country',
-                    phone: '+1234567890',
-                    avatar: 'https://placekitten.com/100/100',
-                };
-
-                setProfile(mockProfile);
-            } catch (error) {
-                console.error('Error fetching profile:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchProfile();
-    }, [user]);
+        // When userData is loaded, set loading to false
+        if (user) {
+            setLoading(false);
+        }
+    }, [user, userData]);
 
     const handleSignOut = async () => {
         await signOut();
@@ -81,6 +52,18 @@ export default function AccountPage() {
         );
     }
 
+    // Format the user's name for display
+    const displayName = userData?.profile?.full_name || 
+                      user?.user_metadata?.full_name || 
+                      user?.email?.split('@')[0] || 
+                      'User';
+
+    // Get the profile image if available
+    const profileImage = userData?.profile?.profile_image || 'https://placekitten.com/100/100';
+
+    // Get the default address if available
+    const defaultAddress = userData?.addresses?.find(addr => addr.is_default) || userData?.addresses?.[0];
+
     return (
         <div className="container mx-auto px-4 py-8">
             <h1 className="text-3xl font-bold mb-8">My Account</h1>
@@ -93,64 +76,76 @@ export default function AccountPage() {
                         <div className="flex items-center mb-6">
                             <div className="relative w-16 h-16 rounded-full overflow-hidden mr-4">
                                 <Image
-                                    src={profile?.avatar || 'https://placekitten.com/100/100'}
-                                    alt={profile?.fullName || 'User'}
+                                    src={profileImage}
+                                    alt={displayName}
                                     fill
                                     className="object-cover"
                                 />
                             </div>
                             <div>
-                                <h2 className="font-bold text-lg">{profile?.fullName}</h2>
+                                <h2 className="font-bold text-lg">{displayName}</h2>
                                 <p className="text-gray-500">{user?.email}</p>
                             </div>
                         </div>
 
                         {/* Navigation */}
-                        <nav className="space-y-2">
+                        <nav className="space-y-1">
                             <button
                                 onClick={() => setActiveTab('profile')}
-                                className={`flex items-center w-full p-3 rounded-md transition-colors ${activeTab === 'profile' ? 'bg-primary text-white' : 'hover:bg-gray-100'
-                                    }`}
+                                className={`flex items-center w-full px-4 py-2 rounded-md transition ${
+                                    activeTab === 'profile'
+                                        ? 'bg-primary text-white'
+                                        : 'hover:bg-gray-100'
+                                }`}
                             >
-                                <User className="h-5 w-5 mr-3" />
-                                Profile
+                                <User className="mr-3 h-5 w-5" />
+                                <span>Profile</span>
                             </button>
                             <button
                                 onClick={() => setActiveTab('orders')}
-                                className={`flex items-center w-full p-3 rounded-md transition-colors ${activeTab === 'orders' ? 'bg-primary text-white' : 'hover:bg-gray-100'
-                                    }`}
+                                className={`flex items-center w-full px-4 py-2 rounded-md transition ${
+                                    activeTab === 'orders'
+                                        ? 'bg-primary text-white'
+                                        : 'hover:bg-gray-100'
+                                }`}
                             >
-                                <Package className="h-5 w-5 mr-3" />
-                                Orders
+                                <Package className="mr-3 h-5 w-5" />
+                                <span>Orders</span>
                             </button>
                             <button
                                 onClick={() => setActiveTab('payment')}
-                                className={`flex items-center w-full p-3 rounded-md transition-colors ${activeTab === 'payment' ? 'bg-primary text-white' : 'hover:bg-gray-100'
-                                    }`}
+                                className={`flex items-center w-full px-4 py-2 rounded-md transition ${
+                                    activeTab === 'payment'
+                                        ? 'bg-primary text-white'
+                                        : 'hover:bg-gray-100'
+                                }`}
                             >
-                                <CreditCard className="h-5 w-5 mr-3" />
-                                Payment Methods
+                                <CreditCard className="mr-3 h-5 w-5" />
+                                <span>Payment Methods</span>
                             </button>
                             <button
                                 onClick={() => setActiveTab('wishlist')}
-                                className={`flex items-center w-full p-3 rounded-md transition-colors ${activeTab === 'wishlist' ? 'bg-primary text-white' : 'hover:bg-gray-100'
-                                    }`}
+                                className={`flex items-center w-full px-4 py-2 rounded-md transition ${
+                                    activeTab === 'wishlist'
+                                        ? 'bg-primary text-white'
+                                        : 'hover:bg-gray-100'
+                                }`}
                             >
-                                <Heart className="h-5 w-5 mr-3" />
-                                Wishlist
+                                <Heart className="mr-3 h-5 w-5" />
+                                <span>Wishlist</span>
                             </button>
                             <button
                                 onClick={handleSignOut}
-                                className="flex items-center w-full p-3 rounded-md text-red-500 hover:bg-red-50 transition-colors"
+                                className="flex items-center w-full px-4 py-2 text-red-500 rounded-md hover:bg-red-50 transition"
                             >
-                                <LogOut className="h-5 w-5 mr-3" />
-                                Sign Out
+                                <LogOut className="mr-3 h-5 w-5" />
+                                <span>Sign Out</span>
                             </button>
                         </nav>
                     </div>
                 </div>
 
-                {/* Content */}
+                {/* Content Area */}
                 <div className="w-full md:w-3/4">
                     <div className="bg-white rounded-lg shadow-md p-6">
                         {/* Profile Tab */}
@@ -163,7 +158,7 @@ export default function AccountPage() {
                                             <label className="block text-sm font-medium mb-1">Full Name</label>
                                             <input
                                                 type="text"
-                                                defaultValue={profile?.fullName}
+                                                defaultValue={userData?.profile?.full_name || ''}
                                                 className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                                             />
                                         </div>
@@ -171,7 +166,7 @@ export default function AccountPage() {
                                             <label className="block text-sm font-medium mb-1">Email Address</label>
                                             <input
                                                 type="email"
-                                                defaultValue={user?.email}
+                                                defaultValue={user?.email || ''}
                                                 className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                                                 disabled
                                             />
@@ -180,68 +175,40 @@ export default function AccountPage() {
                                             <label className="block text-sm font-medium mb-1">Phone Number</label>
                                             <input
                                                 type="tel"
-                                                defaultValue={profile?.phone}
+                                                defaultValue={userData?.profile?.phone_number || ''}
                                                 className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium mb-1">Address</label>
+                                            <label className="block text-sm font-medium mb-1">Date of Birth</label>
                                             <input
-                                                type="text"
-                                                defaultValue={profile?.address}
+                                                type="date"
+                                                defaultValue={userData?.profile?.date_of_birth ? new Date(userData.profile.date_of_birth).toISOString().split('T')[0] : ''}
                                                 className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                                             />
                                         </div>
                                     </div>
 
-                                    <div className="pt-4">
+                                    <div>
+                                        <label className="block text-sm font-medium mb-1">Default Address</label>
+                                        <textarea
+                                            defaultValue={defaultAddress ? 
+                                                `${defaultAddress.street_address}, ${defaultAddress.city}, ${defaultAddress.province || ''} ${defaultAddress.postal_code}, ${defaultAddress.country}` : 
+                                                ''}
+                                            rows={3}
+                                            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                                        ></textarea>
+                                    </div>
+
+                                    <div className="flex justify-end">
                                         <button
                                             type="submit"
-                                            className="px-6 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-colors"
+                                            className="px-6 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition"
                                         >
                                             Save Changes
                                         </button>
                                     </div>
                                 </form>
-
-                                <div className="mt-8 pt-8 border-t">
-                                    <h3 className="text-lg font-bold mb-4">Change Password</h3>
-                                    <form className="space-y-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium mb-1">Current Password</label>
-                                                <input
-                                                    type="password"
-                                                    className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                                                />
-                                            </div>
-                                            <div></div>
-                                            <div>
-                                                <label className="block text-sm font-medium mb-1">New Password</label>
-                                                <input
-                                                    type="password"
-                                                    className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium mb-1">Confirm New Password</label>
-                                                <input
-                                                    type="password"
-                                                    className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="pt-4">
-                                            <button
-                                                type="submit"
-                                                className="px-6 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-colors"
-                                            >
-                                                Update Password
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
                             </div>
                         )}
 
@@ -249,69 +216,95 @@ export default function AccountPage() {
                         {activeTab === 'orders' && (
                             <div>
                                 <h2 className="text-xl font-bold mb-6">Order History</h2>
-
-                                {orders.length > 0 ? (
-                                    <div className="space-y-4">
-                                        {orders.map((order) => (
-                                            <div key={order.id} className="border rounded-md p-4">
-                                                <div className="flex flex-col md:flex-row justify-between mb-4">
-                                                    <div>
-                                                        <p className="font-medium">Order #{order.id}</p>
-                                                        <p className="text-sm text-gray-500">Placed on {order.date}</p>
-                                                    </div>
-                                                    <div className="mt-2 md:mt-0">
-                                                        <span className={`inline-block px-3 py-1 rounded-full text-sm ${order.status === 'Delivered'
-                                                                ? 'bg-green-100 text-green-800'
-                                                                : 'bg-yellow-100 text-yellow-800'
-                                                            }`}>
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Order ID
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Date
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Status
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Total
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Actions
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white divide-y divide-gray-200">
+                                            {orders.map((order) => (
+                                                <tr key={order.id}>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="text-sm font-medium text-gray-900">
+                                                            {order.id}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="text-sm text-gray-500">
+                                                            {order.date}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <span
+                                                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                                                order.status === 'Delivered'
+                                                                    ? 'bg-green-100 text-green-800'
+                                                                    : 'bg-yellow-100 text-yellow-800'
+                                                            }`}
+                                                        >
                                                             {order.status}
                                                         </span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex justify-between items-center">
-                                                    <div>
-                                                        <p className="text-gray-500">{order.items} {order.items === 1 ? 'item' : 'items'}</p>
-                                                        <p className="font-medium">${order.total.toFixed(2)}</p>
-                                                    </div>
-                                                    <Link
-                                                        href={`/account/orders/${order.id}`}
-                                                        className="text-primary hover:underline"
-                                                    >
-                                                        View Details
-                                                    </Link>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-8">
-                                        <Package className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                                        <h3 className="text-lg font-medium mb-2">No orders yet</h3>
-                                        <p className="text-gray-500 mb-4">You haven't placed any orders yet.</p>
-                                        <Link
-                                            href="/products"
-                                            className="text-primary hover:underline"
-                                        >
-                                            Start Shopping
-                                        </Link>
-                                    </div>
-                                )}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        ${order.total.toFixed(2)}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                        <a
+                                                            href="#"
+                                                            className="text-primary hover:text-primary-dark"
+                                                        >
+                                                            View
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         )}
 
-                        {/* Payment Tab */}
+                        {/* Payment Methods Tab */}
                         {activeTab === 'payment' && (
                             <div>
                                 <h2 className="text-xl font-bold mb-6">Payment Methods</h2>
-                                <div className="text-center py-8">
-                                    <CreditCard className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                                    <h3 className="text-lg font-medium mb-2">No payment methods</h3>
-                                    <p className="text-gray-500 mb-4">You haven't added any payment methods yet.</p>
-                                    <button
-                                        className="px-6 py-2 bg-primary text-white rounded-md hover:bg-opacity-90 transition-colors"
-                                    >
-                                        Add Payment Method
+                                <div className="space-y-4">
+                                    <div className="border rounded-md p-4 flex items-center justify-between">
+                                        <div className="flex items-center">
+                                            <div className="bg-gray-100 p-3 rounded-md mr-4">
+                                                <CreditCard className="h-6 w-6 text-gray-600" />
+                                            </div>
+                                            <div>
+                                                <p className="font-medium">Visa ending in 4242</p>
+                                                <p className="text-sm text-gray-500">Expires 04/25</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center">
+                                            <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full mr-4">
+                                                Default
+                                            </span>
+                                            <button className="text-gray-500 hover:text-gray-700">Edit</button>
+                                        </div>
+                                    </div>
+
+                                    <button className="w-full py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-500 hover:text-gray-700 hover:border-gray-400 transition">
+                                        + Add Payment Method
                                     </button>
                                 </div>
                             </div>
@@ -321,16 +314,51 @@ export default function AccountPage() {
                         {activeTab === 'wishlist' && (
                             <div>
                                 <h2 className="text-xl font-bold mb-6">My Wishlist</h2>
-                                <div className="text-center py-8">
-                                    <Heart className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                                    <h3 className="text-lg font-medium mb-2">Your wishlist is empty</h3>
-                                    <p className="text-gray-500 mb-4">Save items you're interested in for later.</p>
-                                    <Link
-                                        href="/products"
-                                        className="text-primary hover:underline"
-                                    >
-                                        Browse Products
-                                    </Link>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="border rounded-md p-4 flex">
+                                        <div className="relative w-20 h-20 mr-4">
+                                            <Image
+                                                src="https://placehold.co/100x100"
+                                                alt="Product"
+                                                fill
+                                                className="object-cover rounded-md"
+                                            />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="font-medium">Wireless Earbuds</h3>
+                                            <p className="text-gray-500 text-sm">$79.99</p>
+                                            <div className="flex justify-between mt-2">
+                                                <button className="text-primary hover:text-primary-dark text-sm">
+                                                    Add to Cart
+                                                </button>
+                                                <button className="text-red-500 hover:text-red-700 text-sm">
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="border rounded-md p-4 flex">
+                                        <div className="relative w-20 h-20 mr-4">
+                                            <Image
+                                                src="https://placehold.co/100x100"
+                                                alt="Product"
+                                                fill
+                                                className="object-cover rounded-md"
+                                            />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="font-medium">Smart Watch</h3>
+                                            <p className="text-gray-500 text-sm">$149.99</p>
+                                            <div className="flex justify-between mt-2">
+                                                <button className="text-primary hover:text-primary-dark text-sm">
+                                                    Add to Cart
+                                                </button>
+                                                <button className="text-red-500 hover:text-red-700 text-sm">
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         )}
