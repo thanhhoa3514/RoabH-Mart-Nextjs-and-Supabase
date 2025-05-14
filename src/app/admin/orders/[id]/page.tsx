@@ -15,11 +15,14 @@ import {
     Truck,
     Check,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    Loader2,
+    X
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useAlert } from '@/lib/context/alert-context';
+import { getOrderById, updateOrderStatus } from '@/lib/supabase';
 
 // Status badge component
 const StatusBadge = ({ status }: { status: string }) => {
@@ -48,114 +51,143 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 export default function OrderDetailPage() {
-    const { id } = useParams();
+    const params = useParams();
+    const orderId = typeof params.id === 'string' ? parseInt(params.id, 10) : 0;
     const router = useRouter();
     const { showAlert } = useAlert();
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
     const [isNoteExpanded, setIsNoteExpanded] = useState(false);
     const [orderNote, setOrderNote] = useState('');
 
-    // Mock order data - in a real app, this would come from an API
-    const [order, setOrder] = useState({
-        id: id as string,
-        orderNumber: 'ORD-2023-1001',
-        customer: {
-            name: 'John Doe',
-            email: 'john.doe@example.com',
-            phone: '+1 (555) 123-4567',
-            address: {
-                street: '123 Main Street',
-                city: 'New York',
-                state: 'NY',
-                zipCode: '10001',
-                country: 'United States'
-            }
-        },
-        date: '2023-11-28',
-        time: '14:35',
-        status: 'Processing',
-        paymentMethod: 'Credit Card',
-        paymentDetails: {
-            cardType: 'Visa',
-            cardNumber: '**** **** **** 4242',
-            transactionId: 'TXN-123456789'
-        },
-        shippingMethod: 'Express Delivery',
-        trackingNumber: 'TRK-987654321',
-        items: [
-            {
-                id: 1,
-                name: 'Premium Laptop Pro',
-                sku: 'ELEC-LP-1001',
-                price: '$1,199.00',
-                quantity: 1,
-                total: '$1,199.00',
-                image: '/laptop.jpg'
-            },
-            {
-                id: 2,
-                name: 'Wireless Headphones',
-                sku: 'ELEC-WH-2002',
-                price: '$79.99',
-                quantity: 1,
-                total: '$79.99',
-                image: '/headphones.jpg'
-            },
-            {
-                id: 3,
-                name: 'USB-C Charging Cable',
-                sku: 'ELEC-CC-3003',
-                price: '$19.99',
-                quantity: 1,
-                total: '$19.99',
-                image: '/cable.jpg'
-            }
-        ],
-        subtotal: '$1,298.98',
-        shipping: '$0.00',
-        tax: '$129.90',
-        discount: '$129.88',
-        total: '$1,299.00',
-        notes: 'Customer requested gift wrapping for the headphones. Please include a gift message.',
-        history: [
-            { date: '2023-11-28', time: '14:35', status: 'Order Placed', description: 'Order was placed by customer' },
-            { date: '2023-11-28', time: '14:40', status: 'Payment Confirmed', description: 'Payment was successfully processed' },
-            { date: '2023-11-28', time: '15:20', status: 'Processing', description: 'Order is being prepared for shipping' }
-        ]
-    });
+    // State for order data
+    const [orderData, setOrderData] = useState<any>(null);
 
+    // Fetch order data from Supabase
     useEffect(() => {
-        // Simulate API call
-        const timer = setTimeout(() => {
-            setIsLoading(false);
-        }, 800);
-
-        return () => clearTimeout(timer);
-    }, []);
-
-    const handleStatusChange = (newStatus: string) => {
-        setOrder(prev => ({ ...prev, status: newStatus }));
-        setIsStatusDropdownOpen(false);
-        showAlert('success', `Order status updated to ${newStatus}`, 2000);
-
-        // In a real app, you would make an API call to update the status
-        const now = new Date();
-        const date = now.toISOString().split('T')[0];
-        const time = now.toTimeString().split(' ')[0].substring(0, 5);
-
-        // Add to history
-        const updatedHistory = [
-            ...order.history,
-            {
-                date,
-                time,
-                status: newStatus,
-                description: `Order status changed to ${newStatus}`
+        const fetchOrder = async () => {
+            try {
+                setIsLoading(true);
+                const { data, error } = await getOrderById(orderId);
+                
+                if (error) {
+                    throw new Error(error.message);
+                }
+                
+                if (data) {
+                    // Format the order data for display
+                    const orderDate = new Date(data.order.order_date);
+                    const formattedDate = orderDate.toISOString().split('T')[0];
+                    const formattedTime = orderDate.toTimeString().split(' ')[0].substring(0, 5);
+                    
+                    // Transform order items
+                    const items = data.orderItems ? data.orderItems.map((item: any) => ({
+                        id: item.order_item_id,
+                        name: item.products?.name || `Product #${item.product_id}`,
+                        sku: `SKU-${item.product_id}`,
+                        price: `$${item.unit_price.toFixed(2)}`,
+                        quantity: item.quantity,
+                        total: `$${item.subtotal.toFixed(2)}`,
+                        image: item.products?.image || '/placeholder.jpg'
+                    })) : [];
+                    
+                    // Create formatted order object
+                    const formattedOrder = {
+                        id: data.order.order_id,
+                        orderNumber: data.order.order_number,
+                        customer: {
+                            name: data.user?.username || `User #${data.order.user_id}`,
+                            email: data.user?.email || 'customer@example.com',
+                            phone: '+1 (555) 123-4567', // Placeholder
+                            address: {
+                                street: '123 Main Street', // Placeholder
+                                city: 'New York',
+                                state: 'NY',
+                                zipCode: '10001',
+                                country: 'United States'
+                            }
+                        },
+                        date: formattedDate,
+                        time: formattedTime,
+                        status: data.order.status.charAt(0).toUpperCase() + data.order.status.slice(1),
+                        paymentMethod: data.payment?.payment_method || 'Credit Card',
+                        paymentDetails: {
+                            cardType: 'Visa', // Placeholder
+                            cardNumber: '**** **** **** 4242', // Placeholder
+                            transactionId: data.payment?.transaction_id || 'TXN-123456789'
+                        },
+                        shippingMethod: data.shipping?.shipping_method || 'Standard Shipping',
+                        trackingNumber: data.shipping?.tracking_number || 'N/A',
+                        items: items,
+                        subtotal: `$${data.order.total_amount.toFixed(2)}`,
+                        shipping: data.shipping ? `$${data.shipping.shipping_cost.toFixed(2)}` : '$0.00',
+                        tax: '$0.00', // Placeholder
+                        discount: '$0.00', // Placeholder
+                        total: `$${data.order.total_amount.toFixed(2)}`,
+                        notes: '',
+                        history: [
+                            { 
+                                date: formattedDate, 
+                                time: formattedTime, 
+                                status: 'Order Placed', 
+                                description: 'Order was placed by customer' 
+                            }
+                        ]
+                    };
+                    
+                    setOrderData(formattedOrder);
+                }
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to load order');
+                showAlert('error', 'Failed to load order details', 5000);
+            } finally {
+                setIsLoading(false);
             }
-        ];
+        };
+        
+        fetchOrder();
+    }, [orderId, showAlert]);
 
-        setOrder(prev => ({ ...prev, history: updatedHistory }));
+    const handleStatusChange = async (newStatus: string) => {
+        try {
+            setIsStatusDropdownOpen(false);
+            
+            // Update status in Supabase
+            const { error } = await updateOrderStatus(orderId, newStatus.toLowerCase());
+            
+            if (error) {
+                throw new Error(error.message);
+            }
+            
+            // Update local state
+            if (orderData) {
+                const now = new Date();
+                const date = now.toISOString().split('T')[0];
+                const time = now.toTimeString().split(' ')[0].substring(0, 5);
+                
+                // Add to history
+                const updatedHistory = [
+                    ...orderData.history,
+                    {
+                        date,
+                        time,
+                        status: newStatus,
+                        description: `Order status changed to ${newStatus}`
+                    }
+                ];
+                
+                setOrderData({
+                    ...orderData,
+                    status: newStatus,
+                    history: updatedHistory
+                });
+                
+                showAlert('success', `Order status updated to ${newStatus}`, 2000);
+            }
+        } catch (err) {
+            showAlert('error', err instanceof Error ? err.message : 'Failed to update order status', 5000);
+        }
     };
 
     const handleSendInvoice = () => {
@@ -165,10 +197,17 @@ export default function OrderDetailPage() {
     const handlePrintInvoice = () => {
         showAlert('info', 'Preparing invoice for printing...', 2000);
         // In a real app, this would trigger the print dialog
+        window.print();
     };
 
     const handleAddNote = () => {
         if (orderNote.trim()) {
+            // In a real app, you would save this note to the database
+            setOrderData({
+                ...orderData,
+                notes: orderNote
+            });
+            
             showAlert('success', 'Note added to order', 2000);
             setOrderNote('');
             setIsNoteExpanded(false);
@@ -178,11 +217,31 @@ export default function OrderDetailPage() {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-screen">
-                <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    className="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full"
-                />
+                <Loader2 className="h-12 w-12 text-amber-500 animate-spin" />
+            </div>
+        );
+    }
+
+    if (error || !orderData) {
+        return (
+            <div className="p-6">
+                <div className="mb-6">
+                    <Link href="/admin/orders" className="text-gray-500 hover:text-amber-500 flex items-center">
+                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        Back to Orders
+                    </Link>
+                </div>
+                
+                <div className="bg-white rounded-lg shadow-md p-8 text-center">
+                    <h2 className="text-xl font-medium text-gray-900 mb-2">Order not found</h2>
+                    <p className="text-gray-500 mb-6">The order you're looking for doesn't exist or has been removed.</p>
+                    <button 
+                        onClick={() => router.push('/admin/orders')}
+                        className="px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600"
+                    >
+                        Return to Orders
+                    </button>
+                </div>
             </div>
         );
     }
@@ -198,10 +257,10 @@ export default function OrderDetailPage() {
 
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold">Order #{order.orderNumber}</h1>
+                    <h1 className="text-2xl font-bold">Order #{orderData.orderNumber}</h1>
                     <div className="flex items-center mt-1">
                         <Calendar className="h-4 w-4 text-gray-400 mr-1" />
-                        <span className="text-sm text-gray-500">{order.date} at {order.time}</span>
+                        <span className="text-sm text-gray-500">{orderData.date} at {orderData.time}</span>
                     </div>
                 </div>
 
@@ -212,7 +271,7 @@ export default function OrderDetailPage() {
                             onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
                         >
                             <span className="mr-2">Status:</span>
-                            <StatusBadge status={order.status} />
+                            <StatusBadge status={orderData.status} />
                             {isStatusDropdownOpen ? (
                                 <ChevronUp className="ml-2 h-4 w-4" />
                             ) : (
@@ -226,13 +285,13 @@ export default function OrderDetailPage() {
                                     {['Pending', 'Processing', 'Shipped', 'Completed', 'Cancelled'].map((status) => (
                                         <button
                                             key={status}
-                                            className={`block w-full text-left px-4 py-2 text-sm ${order.status === status ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
+                                            className={`block w-full text-left px-4 py-2 text-sm ${orderData.status === status ? 'bg-gray-100 text-gray-900' : 'text-gray-700'
                                                 } hover:bg-gray-100`}
                                             onClick={() => handleStatusChange(status)}
                                         >
                                             <div className="flex items-center">
                                                 <StatusBadge status={status} />
-                                                {order.status === status && (
+                                                {orderData.status === status && (
                                                     <Check className="ml-auto h-4 w-4 text-green-500" />
                                                 )}
                                             </div>
@@ -262,183 +321,205 @@ export default function OrderDetailPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Customer Information */}
-                <div className="bg-white rounded-lg shadow-md p-6">
-                    <h2 className="text-lg font-semibold mb-4">Customer Information</h2>
-
-                    <div className="space-y-4">
-                        <div className="flex">
-                            <User className="h-5 w-5 text-gray-400 mr-3" />
-                            <div>
-                                <p className="font-medium">{order.customer.name}</p>
-                                <p className="text-sm text-gray-500">{order.customer.email}</p>
-                            </div>
-                        </div>
-
-                        <div className="flex">
-                            <Phone className="h-5 w-5 text-gray-400 mr-3" />
-                            <p>{order.customer.phone}</p>
-                        </div>
-
-                        <div className="flex">
-                            <MapPin className="h-5 w-5 text-gray-400 mr-3 flex-shrink-0" />
-                            <div>
-                                <p>{order.customer.address.street}</p>
-                                <p>{order.customer.address.city}, {order.customer.address.state} {order.customer.address.zipCode}</p>
-                                <p>{order.customer.address.country}</p>
+                {/* Order Details */}
+                <div className="lg:col-span-2">
+                    <div className="bg-white rounded-lg shadow-md overflow-hidden">
+                        <div className="p-6">
+                            <h2 className="text-lg font-medium mb-4">Order Items</h2>
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full">
+                                    <thead>
+                                        <tr className="bg-gray-50">
+                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Qty</th>
+                                            <th className="py-3 px-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                        {orderData.items.map((item: any) => (
+                                            <tr key={item.id}>
+                                                <td className="py-4 px-4">
+                                                    <div className="flex items-center">
+                                                        <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-md overflow-hidden">
+                                                            <img
+                                                                src={item.image}
+                                                                alt={item.name}
+                                                                className="h-full w-full object-cover"
+                                                                onError={(e) => {
+                                                                    (e.target as HTMLImageElement).src = 'https://placekitten.com/100/100';
+                                                                }}
+                                                            />
+                                                        </div>
+                                                        <div className="ml-4">
+                                                            <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="py-4 px-4 text-sm text-gray-500">{item.sku}</td>
+                                                <td className="py-4 px-4 text-sm text-gray-500">{item.price}</td>
+                                                <td className="py-4 px-4 text-sm text-gray-500">{item.quantity}</td>
+                                                <td className="py-4 px-4 text-sm text-gray-900 text-right">{item.total}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot className="bg-gray-50">
+                                        <tr>
+                                            <td colSpan={4} className="py-3 px-4 text-right text-sm font-medium text-gray-500">Subtotal</td>
+                                            <td className="py-3 px-4 text-right text-sm font-medium text-gray-900">{orderData.subtotal}</td>
+                                        </tr>
+                                        <tr>
+                                            <td colSpan={4} className="py-3 px-4 text-right text-sm font-medium text-gray-500">Shipping</td>
+                                            <td className="py-3 px-4 text-right text-sm font-medium text-gray-900">{orderData.shipping}</td>
+                                        </tr>
+                                        <tr>
+                                            <td colSpan={4} className="py-3 px-4 text-right text-sm font-medium text-gray-500">Tax</td>
+                                            <td className="py-3 px-4 text-right text-sm font-medium text-gray-900">{orderData.tax}</td>
+                                        </tr>
+                                        {parseFloat(orderData.discount.replace('$', '')) > 0 && (
+                                            <tr>
+                                                <td colSpan={4} className="py-3 px-4 text-right text-sm font-medium text-gray-500">Discount</td>
+                                                <td className="py-3 px-4 text-right text-sm font-medium text-red-600">-{orderData.discount}</td>
+                                            </tr>
+                                        )}
+                                        <tr>
+                                            <td colSpan={4} className="py-3 px-4 text-right text-sm font-medium text-gray-900">Total</td>
+                                            <td className="py-3 px-4 text-right text-lg font-bold text-gray-900">{orderData.total}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
                             </div>
                         </div>
                     </div>
 
-                    <div className="mt-6 pt-4 border-t">
-                        <h3 className="text-sm font-medium mb-2">Shipping Method</h3>
-                        <div className="flex items-center">
-                            <Truck className="h-5 w-5 text-gray-400 mr-2" />
-                            <span>{order.shippingMethod}</span>
-                        </div>
-                        {order.trackingNumber && (
-                            <div className="mt-2">
-                                <p className="text-sm text-gray-500">Tracking Number:</p>
-                                <p className="font-medium">{order.trackingNumber}</p>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="mt-6 pt-4 border-t">
-                        <h3 className="text-sm font-medium mb-2">Payment Information</h3>
-                        <div className="flex items-center">
-                            <CreditCard className="h-5 w-5 text-gray-400 mr-2" />
-                            <span>{order.paymentMethod}</span>
-                        </div>
-                        <div className="mt-2">
-                            <p className="text-sm text-gray-500">{order.paymentDetails.cardType}</p>
-                            <p className="font-medium">{order.paymentDetails.cardNumber}</p>
-                            <p className="text-sm text-gray-500 mt-1">Transaction ID: {order.paymentDetails.transactionId}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Order Items */}
-                <div className="bg-white rounded-lg shadow-md p-6 lg:col-span-2">
-                    <h2 className="text-lg font-semibold mb-4">Order Items</h2>
-
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full">
-                            <thead>
-                                <tr className="border-b">
-                                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                                    <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {order.items.map((item) => (
-                                    <tr key={item.id} className="border-b">
-                                        <td className="py-4 px-4">
-                                            <div className="flex items-center">
-                                                <div className="h-10 w-10 bg-gray-200 rounded-md flex items-center justify-center mr-3">
-                                                    <Package className="h-6 w-6 text-gray-400" />
-                                                </div>
-                                                <span className="font-medium">{item.name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="py-4 px-4 text-sm text-gray-500">{item.sku}</td>
-                                        <td className="py-4 px-4">{item.price}</td>
-                                        <td className="py-4 px-4">{item.quantity}</td>
-                                        <td className="py-4 px-4 font-medium">{item.total}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div className="mt-6 border-t pt-4">
-                        <div className="flex justify-between py-2">
-                            <span className="text-gray-600">Subtotal</span>
-                            <span>{order.subtotal}</span>
-                        </div>
-                        <div className="flex justify-between py-2">
-                            <span className="text-gray-600">Shipping</span>
-                            <span>{order.shipping}</span>
-                        </div>
-                        <div className="flex justify-between py-2">
-                            <span className="text-gray-600">Tax</span>
-                            <span>{order.tax}</span>
-                        </div>
-                        {parseFloat(order.discount.replace('$', '')) > 0 && (
-                            <div className="flex justify-between py-2">
-                                <span className="text-gray-600">Discount</span>
-                                <span className="text-green-600">-{order.discount}</span>
-                            </div>
-                        )}
-                        <div className="flex justify-between py-3 border-t mt-2">
-                            <span className="font-bold">Total</span>
-                            <span className="font-bold text-lg">{order.total}</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Order Notes and History */}
-                <div className="bg-white rounded-lg shadow-md p-6 lg:col-span-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <div className="flex justify-between items-center mb-4">
-                                <h2 className="text-lg font-semibold">Order Notes</h2>
-                                <button
-                                    className="text-amber-500 text-sm hover:text-amber-600"
-                                    onClick={() => setIsNoteExpanded(!isNoteExpanded)}
-                                >
-                                    {isNoteExpanded ? 'Cancel' : 'Add Note'}
-                                </button>
-                            </div>
-
-                            {isNoteExpanded ? (
-                                <div className="space-y-3">
-                                    <textarea
-                                        className="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-300"
-                                        rows={3}
-                                        placeholder="Add a note to this order..."
-                                        value={orderNote}
-                                        onChange={(e) => setOrderNote(e.target.value)}
-                                    ></textarea>
-                                    <button
-                                        className="bg-amber-500 text-white px-4 py-2 rounded-md text-sm hover:bg-amber-600"
-                                        onClick={handleAddNote}
-                                    >
-                                        Add Note
-                                    </button>
+                    <div className="bg-white rounded-lg shadow-md mt-6 p-6">
+                        <h2 className="text-lg font-medium mb-4">Order Timeline</h2>
+                        <div className="space-y-6">
+                            {orderData.history.map((event: any, index: number) => (
+                                <div key={index} className="flex">
+                                    <div className="flex flex-col items-center mr-4">
+                                        <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
+                                            {event.status === 'Order Placed' && <Package className="h-5 w-5 text-amber-500" />}
+                                            {event.status === 'Payment Confirmed' && <CreditCard className="h-5 w-5 text-amber-500" />}
+                                            {event.status === 'Processing' && <Package className="h-5 w-5 text-amber-500" />}
+                                            {event.status === 'Shipped' && <Truck className="h-5 w-5 text-amber-500" />}
+                                            {event.status === 'Completed' && <Check className="h-5 w-5 text-amber-500" />}
+                                            {event.status === 'Cancelled' && <X className="h-5 w-5 text-amber-500" />}
+                                        </div>
+                                        {index < orderData.history.length - 1 && (
+                                            <div className="w-0.5 bg-gray-200 h-full mt-2"></div>
+                                        )}
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-md font-medium text-gray-900">{event.status}</h3>
+                                        <p className="text-sm text-gray-500">{event.description}</p>
+                                        <p className="text-xs text-gray-400 mt-1">{event.date} at {event.time}</p>
+                                    </div>
                                 </div>
-                            ) : (
-                                <div className="bg-gray-50 p-4 rounded-md">
-                                    {order.notes ? (
-                                        <p className="text-sm">{order.notes}</p>
-                                    ) : (
-                                        <p className="text-sm text-gray-500 italic">No notes for this order</p>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Customer Info Sidebar */}
+                <div>
+                    <div className="bg-white rounded-lg shadow-md p-6">
+                        <h2 className="text-lg font-medium mb-4">Customer Information</h2>
+                        <div className="space-y-4">
+                            <div className="flex items-start">
+                                <User className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+                                <div>
+                                    <h3 className="text-sm font-medium text-gray-900">{orderData.customer.name}</h3>
+                                    <p className="text-sm text-gray-500">{orderData.customer.email}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start">
+                                <Phone className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+                                <div>
+                                    <h3 className="text-sm font-medium text-gray-900">Phone</h3>
+                                    <p className="text-sm text-gray-500">{orderData.customer.phone}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start">
+                                <MapPin className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+                                <div>
+                                    <h3 className="text-sm font-medium text-gray-900">Shipping Address</h3>
+                                    <p className="text-sm text-gray-500">
+                                        {orderData.customer.address.street}<br />
+                                        {orderData.customer.address.city}, {orderData.customer.address.state} {orderData.customer.address.zipCode}<br />
+                                        {orderData.customer.address.country}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+                        <h2 className="text-lg font-medium mb-4">Payment & Shipping</h2>
+                        <div className="space-y-4">
+                            <div className="flex items-start">
+                                <CreditCard className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+                                <div>
+                                    <h3 className="text-sm font-medium text-gray-900">Payment Method</h3>
+                                    <p className="text-sm text-gray-500">{orderData.paymentMethod}</p>
+                                    {orderData.paymentDetails.cardNumber && (
+                                        <p className="text-sm text-gray-500">{orderData.paymentDetails.cardNumber}</p>
+                                    )}
+                                    {orderData.paymentDetails.transactionId && (
+                                        <p className="text-xs text-gray-400 mt-1">Transaction ID: {orderData.paymentDetails.transactionId}</p>
                                     )}
                                 </div>
-                            )}
-                        </div>
-
-                        <div>
-                            <h2 className="text-lg font-semibold mb-4">Order History</h2>
-                            <div className="space-y-4">
-                                {order.history.map((event, index) => (
-                                    <div key={index} className="relative pl-6 pb-4">
-                                        {index < order.history.length - 1 && (
-                                            <div className="absolute left-2 top-2 h-full w-0.5 bg-gray-200"></div>
-                                        )}
-                                        <div className="absolute left-0 top-2 h-4 w-4 rounded-full bg-amber-500"></div>
-                                        <div>
-                                            <p className="font-medium">{event.status}</p>
-                                            <p className="text-sm text-gray-500">{event.description}</p>
-                                            <p className="text-xs text-gray-400 mt-1">{event.date} at {event.time}</p>
-                                        </div>
-                                    </div>
-                                ))}
+                            </div>
+                            <div className="flex items-start">
+                                <Truck className="h-5 w-5 text-gray-400 mr-3 mt-0.5" />
+                                <div>
+                                    <h3 className="text-sm font-medium text-gray-900">Shipping Method</h3>
+                                    <p className="text-sm text-gray-500">{orderData.shippingMethod}</p>
+                                    {orderData.trackingNumber && orderData.trackingNumber !== 'N/A' && (
+                                        <p className="text-xs text-gray-400 mt-1">Tracking: {orderData.trackingNumber}</p>
+                                    )}
+                                </div>
                             </div>
                         </div>
+                    </div>
+
+                    <div className="bg-white rounded-lg shadow-md p-6 mt-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-lg font-medium">Notes</h2>
+                            <button
+                                className="text-amber-500 hover:text-amber-600 text-sm font-medium"
+                                onClick={() => setIsNoteExpanded(!isNoteExpanded)}
+                            >
+                                {isNoteExpanded ? 'Cancel' : 'Add Note'}
+                            </button>
+                        </div>
+
+                        {isNoteExpanded ? (
+                            <div>
+                                <textarea
+                                    className="w-full border border-gray-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                                    rows={4}
+                                    placeholder="Add a note about this order..."
+                                    value={orderNote}
+                                    onChange={(e) => setOrderNote(e.target.value)}
+                                ></textarea>
+                                <button
+                                    className="mt-2 bg-amber-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-amber-600"
+                                    onClick={handleAddNote}
+                                >
+                                    Save Note
+                                </button>
+                            </div>
+                        ) : (
+                            <div>
+                                {orderData.notes ? (
+                                    <p className="text-sm text-gray-500">{orderData.notes}</p>
+                                ) : (
+                                    <p className="text-sm text-gray-400 italic">No notes for this order</p>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
