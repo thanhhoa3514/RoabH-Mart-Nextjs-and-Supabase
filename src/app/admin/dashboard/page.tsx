@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Search, Bell, Users, ThumbsUp, ThumbsDown, ShoppingCart, HelpCircle } from 'lucide-react';
+import { Search, Bell, Users, ThumbsUp, ShoppingCart, Package, HelpCircle, Loader2 } from 'lucide-react';
 import { useAlert } from '@/lib/context/alert-context';
+import { getDashboardStats, getTopProducts, getReviewStats, getQuarterlySales } from '@/lib/supabase';
 
 // Animation variants
 const cardVariants = {
@@ -36,40 +37,108 @@ const tableRowVariants = {
 export default function AdminDashboard() {
     const { showAlert } = useAlert();
     const [searchQuery, setSearchQuery] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Mock data
-    const stats = [
-        { id: 1, icon: <Users className="h-6 w-6 text-white" />, count: '3000+', label: 'Users Active', change: '+55%', bgColor: 'bg-amber-400' },
-        { id: 2, icon: <ThumbsUp className="h-6 w-6 text-white" />, count: '940', label: 'Likes', change: '+90%', bgColor: 'bg-gray-800' },
-        { id: 3, icon: <ShoppingCart className="h-6 w-6 text-white" />, count: '1024', label: 'Purchases', change: '10%', bgColor: 'bg-gray-800' },
-        { id: 4, icon: <ThumbsDown className="h-6 w-6 text-white" />, count: '19', label: 'Dislike', change: '12%', bgColor: 'bg-gray-800' },
-    ];
+    // State for dashboard data
+    const [stats, setStats] = useState<any[]>([]);
+    const [products, setProducts] = useState<any[]>([]);
+    const [reviewData, setReviewData] = useState({ positive: 0, neutral: 0, negative: 0 });
+    const [quarterlyData, setQuarterlyData] = useState<any[]>([]);
 
-    const products = [
-        { id: 1, name: 'Product 1', category: 'Category 1', price: '$14,000', status: true },
-        { id: 2, name: 'Product 1', category: 'Category 1', price: '$14,000', status: true },
-        { id: 3, name: 'Product 1', category: 'Category 1', price: '$14,000', status: true },
-        { id: 4, name: 'Product 1', category: 'Category 1', price: '$14,000', status: true },
-        { id: 5, name: 'Product 1', category: 'Category 1', price: '$14,000', status: true },
-        { id: 6, name: 'Product 1', category: 'Category 1', price: '$14,000', status: true },
-    ];
-
-    const reviewData = {
-        positive: 75,
-        neutral: 20,
-        negative: 5
-    };
-
-    const quarterlyData = [
-        { quarter: 'Quarter 1', target: 80, reality: 60 },
-        { quarter: 'Quarter 2', target: 65, reality: 85 },
-        { quarter: 'Quarter 3', target: 75, reality: 95 },
-        { quarter: 'Quarter 4', target: 90, reality: 85 },
-    ];
+    // Fetch dashboard data
+    useEffect(() => {
+        async function fetchDashboardData() {
+            setLoading(true);
+            setError(null);
+            
+            try {
+                // Fetch dashboard statistics
+                const { data: statsData, error: statsError } = await getDashboardStats();
+                
+                if (statsError) throw statsError;
+                
+                if (statsData) {
+                    // Format stats for display
+                    const formattedStats = [
+                        { 
+                            id: 1, 
+                            icon: <Users className="h-6 w-6 text-white" />, 
+                            count: statsData.activeUsers.toString(), 
+                            label: 'Users Active', 
+                            change: statsData.userGrowthRate, 
+                            bgColor: 'bg-amber-400' 
+                        },
+                        { 
+                            id: 2, 
+                            icon: <ShoppingCart className="h-6 w-6 text-white" />, 
+                            count: statsData.totalOrders.toString(), 
+                            label: 'Orders', 
+                            change: statsData.orderGrowth, 
+                            bgColor: 'bg-gray-800' 
+                        },
+                        { 
+                            id: 3, 
+                            icon: <Package className="h-6 w-6 text-white" />, 
+                            count: statsData.totalProducts.toString(), 
+                            label: 'Products', 
+                            change: statsData.productGrowth, 
+                            bgColor: 'bg-gray-800' 
+                        },
+                        { 
+                            id: 4, 
+                            icon: <ThumbsUp className="h-6 w-6 text-white" />, 
+                            count: statsData.totalUsers.toString(), 
+                            label: 'Total Users', 
+                            change: statsData.userGrowthRate, 
+                            bgColor: 'bg-gray-800' 
+                        },
+                    ];
+                    setStats(formattedStats);
+                }
+                
+                // Fetch top products
+                const { data: productsData, error: productsError } = await getTopProducts();
+                
+                if (productsError) throw productsError;
+                setProducts(productsData || []);
+                
+                // Fetch review stats
+                const { data: reviewsData, error: reviewsError } = await getReviewStats();
+                
+                if (reviewsError) throw reviewsError;
+                setReviewData(reviewsData || { positive: 75, neutral: 20, negative: 5 });
+                
+                // Fetch quarterly sales data
+                const { data: salesData, error: salesError } = await getQuarterlySales();
+                
+                if (salesError) throw salesError;
+                setQuarterlyData(salesData || []);
+                
+            } catch (err) {
+                console.error('Dashboard data fetch error:', err);
+                setError('Failed to load dashboard data');
+                showAlert('error', 'Failed to load dashboard data', 3000);
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        fetchDashboardData();
+    }, [showAlert]);
 
     const handleNotificationClick = () => {
         showAlert('info', 'You have 3 new notifications', 3000);
     };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 p-4 flex flex-col items-center justify-center">
+                <Loader2 className="h-10 w-10 text-amber-500 animate-spin mb-4" />
+                <p className="text-gray-500">Loading dashboard data...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 p-4">
@@ -122,6 +191,20 @@ export default function AdminDashboard() {
                 <h1 className="text-xl font-semibold text-amber-500">Dashboard</h1>
             </div>
 
+            {/* Error display */}
+            {error && (
+                <div className="bg-red-50 text-red-600 p-4 rounded-md mb-6">
+                    <p className="font-medium">Error</p>
+                    <p className="text-sm">{error}</p>
+                    <button 
+                        className="mt-2 text-sm bg-red-100 px-3 py-1 rounded-md hover:bg-red-200"
+                        onClick={() => window.location.reload()}
+                    >
+                        Try Again
+                    </button>
+                </div>
+            )}
+
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 {stats.map((stat, index) => (
@@ -156,6 +239,11 @@ export default function AdminDashboard() {
                 >
                     <h2 className="text-lg font-semibold mb-4">Top Products</h2>
 
+                    {products.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                            No products found.
+                        </div>
+                    ) : (
                     <div className="overflow-x-auto">
                         <table className="min-w-full">
                             <thead>
@@ -199,6 +287,7 @@ export default function AdminDashboard() {
                             </tbody>
                         </table>
                     </div>
+                    )}
                 </motion.div>
 
                 {/* Reviews Section - Takes 1/3 width on large screens */}
@@ -255,9 +344,8 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="mt-6 text-center text-sm text-gray-600">
-                        <p>More than 1,500,000 developers</p>
-                        <p>used Creative Time products and</p>
-                        <p>over 700,000 projects were created.</p>
+                        <p>Customer reviews summary</p>
+                        <p>based on user feedback</p>
                     </div>
 
                     <button className="mt-4 w-full py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors">
@@ -280,6 +368,11 @@ export default function AdminDashboard() {
                     </button>
                 </div>
 
+                {quarterlyData.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                        No quarterly data available.
+                    </div>
+                ) : (
                 <div className="flex justify-between h-64">
                     {quarterlyData.map((data, index) => (
                         <div key={index} className="flex flex-col items-center justify-end h-full w-1/4">
@@ -301,6 +394,7 @@ export default function AdminDashboard() {
                         </div>
                     ))}
                 </div>
+                )}
 
                 <div className="mt-6 flex justify-around">
                     <div className="flex items-center">
