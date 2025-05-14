@@ -4,16 +4,28 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ShoppingCart } from 'lucide-react';
 import { Product } from '@/types';
+import { useState } from 'react';
 
 interface ProductCardProps {
     product: Product;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
+    const [imageError, setImageError] = useState(false);
+    
     const handleAddToCart = () => {
         // This would be replaced with actual cart functionality
         console.log(`Added ${product.name} to cart`);
         // In a real implementation, this would dispatch an action to add to cart
+    };
+
+    // Determine the image source with fallbacks
+    const getImageSrc = () => {
+        // If image error occurred or no images available, use placeholder
+        if (imageError || !product.images || product.images.length === 0) {
+            return 'https://placekitten.com/300/300'; // Fallback image
+        }
+        return product.images[0];
     };
 
     return (
@@ -21,10 +33,12 @@ export default function ProductCard({ product }: ProductCardProps) {
             <Link href={`/products/${product.id}`}>
                 <div className="relative h-64">
                     <Image
-                        src={product.images[0] || 'https://placekitten.com/300/300'} // Fallback image
+                        src={getImageSrc()}
                         alt={product.name}
                         fill
                         className="object-cover"
+                        onError={() => setImageError(true)}
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
                 </div>
             </Link>
