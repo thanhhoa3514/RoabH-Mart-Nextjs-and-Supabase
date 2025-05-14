@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { signIn } from '@/lib/supabase';
 import { Lock, Mail } from 'lucide-react';
 import Cookies from 'js-cookie';
 import { useAlert } from '@/lib/context/alert-context';
+import { useAuth } from '@/lib/auth/AuthContext';
 
 export default function LoginPage() {
     const router = useRouter();
+    const { signIn } = useAuth();
     const { showAlert } = useAlert();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -32,7 +33,7 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
-            const { data, error } = await signIn(email, password);
+            const { error } = await signIn(email, password);
             
             if (error) {
                 throw error;
