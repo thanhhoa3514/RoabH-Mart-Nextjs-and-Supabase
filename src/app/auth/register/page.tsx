@@ -3,11 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { signUp } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth/AuthContext';
 import { Lock, Mail, User } from 'lucide-react';
+import { useAlert } from '@/lib/context/alert-context';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { showAlert } = useAlert();
+  const { signUp } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,6 +23,8 @@ export default function RegisterPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    
+    console.log('Starting registration process...');
 
     // Validate password match
     if (password !== confirmPassword) {
@@ -29,22 +34,68 @@ export default function RegisterPage() {
     }
 
     try {
-      const { data, error } = await signUp(email, password);
+      console.log('Calling signUp with email:', email);
       
-      if (error) {
-        throw error;
+      // 1. Register with Supabase Auth
+      const { data, error: authError } = await signUp(email, password);
+
+      if (authError) {
+        console.error('Auth error during registration:', authError);
+        throw authError;
       }
 
-      // Successfully registered
+      console.log('Registration successful. User data:', data?.user?.email);
+      console.log('User confirmed:', data?.user?.email_confirmed_at ? 'Yes' : 'No');
+      console.log('User ID:', data?.user?.id);
+
+      // Create user record in our database immediately, regardless of verification status
+      if (data?.user?.email) {
+        try {
+          // Import registerUser function để sử dụng
+          const { registerUser } = await import('@/lib/supabase');
+          
+          console.log('Creating user record in database:', data.user.email);
+          
+          // Tạo người dùng trong database với đầy đủ thông tin
+          const { success, error } = await registerUser({
+            email: data.user.email,
+            username: data.user.email.split('@')[0],
+            fullName: fullName // Giữ lại fullName để tạo profile
+          });
+
+          if (error) {
+            console.error('Failed to create user record:', error);
+            showAlert('warning', 'Đã đăng ký nhưng có lỗi khi lưu thông tin profile. Vui lòng liên hệ hỗ trợ nếu gặp vấn đề khi đăng nhập.', 8000);
+          } else {
+            console.log('User record created successfully in database');
+          }
+        } catch (profileErr) {
+          console.error('Error creating user record:', profileErr);
+          showAlert('warning', 'Đã đăng ký nhưng có lỗi khi lưu thông tin profile. Vui lòng liên hệ hỗ trợ nếu gặp vấn đề khi đăng nhập.', 8000);
+        }
+      } else {
+        console.error('No user email returned from registration');
+      }
+
+      // ALWAYS set success true after registration, regardless of whether all operations succeeded
       setSuccess(true);
       
-      // In a real implementation, you would also create a user profile with the full name
-      // await createProfile(data.user.id, { fullName });
+      // Show alert
+      showAlert('success', 'Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản.', 5000);
       
+      // Stop loading
+      setLoading(false);
+      
+      console.log('Registration process completed successfully');
+      
+      // Return immediately to show success screen
+      return;
+
     } catch (err: any) {
       console.error('Registration error:', err);
-      setError(err.message || 'An error occurred during registration. Please try again.');
-    } finally {
+      setError(err.message || 'Đã xảy ra lỗi trong quá trình đăng ký. Vui lòng thử lại.');
+      showAlert('error', err.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+      setSuccess(false); // Ensure success is false
       setLoading(false);
     }
   };
@@ -54,18 +105,31 @@ export default function RegisterPage() {
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-md mx-auto">
           <div className="bg-white rounded-lg shadow-md p-8">
-            <h1 className="text-2xl font-bold text-center mb-6">Registration Successful</h1>
-            <p className="text-center mb-6">
-              We've sent a confirmation email to <strong>{email}</strong>.
-              Please check your inbox and follow the instructions to verify your account.
-            </p>
-            <div className="flex justify-center">
-              <Link 
-                href="/auth/login" 
-                className="bg-primary text-white px-6 py-3 rounded-md hover:bg-opacity-90 transition-colors"
+            <h1 className="text-2xl font-bold text-center mb-6">Đăng Ký Thành Công</h1>
+            <div className="mb-6">
+              <p className="text-center mb-4">
+                Chúng tôi đã gửi email xác nhận đến <strong>{email}</strong>.
+              </p>
+              <p className="text-center mb-4">
+                Vui lòng kiểm tra hộp thư đến của bạn và làm theo hướng dẫn để xác minh tài khoản.
+              </p>
+              <p className="text-center text-sm text-gray-500">
+                Nếu bạn không thấy email, vui lòng kiểm tra thư mục spam hoặc thùng rác.
+              </p>
+            </div>
+            <div className="flex flex-col items-center">
+              <Link
+                href="/auth/login"
+                className="mb-3 bg-primary text-white w-full text-center px-6 py-3 rounded-md hover:bg-opacity-90 transition-colors"
               >
-                Go to Login
+                Đến Trang Đăng Nhập
               </Link>
+              <button
+                onClick={() => router.push('/')}
+                className="text-gray-600 hover:text-primary transition-colors"
+              >
+                Quay lại trang chủ
+              </button>
             </div>
           </div>
         </div>
@@ -78,13 +142,13 @@ export default function RegisterPage() {
       <div className="max-w-md mx-auto">
         <div className="bg-white rounded-lg shadow-md p-8">
           <h1 className="text-2xl font-bold text-center mb-6">Create an Account</h1>
-          
+
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-md mb-6">
               {error}
             </div>
           )}
-          
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="fullName" className="block text-sm font-medium mb-2">
@@ -105,7 +169,7 @@ export default function RegisterPage() {
                 />
               </div>
             </div>
-            
+
             <div>
               <label htmlFor="email" className="block text-sm font-medium mb-2">
                 Email Address
@@ -125,7 +189,7 @@ export default function RegisterPage() {
                 />
               </div>
             </div>
-            
+
             <div>
               <label htmlFor="password" className="block text-sm font-medium mb-2">
                 Password
@@ -149,7 +213,7 @@ export default function RegisterPage() {
                 Password must be at least 8 characters long
               </p>
             </div>
-            
+
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2">
                 Confirm Password
@@ -169,7 +233,7 @@ export default function RegisterPage() {
                 />
               </div>
             </div>
-            
+
             <div className="flex items-center">
               <input
                 id="terms"
@@ -189,18 +253,17 @@ export default function RegisterPage() {
                 </Link>
               </label>
             </div>
-            
+
             <button
               type="submit"
               disabled={loading}
-              className={`w-full bg-primary text-white py-3 rounded-md transition-colors ${
-                loading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-opacity-90'
-              }`}
+              className={`w-full bg-primary text-white py-3 rounded-md transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-opacity-90'
+                }`}
             >
               {loading ? 'Creating account...' : 'Create Account'}
             </button>
           </form>
-          
+
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Already have an account?{' '}
