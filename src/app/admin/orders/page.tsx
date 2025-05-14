@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter, Eye, FileText, Download, Calendar, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Filter, Eye, FileText, Download, Calendar, Clock, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useAlert } from '@/lib/context/alert-context';
+import { getOrders, updateOrderStatus } from '@/lib/supabase';
 
 // Animation variants
 const containerVariants = {
@@ -56,98 +57,59 @@ export default function OrdersPage() {
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('All');
     const [sortBy, setSortBy] = useState('newest');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [orders, setOrders] = useState<any[]>([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalOrders, setTotalOrders] = useState(0);
+    const pageSize = 10;
 
-    // Mock orders data
-    const orders = [
-        {
-            id: 'ORD-2023-1001',
-            customer: 'John Doe',
-            email: 'john.doe@example.com',
-            date: '2023-11-28',
-            time: '14:35',
-            status: 'Completed',
-            total: '$1,299.00',
-            items: 3,
-            paymentMethod: 'Credit Card'
-        },
-        {
-            id: 'ORD-2023-1002',
-            customer: 'Jane Smith',
-            email: 'jane.smith@example.com',
-            date: '2023-11-28',
-            time: '10:22',
-            status: 'Processing',
-            total: '$249.99',
-            items: 2,
-            paymentMethod: 'PayPal'
-        },
-        {
-            id: 'ORD-2023-1003',
-            customer: 'Robert Johnson',
-            email: 'robert.j@example.com',
-            date: '2023-11-27',
-            time: '16:45',
-            status: 'Shipped',
-            total: '$89.95',
-            items: 1,
-            paymentMethod: 'Credit Card'
-        },
-        {
-            id: 'ORD-2023-1004',
-            customer: 'Emily Wilson',
-            email: 'emily.w@example.com',
-            date: '2023-11-27',
-            time: '09:10',
-            status: 'Pending',
-            total: '$459.90',
-            items: 4,
-            paymentMethod: 'Bank Transfer'
-        },
-        {
-            id: 'ORD-2023-1005',
-            customer: 'Michael Brown',
-            email: 'michael.b@example.com',
-            date: '2023-11-26',
-            time: '13:20',
-            status: 'Cancelled',
-            total: '$129.50',
-            items: 2,
-            paymentMethod: 'PayPal'
-        },
-        {
-            id: 'ORD-2023-1006',
-            customer: 'Sarah Davis',
-            email: 'sarah.d@example.com',
-            date: '2023-11-26',
-            time: '11:05',
-            status: 'Completed',
-            total: '$349.95',
-            items: 3,
-            paymentMethod: 'Credit Card'
-        },
-        {
-            id: 'ORD-2023-1007',
-            customer: 'David Miller',
-            email: 'david.m@example.com',
-            date: '2023-11-25',
-            time: '15:30',
-            status: 'Processing',
-            total: '$74.99',
-            items: 1,
-            paymentMethod: 'Credit Card'
-        },
-        {
-            id: 'ORD-2023-1008',
-            customer: 'Lisa Taylor',
-            email: 'lisa.t@example.com',
-            date: '2023-11-25',
-            time: '08:45',
-            status: 'Shipped',
-            total: '$199.00',
-            items: 2,
-            paymentMethod: 'PayPal'
-        }
-    ];
+    // Fetch orders from Supabase
+    useEffect(() => {
+        const fetchOrders = async () => {
+            try {
+                setLoading(true);
+                const { data, error, count } = await getOrders(currentPage, pageSize);
+                
+                if (error) {
+                    throw new Error(error.message);
+                }
+                
+                if (data) {
+                    // Transform data to match our UI format
+                    const formattedOrders = data.map(order => {
+                        // Format date and time
+                        const orderDate = new Date(order.order_date);
+                        const formattedDate = orderDate.toISOString().split('T')[0];
+                        const formattedTime = orderDate.toTimeString().split(' ')[0].substring(0, 5);
+                        
+                        return {
+                            id: order.order_number,
+                            orderId: order.order_id,
+                            customer: `Customer #${order.user_id}`, // We'll replace this with actual user data in a real app
+                            email: "customer@example.com", // Placeholder
+                            date: formattedDate,
+                            time: formattedTime,
+                            status: order.status.charAt(0).toUpperCase() + order.status.slice(1),
+                            total: `$${order.total_amount.toFixed(2)}`,
+                            items: 0, // This would be populated from order items in a real app
+                            paymentMethod: "Credit Card" // This would be populated from payment info in a real app
+                        };
+                    });
+                    
+                    setOrders(formattedOrders);
+                    setTotalOrders(count || 0);
+                }
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to load orders');
+                showAlert('error', 'Failed to load orders', 5000);
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        fetchOrders();
+    }, [currentPage, showAlert]);
 
     const handleViewOrder = (orderId: string) => {
         showAlert('info', `Viewing order ${orderId}`, 2000);
@@ -167,7 +129,7 @@ export default function OrdersPage() {
                     order.id,
                     order.date,
                     order.customer,
-                    `$${order.total}`,
+                    order.total,
                     order.status
                 ];
                 csvContent += row.join(',') + '\n';
@@ -218,14 +180,14 @@ Business City, 12345
 Order ID: ${order.id}
 Date: ${order.date}
 Customer: ${order.customer}
-Email: customer@example.com
+Email: ${order.email}
 
 Items:
-${Array(order.items).fill(0).map((_, i) => `Item ${i + 1}: Product Name - $${(parseFloat(order.total) / order.items).toFixed(2)}`).join('\n')}
+${Array(order.items || 1).fill(0).map((_, i) => `Item ${i + 1}: Product Name - $${(parseFloat(order.total.replace('$', '')) / (order.items || 1)).toFixed(2)}`).join('\n')}
 
-Subtotal: $${order.total}
-Tax (10%): $${(parseFloat(order.total) * 0.1).toFixed(2)}
-Total: $${(parseFloat(order.total) * 1.1).toFixed(2)}
+Subtotal: ${order.total}
+Tax (10%): $${(parseFloat(order.total.replace('$', '')) * 0.1).toFixed(2)}
+Total: $${(parseFloat(order.total.replace('$', '')) * 1.1).toFixed(2)}
 
 Payment Status: Paid
 Shipping Status: ${order.status}
@@ -258,7 +220,7 @@ Thank you for your business!
             searchQuery === '' ||
             order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
             order.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            order.email.toLowerCase().includes(searchQuery.toLowerCase());
+            (order.email && order.email.toLowerCase().includes(searchQuery.toLowerCase()));
 
         // Status filter
         const matchesStatus =
@@ -272,7 +234,32 @@ Thank you for your business!
 
         // Date range filter - simplified for demo
         // In a real app, you would implement proper date filtering
-        const matchesDateRange = true;
+        let matchesDateRange = true;
+        
+        if (selectedDateRange !== 'All Time') {
+            const orderDate = new Date(order.date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (selectedDateRange === 'Today') {
+                matchesDateRange = orderDate >= today;
+            } else if (selectedDateRange === 'Last 7 Days') {
+                const lastWeek = new Date(today);
+                lastWeek.setDate(lastWeek.getDate() - 7);
+                matchesDateRange = orderDate >= lastWeek;
+            } else if (selectedDateRange === 'Last 30 Days') {
+                const lastMonth = new Date(today);
+                lastMonth.setDate(lastMonth.getDate() - 30);
+                matchesDateRange = orderDate >= lastMonth;
+            } else if (selectedDateRange === 'This Month') {
+                const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                matchesDateRange = orderDate >= firstDayOfMonth;
+            } else if (selectedDateRange === 'Last Month') {
+                const firstDayOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                const firstDayOfThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                matchesDateRange = orderDate >= firstDayOfLastMonth && orderDate < firstDayOfThisMonth;
+            }
+        }
 
         return matchesSearch && matchesStatus && matchesPayment && matchesDateRange;
     });
@@ -291,6 +278,14 @@ Thank you for your business!
         return 0;
     });
 
+    const totalPages = Math.ceil(totalOrders / pageSize);
+
+    const handlePageChange = (page: number) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
+
     return (
         <div className="p-6">
             <div className="flex justify-between items-center mb-6">
@@ -305,6 +300,7 @@ Thank you for your business!
                         whileTap={{ scale: 0.95 }}
                         className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md flex items-center"
                         onClick={handleExportOrders}
+                        disabled={loading || orders.length === 0}
                     >
                         <Download className="h-4 w-4 mr-2" />
                         Export
@@ -413,120 +409,164 @@ Thank you for your business!
                     </motion.div>
                 )}
 
-                {/* Orders Table */}
-                <div className="overflow-x-auto">
-                    <table className="min-w-full">
-                        <thead>
-                            <tr className="bg-gray-50 border-b">
-                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
-                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
-                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sortedOrders.length > 0 ? (
-                                <motion.div
-                                    variants={containerVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    className="contents"
-                                >
-                                    {sortedOrders.map((order, index) => (
-                                        <motion.tr
-                                            key={order.id}
-                                            variants={itemVariants}
-                                            className="border-b hover:bg-gray-50"
+                {/* Loading State */}
+                {loading ? (
+                    <div className="flex flex-col items-center justify-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+                        <p className="mt-4 text-gray-500">Loading orders...</p>
+                    </div>
+                ) : error ? (
+                    <div className="text-center py-12">
+                        <p className="text-red-500">{error}</p>
+                        <button 
+                            onClick={() => window.location.reload()}
+                            className="mt-4 text-amber-500 underline"
+                        >
+                            Try again
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        {/* Orders Table */}
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full">
+                                <thead>
+                                    <tr className="bg-gray-50 border-b">
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {sortedOrders.length > 0 ? (
+                                        <motion.div
+                                            variants={containerVariants}
+                                            initial="hidden"
+                                            animate="visible"
+                                            className="contents"
                                         >
-                                            <td className="py-4 px-4 whitespace-nowrap">
-                                                <div className="font-medium text-gray-900">{order.id}</div>
-                                                <div className="text-xs text-gray-500">{order.items} items</div>
-                                            </td>
-                                            <td className="py-4 px-4 whitespace-nowrap">
-                                                <div className="font-medium text-gray-900">{order.customer}</div>
-                                                <div className="text-xs text-gray-500">{order.email}</div>
-                                            </td>
-                                            <td className="py-4 px-4 whitespace-nowrap">
-                                                <div className="flex items-center">
-                                                    <Calendar className="h-4 w-4 text-gray-400 mr-1" />
-                                                    <span className="text-sm text-gray-900">{order.date}</span>
-                                                </div>
-                                                <div className="flex items-center text-xs text-gray-500 mt-1">
-                                                    <Clock className="h-3 w-3 text-gray-400 mr-1" />
-                                                    <span>{order.time}</span>
-                                                </div>
-                                            </td>
-                                            <td className="py-4 px-4 whitespace-nowrap">
-                                                <StatusBadge status={order.status} />
-                                            </td>
-                                            <td className="py-4 px-4 whitespace-nowrap">
-                                                <div className="font-medium text-gray-900">{order.total}</div>
-                                                <div className="text-xs text-gray-500">{order.paymentMethod}</div>
-                                            </td>
-                                            <td className="py-4 px-4 whitespace-nowrap">
-                                                <div className="flex space-x-2">
-                                                    <Link href={`/admin/orders/${order.id}`}>
-                                                        <motion.button
-                                                            whileHover={{ scale: 1.1 }}
-                                                            whileTap={{ scale: 0.9 }}
-                                                            className="p-1 bg-amber-100 rounded text-amber-600"
-                                                            title="View Order"
-                                                        >
-                                                            <Eye className="h-4 w-4" />
-                                                        </motion.button>
-                                                    </Link>
+                                            {sortedOrders.map((order, index) => (
+                                                <motion.tr
+                                                    key={order.id}
+                                                    variants={itemVariants}
+                                                    className="border-b hover:bg-gray-50"
+                                                >
+                                                    <td className="py-4 px-4 whitespace-nowrap">
+                                                        <div className="font-medium text-gray-900">{order.id}</div>
+                                                        <div className="text-xs text-gray-500">{order.items || 'N/A'} items</div>
+                                                    </td>
+                                                    <td className="py-4 px-4 whitespace-nowrap">
+                                                        <div className="font-medium text-gray-900">{order.customer}</div>
+                                                        <div className="text-xs text-gray-500">{order.email || 'N/A'}</div>
+                                                    </td>
+                                                    <td className="py-4 px-4 whitespace-nowrap">
+                                                        <div className="flex items-center">
+                                                            <Calendar className="h-4 w-4 text-gray-400 mr-1" />
+                                                            <span className="text-sm text-gray-900">{order.date}</span>
+                                                        </div>
+                                                        <div className="flex items-center text-xs text-gray-500 mt-1">
+                                                            <Clock className="h-3 w-3 text-gray-400 mr-1" />
+                                                            <span>{order.time}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-4 px-4 whitespace-nowrap">
+                                                        <StatusBadge status={order.status} />
+                                                    </td>
+                                                    <td className="py-4 px-4 whitespace-nowrap">
+                                                        <div className="font-medium text-gray-900">{order.total}</div>
+                                                        <div className="text-xs text-gray-500">{order.paymentMethod || 'N/A'}</div>
+                                                    </td>
+                                                    <td className="py-4 px-4 whitespace-nowrap">
+                                                        <div className="flex space-x-2">
+                                                            <Link href={`/admin/orders/${order.orderId}`}>
+                                                                <motion.button
+                                                                    whileHover={{ scale: 1.1 }}
+                                                                    whileTap={{ scale: 0.9 }}
+                                                                    className="p-1 bg-amber-100 rounded text-amber-600"
+                                                                    title="View Order"
+                                                                >
+                                                                    <Eye className="h-4 w-4" />
+                                                                </motion.button>
+                                                            </Link>
 
-                                                    <motion.button
-                                                        whileHover={{ scale: 1.1 }}
-                                                        whileTap={{ scale: 0.9 }}
-                                                        className="p-1 bg-gray-100 rounded text-gray-600"
-                                                        title="Download Invoice"
-                                                        onClick={() => handleInvoiceDownload(order.id)}
-                                                    >
-                                                        <FileText className="h-4 w-4" />
-                                                    </motion.button>
-                                                </div>
+                                                            <motion.button
+                                                                whileHover={{ scale: 1.1 }}
+                                                                whileTap={{ scale: 0.9 }}
+                                                                className="p-1 bg-gray-100 rounded text-gray-600"
+                                                                title="Download Invoice"
+                                                                onClick={() => handleInvoiceDownload(order.id)}
+                                                            >
+                                                                <FileText className="h-4 w-4" />
+                                                            </motion.button>
+                                                        </div>
+                                                    </td>
+                                                </motion.tr>
+                                            ))}
+                                        </motion.div>
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={6} className="py-8 text-center text-gray-500">
+                                                No orders found matching your criteria
                                             </td>
-                                        </motion.tr>
-                                    ))}
-                                </motion.div>
-                            ) : (
-                                <tr>
-                                    <td colSpan={6} className="py-8 text-center text-gray-500">
-                                        No orders found matching your criteria
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
 
-                {/* Pagination - simplified for demo */}
-                <div className="mt-6 flex justify-between items-center">
-                    <div className="text-sm text-gray-500">
-                        Showing <span className="font-medium">{sortedOrders.length}</span> of <span className="font-medium">{orders.length}</span> orders
-                    </div>
+                        {/* Pagination */}
+                        <div className="mt-6 flex justify-between items-center">
+                            <div className="text-sm text-gray-500">
+                                Showing <span className="font-medium">{sortedOrders.length}</span> of <span className="font-medium">{totalOrders}</span> orders
+                            </div>
 
-                    <div className="flex space-x-1">
-                        <button className="px-3 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-50">
-                            Previous
-                        </button>
-                        <button className="px-3 py-1 border rounded-md bg-amber-500 text-white">
-                            1
-                        </button>
-                        <button className="px-3 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-50">
-                            2
-                        </button>
-                        <button className="px-3 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-50">
-                            3
-                        </button>
-                        <button className="px-3 py-1 border rounded-md bg-white text-gray-600 hover:bg-gray-50">
-                            Next
-                        </button>
-                    </div>
-                </div>
+                            <div className="flex space-x-1">
+                                <button 
+                                    className={`px-3 py-1 border rounded-md ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                                    onClick={() => handlePageChange(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                >
+                                    Previous
+                                </button>
+                                
+                                {Array.from({ length: Math.min(totalPages, 3) }, (_, i) => {
+                                    // Show current page and adjacent pages
+                                    let pageNum = currentPage;
+                                    if (totalPages <= 3) {
+                                        pageNum = i + 1;
+                                    } else if (currentPage === 1) {
+                                        pageNum = i + 1;
+                                    } else if (currentPage === totalPages) {
+                                        pageNum = totalPages - 2 + i;
+                                    } else {
+                                        pageNum = currentPage - 1 + i;
+                                    }
+                                    
+                                    return (
+                                        <button 
+                                            key={pageNum}
+                                            className={`px-3 py-1 border rounded-md ${currentPage === pageNum ? 'bg-amber-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                                            onClick={() => handlePageChange(pageNum)}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    );
+                                })}
+                                
+                                <button 
+                                    className={`px-3 py-1 border rounded-md ${currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                                    onClick={() => handlePageChange(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );
