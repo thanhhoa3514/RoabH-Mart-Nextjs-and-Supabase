@@ -1,8 +1,8 @@
 // Export client
-export { supabase } from './client/client.model';
+export { supabase } from '@/lib/supabase/client/client.model';
 
 // Export auth functions
-export { signUp, signIn, signOut, getUserProfile } from './auth/auth.model';
+export { signUp, signIn, signOut, getUserProfile } from '@/lib/supabase/auth/auth.model';
 
 // Export user data functions
 export { 
@@ -12,10 +12,10 @@ export {
   createUser,
   createUserProfile,
   registerUser
-} from './user/users.model';
+} from '@/lib/supabase/user/users.model';
 
 // Export product functions
-export { getProducts, getProductById } from './products/products.model';
+export { getProducts, getProductById } from '@/lib/supabase/products/products.model';
 
 // Export order functions
 export {
@@ -24,7 +24,7 @@ export {
     getOrdersByUserId,
     updateOrderStatus,
     createOrder
-} from './orders/orders.model';
+} from '@/lib/supabase/orders/orders.model';
 
 // Export category functions
 export { 
@@ -33,7 +33,7 @@ export {
     deleteCategory, 
     createCategory, 
     updateCategory 
-} from './categories/categories.model';
+} from '@/lib/supabase/categories/categories.model';
 
 // Export subcategory functions
 export { 
@@ -42,7 +42,7 @@ export {
     createSubcategory, 
     updateSubcategory, 
     deleteSubcategory 
-} from './subcategories/subcategories.model'; 
+} from '@/lib/supabase/subcategories/subcategories.model'; 
 
 // Export customer functions
 export {
@@ -55,7 +55,7 @@ export {
     getCustomerOrders,
     getCustomerStats,
     getCustomerAddresses
-} from './customers/customers.model';
+} from '@/lib/supabase/customers/customers.model';
 
 // Export dashboard functions
 export {
@@ -63,6 +63,6 @@ export {
     getTopProducts,
     getReviewStats,
     getQuarterlySales
-} from './dashboard/dashboard.model';
+} from '@/lib/supabase/dashboard/dashboard.model';
 
 
