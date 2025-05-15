@@ -2,54 +2,57 @@ import { notFound } from 'next/navigation';
 import AddToCartButton from './AddToCartButton';
 import ProductGallery from './ProductGallery';
 import RelatedProducts from './RelatedProducts';
+import { getProductById } from '@/lib/supabase/products/products.model';
 
 type ProductDetailPageProps = {
   params: { id: string }
   searchParams: { [key: string]: string | string[] | undefined }
 }
 
-export default function ProductDetailPage({ params, searchParams }: ProductDetailPageProps) {
+type ProductImage = {
+  image_url: string;
+  is_primary: boolean;
+}
+
+type ProductSpecifications = {
+  [key: string]: string;
+}
+
+export default async function ProductDetailPage({ params, searchParams }: ProductDetailPageProps) {
     const { id } = params;
 
-    // In a real app, this would fetch from Supabase or an API
-    // Mock product data
-    const product = {
-        id,
-        name: 'Smart Watch Pro',
-        description: 'The Smart Watch Pro is a premium wearable device that combines style with cutting-edge technology. Track your fitness goals, receive notifications, and monitor your health with this sleek and powerful smartwatch.',
-        price: 199.99,
-        images: [
-            'https://placekitten.com/800/800',
-            'https://placekitten.com/801/800',
-            'https://placekitten.com/802/800',
-        ],
-        category: 'electronics',
-        stock: 8,
-        features: [
-            'Heart rate monitoring',
-            'Sleep tracking',
-            'Water resistant up to 50m',
-            'GPS tracking',
-            '5-day battery life',
-            'Customizable watch faces',
-        ],
-        specifications: {
-            'Display': '1.4" AMOLED',
-            'Connectivity': 'Bluetooth 5.0, WiFi',
-            'Battery': 'Lithium-ion 300mAh',
-            'Compatibility': 'iOS 12+, Android 8+',
-            'Sensors': 'Accelerometer, Gyroscope, Heart Rate',
-            'Dimensions': '44mm x 38mm x 10.7mm',
-            'Weight': '48g',
-        },
-        createdAt: '2023-03-05',
-        updatedAt: '2023-03-05',
-    };
+    // Fetch product data from Supabase
+    const { data: productData, error } = await getProductById(id);
 
-    // If product not found
-    if (!product) {
+    // If error or no product found
+    if (error || !productData) {
         notFound();
     }
+
+    // Format the product data to match the expected structure
+    const product = {
+        id: productData.product_id,
+        name: productData.name,
+        description: productData.description,
+        price: productData.price,
+        images: productData.product_images.map((img: ProductImage) => img.image_url),
+        category: productData.subcategory_id, // This should ideally include category name
+        stock: productData.stock_quantity,
+        features: productData.features || [
+            'Premium quality',
+            'Durable construction',
+            'Modern design',
+            'Satisfaction guaranteed',
+        ],
+        specifications: productData.specifications as ProductSpecifications || {
+            'Material': 'High-quality materials',
+            'Dimensions': 'Standard size',
+            'Weight': 'Average weight',
+            'Warranty': '1 year manufacturer warranty',
+        },
+        createdAt: new Date(productData.created_at || Date.now()).toISOString().split('T')[0],
+        updatedAt: new Date(productData.updated_at || Date.now()).toISOString().split('T')[0],
+    };
 
     return (
         <div className="container mx-auto px-4 py-8">
@@ -86,7 +89,7 @@ export default function ProductDetailPage({ params, searchParams }: ProductDetai
                     <div className="mb-6">
                         <h2 className="text-xl font-bold mb-3">Features</h2>
                         <ul className="list-disc pl-5 space-y-1">
-                            {product.features.map((feature, index) => (
+                            {product.features.map((feature: string, index: number) => (
                                 <li key={index}>{feature}</li>
                             ))}
                         </ul>
