@@ -18,4 +18,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
         detectSessionInUrl: true, // Enable to handle tokens in URL for email verification
         flowType: 'pkce', // More secure PKCE flow
     },
+    global: {
+      headers: {
+        'x-application-name': 'roabh-mart',
+      },
+    }
 }); 
