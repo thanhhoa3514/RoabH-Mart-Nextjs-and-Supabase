@@ -124,15 +124,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         // Check active session
         const checkSession = async () => {
-            const { data } = await supabase.auth.getSession();
-            const sessionUser = data.session?.user ?? null;
-            setUser(sessionUser);
-            
-            if (sessionUser) {
-                await fetchUserData(sessionUser);
+            try {
+                const { data } = await supabase.auth.getSession();
+                const sessionUser = data.session?.user ?? null;
+                setUser(sessionUser);
+                
+                if (sessionUser) {
+                    await fetchUserData(sessionUser);
+                }
+                
+                setLoading(false);
+            } catch (error) {
+                console.error('Error checking session:', error);
+                setLoading(false);
             }
-            
-            setLoading(false);
         };
 
         checkSession();
@@ -232,35 +237,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Sign up with email and password
     const signUp = async (email: string, password: string) => {
         // Define the current origin for redirect
-        const redirectUrl = `${window.location.origin}/auth/callback`;
+        const redirectBase = typeof window !== 'undefined' ? window.location.origin : '';
+        const redirectUrl = `${redirectBase}/auth/callback`;
         console.log('Signing up with redirect URL:', redirectUrl);
 
-        // Register with Supabase Auth using PKCE flow
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                emailRedirectTo: redirectUrl,
-                // Do not add custom data here as it can interfere with some providers
-            }
-        });
-        
-        console.log('Sign up attempt:', { email, error: !!error });
-        
-        if (error) {
-            console.error('Sign up error:', error);
-        } else {
-            // Check if email verification was sent or if user was auto-confirmed
-            const emailConfirmationSent = !data?.user?.email_confirmed_at;
+        try {
+            // Register with Supabase Auth using PKCE flow
+            const { data, error } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    emailRedirectTo: redirectUrl,
+                    // Do not add custom data here as it can interfere with some providers
+                }
+            });
             
-            if (emailConfirmationSent) {
-                console.log('Verification email has been sent to:', email);
+            console.log('Sign up attempt:', { email, error: !!error, redirectUrl });
+            
+            if (error) {
+                console.error('Sign up error:', error);
             } else {
-                console.log('User was auto-confirmed or already exists:', email);
+                // Check if email verification was sent or if user was auto-confirmed
+                const emailConfirmationSent = !data?.user?.email_confirmed_at;
+                
+                if (emailConfirmationSent) {
+                    console.log('Verification email has been sent to:', email);
+                } else {
+                    console.log('User was auto-confirmed or already exists:', email);
+                }
             }
+            
+            return { data, error };
+        } catch (err) {
+            console.error('Unexpected error during sign up:', err);
+            return { data: null, error: err as AuthError };
         }
-        
-        return { data, error };
     };
 
     // Sign out
