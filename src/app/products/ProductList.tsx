@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import ProductCard from '@/components/products/ProductCard';
 import { Product } from '@/types';
 import { getProducts } from '@/lib/supabase/products/client/product.query';
@@ -36,13 +36,17 @@ export default function ProductList({
     totalPages: 1,
     hasMore: false
   });
+  const initialRender = useRef(true);
 
   useEffect(() => {
     const fetchProducts = async () => {
-      // If parameter changes or we don't have initial data, fetch new data
-      if (initialData.length === 0 || products !== initialData) {
+      // Only set loading on subsequent renders or if we have no initial data
+      if (initialData.length === 0 || !initialRender.current) {
         setLoading(true);
       }
+      
+      // After first render, set initialRender to false
+      initialRender.current = false;
 
       try {
         // Fetch products from Supabase
