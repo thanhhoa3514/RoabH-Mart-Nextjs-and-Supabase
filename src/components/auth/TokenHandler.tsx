@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAlert } from '@/lib/context/alert-context';
@@ -13,7 +13,6 @@ import { useAlert } from '@/lib/context/alert-context';
 export default function TokenHandler() {
   const router = useRouter();
   const { showAlert } = useAlert();
-  const [processingToken, setProcessingToken] = useState(false);
   
   useEffect(() => {
     // Check for success parameters or hash fragments
@@ -47,7 +46,6 @@ export default function TokenHandler() {
       
       // 3. Handle hash fragments with tokens
       if (hash && hash.includes('access_token')) {
-        setProcessingToken(true);
         console.log('TokenHandler: Found access_token in URL hash');
         
         try {
@@ -82,8 +80,6 @@ export default function TokenHandler() {
         } catch (err) {
           console.error('Error handling token in hash:', err);
           showAlert('error', 'Đã xảy ra lỗi khi xử lý token xác thực.', 5000);
-        } finally {
-          setProcessingToken(false);
         }
       }
     };

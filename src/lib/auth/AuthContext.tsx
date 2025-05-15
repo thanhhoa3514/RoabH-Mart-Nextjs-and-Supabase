@@ -5,13 +5,23 @@ import { useRouter } from 'next/navigation';
 import { supabase, getUserIdFromAuth, getUserData, updateLastLogin } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { CompleteUserData } from '@/lib/supabase/user/users.model';
+import { AuthError } from '@supabase/supabase-js';
+
+// Define types for authentication responses
+interface AuthResponse {
+  data?: {
+    user?: User | null;
+    session?: unknown;
+  } | null;
+  error: AuthError | null;
+}
 
 interface AuthContextType {
     user: User | null;
     userData: CompleteUserData | null;
     loading: boolean;
-    signIn: (email: string, password: string) => Promise<{ error: any }>;
-    signUp: (email: string, password: string) => Promise<{ data: any; error: any }>;
+    signIn: (email: string, password: string) => Promise<{ error: AuthError | null | unknown }>;
+    signUp: (email: string, password: string) => Promise<{ data: { user?: User | null } | null; error: AuthError | null }>;
     signOut: () => Promise<void>;
     refreshUserData: () => Promise<void>;
 }
@@ -45,7 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     const { registerUser } = await import('@/lib/supabase');
                     
                     // Create user record and profile since it doesn't exist
-                    const { success, error } = await registerUser({
+                    const { error } = await registerUser({
                         email: authUser.email || '',
                         username: authUser.email?.split('@')[0] || `user_${Date.now()}`
                     });
@@ -154,7 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 const { registerUser } = await import('@/lib/supabase');
                                 
                                 // Create user record and profile
-                                const { success, error } = await registerUser({
+                                const { error } = await registerUser({
                                     email: authUser.email || '',
                                     username: authUser.email?.split('@')[0] || `user_${Date.now()}`
                                 });
@@ -235,7 +245,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         });
         
-        console.log('Sign up attempt:', { email, success: !error });
+        console.log('Sign up attempt:', { email, error: !!error });
         
         if (error) {
             console.error('Sign up error:', error);
