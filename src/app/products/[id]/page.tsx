@@ -8,7 +8,7 @@ type ProductDetailPageProps = {
   searchParams: { [key: string]: string | string[] | undefined }
 }
 
-export default function ProductDetailPage({ params }: ProductDetailPageProps) {
+export default function ProductDetailPage({ params, searchParams }: ProductDetailPageProps) {
     const { id } = params;
 
     // In a real app, this would fetch from Supabase or an API
