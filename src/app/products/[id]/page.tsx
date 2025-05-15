@@ -7,6 +7,7 @@ interface ProductDetailPageProps {
     params: {
         id: string;
     };
+    searchParams: Record<string, string | string[] | undefined>;
 }
 
 export default function ProductDetailPage({ params }: ProductDetailPageProps) {
