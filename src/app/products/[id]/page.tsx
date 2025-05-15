@@ -4,15 +4,6 @@ import ProductGallery from './ProductGallery';
 import RelatedProducts from './RelatedProducts';
 import { getProductById } from '@/lib/supabase/products/products.model';
 
-type ProductParams = {
-  id: string;
-};
-
-type ProductDetailPageProps = {
-  params: ProductParams;
-  searchParams?: { [key: string]: string | string[] | undefined };
-};
-
 type ProductImage = {
   image_url: string;
   is_primary: boolean;
@@ -22,7 +13,11 @@ type ProductSpecifications = {
   [key: string]: string;
 }
 
-export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
+export default async function ProductDetailPage({
+  params,
+}: {
+  params: { id: string };
+}) {
     const { id } = params;
 
     // Fetch product data from Supabase
