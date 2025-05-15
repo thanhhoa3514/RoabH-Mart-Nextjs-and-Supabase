@@ -4,15 +4,16 @@ export async function signUp(email: string, password: string) {
     console.log('Auth model: signUp called for email:', email);
     
     try {
+        const redirectUrl = `${window.location.origin}/auth/callback`;
+        console.log('Auth model: setting redirectUrl to:', redirectUrl);
+        
         // Sign up with Supabase Auth - ensuring email verification is enabled
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
-                emailRedirectTo: `${window.location.origin}/auth/callback`,
-                data: {
-                    email_confirmation_sent: true
-                }
+                emailRedirectTo: redirectUrl,
+                // Do NOT set any data as it can cause issues with some providers
             }
         });
         
@@ -21,6 +22,13 @@ export async function signUp(email: string, password: string) {
         } else {
             console.log('Auth model: signUp successful. User ID:', data?.user?.id);
             console.log('Auth model: verification email should be sent to:', email);
+            // Check if confirmation sent
+            const emailConfirmationSent = !data?.user?.email_confirmed_at;
+            if (emailConfirmationSent) {
+                console.log('Auth model: Email confirmation was sent');
+            } else {
+                console.log('Auth model: User already confirmed or auto-confirmed');
+            }
         }
         
         return { data, error };
