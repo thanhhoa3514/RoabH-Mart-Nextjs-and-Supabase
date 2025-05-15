@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
         try {
             console.log('Exchanging code for session...');
             
-            // Exchange the code for a session
+            // Exchange the code for a session - THIS MUST BE AWAITED
             const { error } = await supabase.auth.exchangeCodeForSession(code);
             
             if (error) {
@@ -63,14 +63,8 @@ export async function GET(request: NextRequest) {
             
             if (session) {
                 console.log('Session confirmed, user is verified and logged in');
-                // Set a verification success flag in cookies
-                const response = NextResponse.redirect(new URL('/?verified=true', request.url));
-                response.cookies.set('auth_verification_success', 'true', {
-                    path: '/',
-                    maxAge: 60, // 1 minute expiry
-                    httpOnly: false, // Allow JavaScript to read this cookie
-                });
-                return response;
+                // Redirect to home page with verified=true parameter
+                return NextResponse.redirect(new URL('/?verified=true', request.url));
             } else {
                 console.log('Session not found after code exchange');
                 // If no session, redirect to login page with verified flag

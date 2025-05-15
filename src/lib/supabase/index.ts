@@ -15,7 +15,7 @@ export {
 } from '@/lib/supabase/user/users.model';
 
 // Export product functions
-export { getProducts, getProductById } from '@/lib/supabase/products/products.model';
+export { getProducts, getProductById, getFeaturedProducts } from '@/lib/supabase/products/products.model';
 
 // Export order functions
 export {

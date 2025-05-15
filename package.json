@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seed": "ts-node --project tsconfig.json src/scripts/seed-products.ts"
   },
   "dependencies": {
     "@radix-ui/react-icons": "^1.3.2",
