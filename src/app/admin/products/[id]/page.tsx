@@ -15,7 +15,7 @@ export default function ProductDetailPage() {
     const [isLoading, setIsLoading] = useState(true);
     
     // Mock product data - in a real app, this would come from an API
-    const [product, setProduct] = useState({
+    const product = {
         id: Number(id),
         name: 'Premium Laptop Pro',
         category: 'Electronics',
@@ -37,7 +37,7 @@ export default function ProductDetailPage() {
         ],
         sales: 156,
         reviews: 48
-    });
+    };
     
     useEffect(() => {
         // Simulate API call

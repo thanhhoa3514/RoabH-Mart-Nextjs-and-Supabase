@@ -5,6 +5,11 @@ import Link from 'next/link';
 import { Mail } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
+interface AuthError {
+    message: string;
+    status?: number;
+}
+
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
@@ -29,9 +34,13 @@ export default function ForgotPasswordPage() {
 
             // Successfully sent reset email
             setSuccess(true);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Password reset error:', err);
-            setError(err.message || 'An error occurred. Please try again.');
+            // Type guard to ensure err has a message property
+            const errorMessage = err && typeof err === 'object' && 'message' in err 
+                ? (err.message as string) 
+                : 'An error occurred. Please try again.';
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -44,7 +53,7 @@ export default function ForgotPasswordPage() {
                     <div className="bg-white rounded-lg shadow-md p-8">
                         <h1 className="text-2xl font-bold text-center mb-6">Check Your Email</h1>
                         <p className="text-center mb-6">
-                            We've sent a password reset link to <strong>{email}</strong>.
+                            We&apos;ve sent a password reset link to <strong>{email}</strong>.
                             Please check your inbox and follow the instructions to reset your password.
                         </p>
                         <div className="flex justify-center">
@@ -67,7 +76,7 @@ export default function ForgotPasswordPage() {
                 <div className="bg-white rounded-lg shadow-md p-8">
                     <h1 className="text-2xl font-bold text-center mb-6">Forgot Your Password?</h1>
                     <p className="text-center text-gray-600 mb-6">
-                        Enter your email address and we'll send you a link to reset your password.
+                        Enter your email address and we&apos;ll send you a link to reset your password.
                     </p>
 
                     {error && (

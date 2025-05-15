@@ -9,6 +9,11 @@ import { useAlert } from '@/lib/context/alert-context';
 import { useAuth } from '@/lib/auth/AuthContext';
 import TokenHandler from '@/components/auth/TokenHandler';
 
+interface AuthError {
+    message: string;
+    status?: number;
+}
+
 export default function LoginPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -58,19 +63,6 @@ export default function LoginPage() {
             
             if (error) {
                 console.error('Login error details:', error);
-                
-                // Check if this is an email verification error
-                if (error.message && (
-                    error.message.includes('Email not confirmed') || 
-                    error.message.includes('Invalid login credentials') || 
-                    error.message.includes('Email link is invalid or has expired')
-                )) {
-                    // This could be an unverified email
-                    showAlert('error', 'Please verify your email before logging in. Check your inbox for the verification link.', 8000);
-                    setLoading(false);
-                    return;
-                }
-                
                 throw error;
             }
 
@@ -85,9 +77,12 @@ export default function LoginPage() {
                 router.push(redirectPath || '/');
                 router.refresh();
             }, 1000);
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Login error:', err);
-            showAlert('error', 'Invalid email or password. Please try again.');
+            const errorMessage = err && typeof err === 'object' && 'message' in err 
+                ? (err.message as string) 
+                : 'Invalid email or password. Please try again.';
+            showAlert('error', errorMessage);
         } finally {
             setLoading(false);
         }
@@ -179,7 +174,7 @@ export default function LoginPage() {
 
                     <div className="mt-6 text-center">
                         <p className="text-sm text-gray-600">
-                            Don't have an account?{' '}
+                            Don&apos;t have an account?{' '}
                             <Link href="/auth/register" className="text-primary hover:underline">
                                 Sign up
                             </Link>
