@@ -69,11 +69,6 @@ const containerVariants = {
     }
 };
 
-const itemVariants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: { opacity: 1, y: 0 }
-};
-
 // Tab component
 const Tab = ({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) => {
     return (
