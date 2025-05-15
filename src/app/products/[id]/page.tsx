@@ -3,6 +3,18 @@ import AddToCartButton from './AddToCartButton';
 import ProductGallery from './ProductGallery';
 import RelatedProducts from './RelatedProducts';
 import { getProductById } from '@/lib/supabase/products/products.model';
+type PageProps<T extends Record<string, string> = {}> = {
+    params: T;
+    searchParams?: { [key: string]: string | string[] };
+  };
+// type ProductParams = {
+//   id: string;
+// };
+
+// type ProductDetailPageProps = {
+//   params: ProductParams;
+//   searchParams?: { [key: string]: string | string[] | undefined };
+// };
 
 type ProductImage = {
   image_url: string;
@@ -13,11 +25,7 @@ type ProductSpecifications = {
   [key: string]: string;
 }
 
-export default async function ProductDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function ProductDetailPage({ params }: PageProps<{ id: string }>) {
     const { id } = params;
 
     // Fetch product data from Supabase
