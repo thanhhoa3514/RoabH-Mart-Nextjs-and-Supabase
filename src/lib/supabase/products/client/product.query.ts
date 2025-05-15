@@ -32,7 +32,6 @@ export async function getProducts({
         seller_id,
         sku,
         is_active,
-        created_at,
         subcategories:subcategory_id(category_id, name),
         product_images(image_id, image_url, is_primary),
         sellers:seller_id(name)
@@ -70,7 +69,8 @@ export async function getProducts({
         } else if (sort === 'price-high') {
             baseQuery = baseQuery.order('price', { ascending: false });
         } else if (sort === 'newest') {
-            baseQuery = baseQuery.order('created_at', { ascending: false });
+            // Sử dụng product_id thay vì created_at để sắp xếp theo độ mới
+            baseQuery = baseQuery.order('product_id', { ascending: false });
         }
 
         // Thực hiện truy vấn để lấy tổng số bản ghi
@@ -91,7 +91,7 @@ export async function getProducts({
         const { data, error } = await baseQuery.range(from, to);
 
         if (error) {
-            console.error('Error fetching products:', error);
+            console.log('Error fetching products:', error);
             return { data: null, error, count: totalCount };
         }
 
@@ -111,7 +111,7 @@ export async function getProducts({
             stock: item.stock_quantity,
             discount: item.discount_percentage ? parseFloat(item.discount_percentage) : 0,
             seller: item.sellers?.[0]?.name || '',
-            createdAt: item.created_at || new Date().toISOString(),
+            createdAt: new Date().toISOString(), // Use current date as fallback
             updatedAt: new Date().toISOString(),
         }));
 
@@ -152,7 +152,6 @@ export async function getProductById(id: string) {
         seller_id,
         sku,
         is_active,
-        created_at,
         subcategories:subcategory_id(subcategory_id, name, category_id, categories:category_id(category_id, name)),
         product_images(image_id, image_url, is_primary, display_order),
         sellers:seller_id(seller_id, name, logo),
@@ -207,8 +206,8 @@ export async function getProductById(id: string) {
                     user: review.users?.[0]?.username || 'Anonymous',
                 }))
                 : [],
-            createdAt: data.created_at || new Date().toISOString(),
-            updatedAt: new Date().toISOString(), // Placeholder, replace with actual updated_at if available
+            createdAt: new Date().toISOString(), // Use current date
+            updatedAt: new Date().toISOString(), 
         };
 
         return { data: product, error: null };
