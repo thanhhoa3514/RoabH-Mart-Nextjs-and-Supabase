@@ -5,7 +5,21 @@ import { motion } from 'framer-motion';
 import { Search, Filter, Eye, FileText, Download, Calendar, Clock, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useAlert } from '@/lib/context/alert-context';
-import { getOrders, updateOrderStatus } from '@/lib/supabase';
+import { getOrders } from '@/lib/supabase';
+
+// Define interfaces for order data
+interface Order {
+    id: string;
+    orderId: number;
+    customer: string;
+    email: string;
+    date: string;
+    time: string;
+    status: string;
+    total: string;
+    items: number;
+    paymentMethod: string;
+}
 
 // Animation variants
 const containerVariants = {
@@ -59,7 +73,7 @@ export default function OrdersPage() {
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [orders, setOrders] = useState<any[]>([]);
+    const [orders, setOrders] = useState<Order[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalOrders, setTotalOrders] = useState(0);
     const pageSize = 10;
@@ -110,10 +124,6 @@ export default function OrdersPage() {
         
         fetchOrders();
     }, [currentPage, showAlert]);
-
-    const handleViewOrder = (orderId: string) => {
-        showAlert('info', `Viewing order ${orderId}`, 2000);
-    };
 
     const handleExportOrders = () => {
         // Simulate processing time
@@ -448,7 +458,7 @@ Thank you for your business!
                                     animate="visible"
                                     className="contents"
                                 >
-                                    {sortedOrders.map((order, index) => (
+                                    {sortedOrders.map((order) => (
                                         <motion.tr
                                             key={order.id}
                                             variants={itemVariants}

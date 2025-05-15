@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import {
     ArrowLeft,
     Printer,
@@ -20,9 +19,70 @@ import {
     X
 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useAlert } from '@/lib/context/alert-context';
 import { getOrderById, updateOrderStatus } from '@/lib/supabase';
+
+// Define interfaces for order data
+interface OrderItem {
+    id: number;
+    name: string;
+    sku: string;
+    price: string;
+    quantity: number;
+    total: string;
+    image: string;
+}
+
+interface OrderEvent {
+    date: string;
+    time: string;
+    status: string;
+    description: string;
+}
+
+interface CustomerAddress {
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+}
+
+interface CustomerInfo {
+    name: string;
+    email: string;
+    phone: string;
+    address: CustomerAddress;
+}
+
+interface PaymentDetails {
+    cardType?: string;
+    cardNumber?: string;
+    transactionId?: string;
+}
+
+interface OrderData {
+    id: number;
+    orderNumber: string;
+    customer: CustomerInfo;
+    date: string;
+    time: string;
+    status: string;
+    paymentMethod: string;
+    paymentDetails: PaymentDetails;
+    shippingMethod: string;
+    trackingNumber: string;
+    items: OrderItem[];
+    subtotal: string;
+    shipping: string;
+    tax: string;
+    discount: string;
+    total: string;
+    notes: string;
+    history: OrderEvent[];
+}
 
 // Status badge component
 const StatusBadge = ({ status }: { status: string }) => {
@@ -62,7 +122,7 @@ export default function OrderDetailPage() {
     const [orderNote, setOrderNote] = useState('');
 
     // State for order data
-    const [orderData, setOrderData] = useState<any>(null);
+    const [orderData, setOrderData] = useState<OrderData | null>(null);
 
     // Fetch order data from Supabase
     useEffect(() => {
@@ -82,7 +142,7 @@ export default function OrderDetailPage() {
                     const formattedTime = orderDate.toTimeString().split(' ')[0].substring(0, 5);
                     
                     // Transform order items
-                    const items = data.orderItems ? data.orderItems.map((item: any) => ({
+                    const items = data.orderItems ? data.orderItems.map((item: { order_item_id: number; product_id: number; products?: { name: string; image: string }; unit_price: number; quantity: number; subtotal: number; }) => ({
                         id: item.order_item_id,
                         name: item.products?.name || `Product #${item.product_id}`,
                         sku: `SKU-${item.product_id}`,
@@ -93,7 +153,7 @@ export default function OrderDetailPage() {
                     })) : [];
                     
                     // Create formatted order object
-                    const formattedOrder = {
+                    const formattedOrder: OrderData = {
                         id: data.order.order_id,
                         orderNumber: data.order.order_number,
                         customer: {
@@ -201,7 +261,7 @@ export default function OrderDetailPage() {
     };
 
     const handleAddNote = () => {
-        if (orderNote.trim()) {
+        if (orderNote.trim() && orderData) {
             // In a real app, you would save this note to the database
             setOrderData({
                 ...orderData,
@@ -234,7 +294,7 @@ export default function OrderDetailPage() {
                 
                 <div className="bg-white rounded-lg shadow-md p-8 text-center">
                     <h2 className="text-xl font-medium text-gray-900 mb-2">Order not found</h2>
-                    <p className="text-gray-500 mb-6">The order you're looking for doesn't exist or has been removed.</p>
+                    <p className="text-gray-500 mb-6">The order you&apos;re looking for doesn&apos;t exist or has been removed.</p>
                     <button 
                         onClick={() => router.push('/admin/orders')}
                         className="px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600"
@@ -338,17 +398,24 @@ export default function OrderDetailPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200">
-                                        {orderData.items.map((item: any) => (
+                                        {orderData.items.map((item: OrderItem) => (
                                             <tr key={item.id}>
                                                 <td className="py-4 px-4">
                                                     <div className="flex items-center">
-                                                        <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-md overflow-hidden">
-                                                            <img
+                                                        <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-md overflow-hidden relative">
+                                                            <Image
                                                                 src={item.image}
                                                                 alt={item.name}
-                                                                className="h-full w-full object-cover"
+                                                                className="object-cover"
+                                                                fill
+                                                                sizes="40px"
                                                                 onError={(e) => {
-                                                                    (e.target as HTMLImageElement).src = 'https://placekitten.com/100/100';
+                                                                    // TypeScript doesn't allow direct src assignment on Image component
+                                                                    // We can use a placeholder image URL instead
+                                                                    const imgElement = e.target as HTMLImageElement;
+                                                                    if (imgElement.src !== 'https://placekitten.com/100/100') {
+                                                                        imgElement.src = 'https://placekitten.com/100/100';
+                                                                    }
                                                                 }}
                                                             />
                                                         </div>
@@ -396,7 +463,7 @@ export default function OrderDetailPage() {
                     <div className="bg-white rounded-lg shadow-md mt-6 p-6">
                         <h2 className="text-lg font-medium mb-4">Order Timeline</h2>
                         <div className="space-y-6">
-                            {orderData.history.map((event: any, index: number) => (
+                            {orderData.history.map((event: OrderEvent, index: number) => (
                                 <div key={index} className="flex">
                                     <div className="flex flex-col items-center mr-4">
                                         <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
