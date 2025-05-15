@@ -11,15 +11,9 @@ import {
     Calendar, 
     ShoppingBag, 
     CreditCard, 
-    Tag, 
     Edit, 
     Trash2, 
-    Clock, 
-    CheckCircle, 
-    XCircle,
-    User,
     Home,
-    FileText,
     MessageSquare,
     Send,
     Loader2,
@@ -30,6 +24,39 @@ import Link from 'next/link';
 import { useAlert } from '@/lib/context/alert-context';
 import { getCustomerById, getCustomerStats, getCustomerOrders, getCustomerAddresses } from '@/lib/supabase/customers/customers.model';
 import { DbCustomer } from '@/types/user/customer.model';
+
+// Define interfaces for the data types
+interface Order {
+    order_id: string;
+    order_date: string;
+    item_count: number;
+    total_amount: number;
+    status: string;
+}
+
+interface Address {
+    address_id: string;
+    address_type: string;
+    is_default: boolean;
+    street_address: string;
+    city: string;
+    state: string;
+    postal_code: string;
+    country: string;
+}
+
+interface PaymentMethod {
+    brand: string;
+    isDefault: boolean;
+    last4: string;
+    expiryDate: string;
+}
+
+interface Note {
+    author: string;
+    date: string;
+    content: string;
+}
 
 // Animation variants
 const containerVariants = {
@@ -64,24 +91,24 @@ const Tab = ({ label, active, onClick }: { label: string; active: boolean; onCli
 };
 
 // Order item component
-const OrderItem = ({ order }: { order: any }) => {
+const OrderItem = ({ order }: { order: Order }) => {
     return (
         <tr className="border-b hover:bg-gray-50">
             <td className="py-4 px-3">
                 <div className="flex items-center">
-                    <Link href={`/admin/orders/${order.id}`}>
-                        <span className="font-medium text-amber-600">{order.id}</span>
+                    <Link href={`/admin/orders/${order.order_id}`}>
+                        <span className="font-medium text-amber-600">{order.order_id}</span>
                     </Link>
                 </div>
             </td>
             <td className="py-4 px-3 text-sm text-gray-500">
-                {order.date}
+                {order.order_date}
             </td>
             <td className="py-4 px-3 text-sm">
-                {order.items} {order.items === 1 ? 'item' : 'items'}
+                {order.item_count} {order.item_count === 1 ? 'item' : 'items'}
             </td>
             <td className="py-4 px-3 text-sm font-medium">
-                ${order.total}
+                ${order.total_amount}
             </td>
             <td className="py-4 px-3">
                 <div className={`px-3 py-1 rounded-full text-xs font-medium inline-block ${
@@ -95,7 +122,7 @@ const OrderItem = ({ order }: { order: any }) => {
                 </div>
             </td>
             <td className="py-4 px-3 text-right">
-                <Link href={`/admin/orders/${order.id}`}>
+                <Link href={`/admin/orders/${order.order_id}`}>
                     <button className="text-sm text-amber-600 hover:text-amber-500">
                         View Details
                     </button>
@@ -106,7 +133,7 @@ const OrderItem = ({ order }: { order: any }) => {
 };
 
 // Address card component
-const AddressCard = ({ address }: { address: any }) => {
+const AddressCard = ({ address }: { address: Address }) => {
     return (
         <motion.div 
             variants={itemVariants}
@@ -115,9 +142,9 @@ const AddressCard = ({ address }: { address: any }) => {
             <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center">
                     <Home className="h-4 w-4 text-gray-400 mr-2" />
-                    <h3 className="font-medium">{address.type} Address</h3>
+                    <h3 className="font-medium">{address.address_type} Address</h3>
                 </div>
-                {address.isDefault && (
+                {address.is_default && (
                     <span className="bg-amber-100 text-amber-600 text-xs px-2 py-1 rounded-full">
                         Default
                     </span>
@@ -125,8 +152,8 @@ const AddressCard = ({ address }: { address: any }) => {
             </div>
             
             <div className="text-sm text-gray-600 space-y-1">
-                <p>{address.street}</p>
-                <p>{address.city}, {address.state} {address.zipCode}</p>
+                <p>{address.street_address}</p>
+                <p>{address.city}, {address.state} {address.postal_code}</p>
                 <p>{address.country}</p>
             </div>
             
@@ -140,7 +167,7 @@ const AddressCard = ({ address }: { address: any }) => {
 };
 
 // Payment method card component
-const PaymentMethodCard = ({ paymentMethod }: { paymentMethod: any }) => {
+const PaymentMethodCard = ({ paymentMethod }: { paymentMethod: PaymentMethod }) => {
     return (
         <motion.div 
             variants={itemVariants}
@@ -173,7 +200,7 @@ const PaymentMethodCard = ({ paymentMethod }: { paymentMethod: any }) => {
 };
 
 // Note item component
-const NoteItem = ({ note }: { note: any }) => {
+const NoteItem = ({ note }: { note: Note }) => {
     return (
         <motion.div 
             variants={itemVariants}
@@ -213,8 +240,8 @@ export default function CustomerDetailPage() {
         totalSpent: number;
         lastOrderDate: string | null;
     } | null>(null);
-    const [orders, setOrders] = useState<any[]>([]);
-    const [addresses, setAddresses] = useState<any[]>([]);
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [addresses, setAddresses] = useState<Address[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     
@@ -597,10 +624,10 @@ export default function CustomerDetailPage() {
                                             <tbody className="bg-white divide-y divide-gray-200">
                                                 {orders.slice(0, 5).map((order) => (
                                                     <OrderItem key={order.order_id} order={{
-                                                        id: order.order_id,
-                                                        date: new Date(order.order_date).toLocaleDateString(),
-                                                        items: order.item_count || 0,
-                                                        total: order.total_amount.toFixed(2),
+                                                        order_id: order.order_id,
+                                                        order_date: new Date(order.order_date).toLocaleDateString(),
+                                                        item_count: order.item_count || 0,
+                                                        total_amount: order.total_amount,
                                                         status: order.status
                                                     }} />
                                                 ))}
@@ -661,7 +688,7 @@ export default function CustomerDetailPage() {
                                                         {new Date(order.order_date).toLocaleDateString()}
                                                     </td>
                                                     <td className="py-4 px-3 text-sm">
-                                                        {order.item_count || 0} items
+                                                        {order.item_count} items
                                                     </td>
                                                     <td className="py-4 px-3 text-sm font-medium">
                                                         ${order.total_amount.toFixed(2)}
@@ -731,7 +758,7 @@ export default function CustomerDetailPage() {
                                             <div className="flex items-start mb-4">
                                                 <Home className="h-5 w-5 text-gray-400 mr-3 mt-1" />
                                                 <div>
-                                                    <h4 className="font-medium">{address.address_type || 'Address'}</h4>
+                                                    <h4 className="font-medium">{address.address_type} Address</h4>
                                                     {address.is_default && (
                                                         <p className="text-sm text-gray-500">Default</p>
                                                     )}

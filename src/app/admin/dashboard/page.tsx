@@ -6,6 +6,41 @@ import { motion } from 'framer-motion';
 import { Search, Bell, Users, ThumbsUp, ShoppingCart, Package, HelpCircle, Loader2 } from 'lucide-react';
 import { useAlert } from '@/lib/context/alert-context';
 import { getDashboardStats, getTopProducts, getReviewStats, getQuarterlySales } from '@/lib/supabase';
+import React from 'react';
+
+// Define interfaces for the dashboard data
+interface StatCard {
+    id: number;
+    icon: React.ReactNode;
+    count: string;
+    label: string;
+    change: string;
+    bgColor: string;
+}
+
+interface Product {
+    id: number;
+    name: string;
+    category: string;
+    price: string;
+    stock?: number;
+    sales?: number;
+    status: string;
+}
+
+interface ReviewStats {
+    positive: number;
+    neutral: number;
+    negative: number;
+}
+
+interface QuarterlySales {
+    quarter: string;
+    target: number;
+    reality: number;
+    sales?: number;
+    growth?: number;
+}
 
 // Animation variants
 const cardVariants = {
@@ -41,10 +76,10 @@ export default function AdminDashboard() {
     const [error, setError] = useState<string | null>(null);
 
     // State for dashboard data
-    const [stats, setStats] = useState<any[]>([]);
-    const [products, setProducts] = useState<any[]>([]);
-    const [reviewData, setReviewData] = useState({ positive: 0, neutral: 0, negative: 0 });
-    const [quarterlyData, setQuarterlyData] = useState<any[]>([]);
+    const [stats, setStats] = useState<StatCard[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [reviewData, setReviewData] = useState<ReviewStats>({ positive: 0, neutral: 0, negative: 0 });
+    const [quarterlyData, setQuarterlyData] = useState<QuarterlySales[]>([]);
 
     // Fetch dashboard data
     useEffect(() => {
@@ -270,7 +305,7 @@ export default function AdminDashboard() {
                                         <td className="py-3 px-4 text-sm">{product.category}</td>
                                         <td className="py-3 px-4 text-sm">{product.price}</td>
                                         <td className="py-3 px-4">
-                                            {product.status ? (
+                                            {product.status === 'active' ? (
                                                 <div className="flex items-center">
                                                     <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center">
                                                         <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">

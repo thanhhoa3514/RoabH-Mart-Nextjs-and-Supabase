@@ -6,7 +6,8 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Upload, X, Check } from 'lucide-react';
 import { useAlert } from '@/lib/context/alert-context';
 import { createCategory } from '@/lib/supabase';
-import { Category } from '@/types';
+
+import Image from 'next/image';
 
 export default function AddCategoryPage() {
     const router = useRouter();
@@ -257,16 +258,17 @@ export default function AddCategoryPage() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="mt-1 relative">
-                                    <img
+                                <div className="mt-1 relative h-64">
+                                    <Image
                                         src={imagePreview}
                                         alt="Category preview"
-                                        className="w-full h-64 object-cover rounded-md"
+                                        className="object-cover rounded-md"
+                                        fill
                                     />
                                     <button
                                         type="button"
                                         onClick={removeImage}
-                                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 z-10"
                                     >
                                         <X className="h-4 w-4" />
                                     </button>

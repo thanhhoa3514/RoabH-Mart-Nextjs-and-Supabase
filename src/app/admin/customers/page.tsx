@@ -9,13 +9,11 @@ import {
     Mail, 
     Phone, 
     Calendar, 
-    ShoppingBag, 
+
     ChevronDown, 
     ChevronUp, 
     User,
     MapPin,
-    CreditCard,
-    Tag,
     Plus,
     Loader2
 } from 'lucide-react';

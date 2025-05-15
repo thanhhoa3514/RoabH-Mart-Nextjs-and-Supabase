@@ -8,9 +8,7 @@ import {
     Edit, 
     Trash2, 
     Tag, 
-    Link as LinkIcon,
     Save,
-    X,
     Loader2,
     Plus
 } from 'lucide-react';
@@ -18,6 +16,7 @@ import { useAlert } from '@/lib/context/alert-context';
 import { getCategoryById, updateCategory, deleteCategory, getSubcategories } from '@/lib/supabase';
 import { Category, Subcategory } from '@/types';
 import Link from 'next/link';
+import Image from 'next/image';
 
 // Animation variants
 const containerVariants = {
@@ -291,7 +290,7 @@ export default function CategoryDetailPage() {
                     >
                         <h3 className="text-lg font-medium text-gray-900 mb-4">Delete Category</h3>
                         <p className="text-gray-500 mb-6">
-                            Are you sure you want to delete the category "{categoryData.name}"? This action cannot be undone.
+                            Are you sure you want to delete the category &quot;{categoryData.name}&quot;? This action cannot be undone.
                         </p>
                         <div className="flex justify-end space-x-3">
                             <button
@@ -314,10 +313,11 @@ export default function CategoryDetailPage() {
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
                 {/* Category Image Banner */}
                 <div className="relative h-48 md:h-64 bg-gray-200">
-                    <img 
+                    <Image 
                         src={categoryData.image || 'https://placekitten.com/800/400'} 
                         alt={categoryData.name} 
-                        className="w-full h-full object-cover"
+                        className="object-cover"
+                        fill
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                     <div className="absolute bottom-4 left-6">
@@ -417,11 +417,12 @@ export default function CategoryDetailPage() {
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                         Image Preview
                                     </label>
-                                    <div className="mt-1 border rounded-md overflow-hidden">
-                                        <img 
+                                    <div className="mt-1 border rounded-md overflow-hidden relative h-64">
+                                        <Image 
                                             src={formData.image || 'https://placekitten.com/800/400'} 
                                             alt="Preview" 
-                                            className="w-full h-64 object-cover"
+                                            className="object-cover"
+                                            fill
                                         />
                                     </div>
                                 </div>
