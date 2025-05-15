@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { ShoppingCart } from 'lucide-react';
+import { Product } from '@/types';
 
 interface AddToCartButtonProps {
-    product: any;
+    product: Product;
 }
 
 export default function AddToCartButton({ product }: AddToCartButtonProps) {

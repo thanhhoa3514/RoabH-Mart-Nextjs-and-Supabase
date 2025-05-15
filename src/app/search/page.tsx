@@ -29,7 +29,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       <div>
         {query ? (
           <h2 className="text-xl mb-4">
-            Search results for: <span className="font-medium">"{query}"</span>
+            Search results for: <span className="font-medium">&quot;{query}&quot;</span>
             {products && <span className="text-sm text-gray-500 ml-2">({products.length} items found)</span>}
           </h2>
         ) : (
@@ -41,7 +41,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             <div className="text-red-500">Error loading products: {error.message}</div>
           ) : !products || products.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500 mb-4">No products found{query ? ` for "${query}"` : ''}.</p>
+              <p className="text-gray-500 mb-4">No products found{query ? ` for &quot;${query}&quot;` : ''}.</p>
               {query && <p className="text-gray-500">Try a different search term or browse our categories.</p>}
             </div>
           ) : (
