@@ -7,6 +7,11 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { Lock, Mail, User } from 'lucide-react';
 import { useAlert } from '@/lib/context/alert-context';
 
+interface AuthError {
+  message: string;
+  status?: number;
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const { showAlert } = useAlert();
@@ -61,7 +66,7 @@ export default function RegisterPage() {
           console.log('Creating user record in database with ID:', data.user.id);
           
           // Tạo người dùng trong database với đầy đủ thông tin
-          const { success, error } = await registerUser({
+          const { error } = await registerUser({
             email: data.user.email || '',
             username: (data.user.email || '').split('@')[0],
             fullName: fullName // Giữ lại fullName để tạo profile
@@ -99,10 +104,13 @@ export default function RegisterPage() {
       console.log('Registration process completed successfully');
       return;
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Registration error:', err);
-      setError(err.message || 'Đã xảy ra lỗi trong quá trình đăng ký. Vui lòng thử lại.');
-      showAlert('error', err.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+      const errorMessage = err && typeof err === 'object' && 'message' in err 
+        ? (err.message as string) 
+        : 'Đã xảy ra lỗi trong quá trình đăng ký. Vui lòng thử lại.';
+      setError(errorMessage);
+      showAlert('error', errorMessage || 'Đăng ký thất bại. Vui lòng thử lại.');
       setSuccess(false); // Ensure success is false
       setLoading(false);
     }

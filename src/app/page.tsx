@@ -3,6 +3,12 @@ import Image from 'next/image';
 import { getFeaturedProducts } from '@/lib/supabase/products/products.model';
 import { getCategories } from '@/lib/supabase/categories/categories.model';
 
+// Define interface for product image
+interface ProductImage {
+  image_url: string;
+  is_primary: boolean;
+}
+
 export default async function Home() {
   // Fetch featured products from Supabase
   const { data: featuredProductsData, error: featuredProductsError } = await getFeaturedProducts(4);
@@ -60,7 +66,7 @@ export default async function Home() {
           ) : (
             featuredProducts.map((product) => {
               // Tìm ảnh chính của sản phẩm hoặc lấy ảnh đầu tiên
-              const primaryImage = product.product_images?.find((img: any) => img.is_primary)?.image_url;
+              const primaryImage = product.product_images?.find((img: ProductImage) => img.is_primary)?.image_url;
               const firstImage = product.product_images?.[0]?.image_url;
               const imageUrl = primaryImage || firstImage || "https://placekitten.com/300/300";
               
