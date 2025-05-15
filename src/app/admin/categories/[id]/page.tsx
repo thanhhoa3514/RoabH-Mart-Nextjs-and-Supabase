@@ -7,8 +7,6 @@ import {
     ArrowLeft, 
     Edit, 
     Trash2, 
-    ShoppingBag, 
-    Calendar, 
     Tag, 
     Link as LinkIcon,
     Save,
