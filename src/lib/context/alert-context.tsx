@@ -24,6 +24,11 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
     // Generate a unique ID for each alert
     const generateId = () => `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+    // Hide an alert by ID
+    const hideAlert = useCallback((id: string) => {
+        setAlerts((prevAlerts) => prevAlerts.filter(alert => alert.id !== id));
+    }, []);
+
     // Show a new alert
     const showAlert = useCallback((type: AlertType, message: string, duration = 5000) => {
         const id = generateId();
@@ -37,12 +42,7 @@ export function AlertProvider({ children }: { children: React.ReactNode }) {
         }
 
         return id;
-    }, []);
-
-    // Hide an alert by ID
-    const hideAlert = useCallback((id: string) => {
-        setAlerts((prevAlerts) => prevAlerts.filter(alert => alert.id !== id));
-    }, []);
+    }, [hideAlert]);
 
     return (
         <AlertContext.Provider value={{ alerts, showAlert, hideAlert }}>

@@ -1,8 +1,5 @@
 import { supabase } from '../client/client.model';
 import { DbOrder } from '../../../types/order/order.model';
-import { DbOrderItem } from '../../../types/order/order-item.model';
-import { DbPayment } from '../../../types/order/order-payment.model';
-import { DbShippingInfo } from '../../../types/order/order-shipping.model';
 
 // Get all orders with pagination
 export async function getOrders(page = 1, pageSize = 10) {

@@ -1,5 +1,6 @@
 import { supabase } from '../client/client.model';
 import { User as SupabaseUser } from '@supabase/supabase-js';
+import { PostgrestError } from '@supabase/supabase-js';
 
 /**
  * Interface for the user profile as stored in the database
@@ -66,7 +67,7 @@ export interface CreateUserData {
  * Get complete user data including profile and addresses
  * @param userId The database user ID
  */
-export async function getUserData(userId: number): Promise<{ data: CompleteUserData | null; error: any }> {
+export async function getUserData(userId: number): Promise<{ data: CompleteUserData | null; error: PostgrestError | Error | null }> {
   try {
     // Get user data
     const { data: userData, error: userError } = await supabase
@@ -110,7 +111,7 @@ export async function getUserData(userId: number): Promise<{ data: CompleteUserD
     };
   } catch (error) {
     console.error('Error fetching user data:', error);
-    return { data: null, error };
+    return { data: null, error: error as Error };
   }
 }
 
@@ -118,7 +119,7 @@ export async function getUserData(userId: number): Promise<{ data: CompleteUserD
  * Get user database ID from Supabase auth user
  * @param supabaseUser The Supabase auth user object
  */
-export async function getUserIdFromAuth(supabaseUser: SupabaseUser): Promise<{ userId: number | null; error: any }> {
+export async function getUserIdFromAuth(supabaseUser: SupabaseUser): Promise<{ userId: number | null; error: PostgrestError | Error | null }> {
   try {
     if (!supabaseUser?.email) {
       console.error('No email found in the Supabase user object');
@@ -155,7 +156,7 @@ export async function getUserIdFromAuth(supabaseUser: SupabaseUser): Promise<{ u
     return { userId, error: null };
   } catch (error) {
     console.error('Error getting user ID:', error);
-    return { userId: null, error };
+    return { userId: null, error: error as Error };
   }
 }
 
@@ -163,7 +164,7 @@ export async function getUserIdFromAuth(supabaseUser: SupabaseUser): Promise<{ u
  * Update user's last login timestamp
  * @param userId The database user ID
  */
-export async function updateLastLogin(userId: number): Promise<{ success: boolean; error: any }> {
+export async function updateLastLogin(userId: number): Promise<{ success: boolean; error: PostgrestError | Error | null }> {
   try {
     const { error } = await supabase
       .from('users')
@@ -177,7 +178,7 @@ export async function updateLastLogin(userId: number): Promise<{ success: boolea
     return { success: true, error: null };
   } catch (error) {
     console.error('Error updating last login:', error);
-    return { success: false, error };
+    return { success: false, error: error as Error };
   }
 }
 
@@ -186,7 +187,7 @@ export async function updateLastLogin(userId: number): Promise<{ success: boolea
  * @param email User's email address
  * @param username Username (defaults to the first part of email)
  */
-export async function createUser(email: string, username?: string): Promise<{ userId: number | null; error: any }> {
+export async function createUser(email: string, username?: string): Promise<{ userId: number | null; error: PostgrestError | Error | null }> {
   try {
     // If username not provided, use the part before @ in email
     const defaultUsername = username || email.split('@')[0];
@@ -216,7 +217,7 @@ export async function createUser(email: string, username?: string): Promise<{ us
     return { userId, error: null };
   } catch (error) {
     console.error('Error creating user:', error);
-    return { userId: null, error };
+    return { userId: null, error: error as Error };
   }
 }
 
@@ -228,7 +229,7 @@ export async function createUser(email: string, username?: string): Promise<{ us
 export async function createUserProfile(
   userId: number, 
   profileData: { fullName?: string; phoneNumber?: string; email?: string }
-): Promise<{ success: boolean; error: any }> {
+): Promise<{ success: boolean; error: PostgrestError | Error | null }> {
   try {
     const now = new Date().toISOString();
     
@@ -255,7 +256,7 @@ export async function createUserProfile(
     return { success: true, error: null };
   } catch (error) {
     console.error('Error creating user profile:', error);
-    return { success: false, error };
+    return { success: false, error: error as Error };
   }
 }
 
@@ -264,7 +265,7 @@ export async function createUserProfile(
  * This is called after Supabase Auth registration
  * @param userData User registration data
  */
-export async function registerUser(userData: CreateUserData): Promise<{ success: boolean; error: any }> {
+export async function registerUser(userData: CreateUserData): Promise<{ success: boolean; error: PostgrestError | Error | null }> {
   try {
     console.log('Starting user registration for:', userData.email);
     
@@ -284,7 +285,7 @@ export async function registerUser(userData: CreateUserData): Promise<{ success:
     console.log('User created successfully with ID:', userId);
     
     // Create the user profile
-    const { success: profileSuccess, error: profileError } = await createUserProfile(userId, {
+    const { error: profileError } = await createUserProfile(userId, {
       fullName: userData.fullName,
       phoneNumber: userData.phoneNumber,
       email: userData.email
@@ -293,13 +294,16 @@ export async function registerUser(userData: CreateUserData): Promise<{ success:
     if (profileError) {
       console.error('Failed to create user profile:', profileError);
       // Đã tạo user nhưng không tạo được profile - vẫn coi là thành công một phần
-      return { success: true, error: { message: 'User created but profile creation failed', details: profileError } };
+      return { success: true, error: { 
+        message: 'User created but profile creation failed', 
+        details: profileError 
+      } as unknown as Error };
     }
     
     console.log('User profile created successfully');
     return { success: true, error: null };
   } catch (error) {
     console.error('Error during user registration:', error);
-    return { success: false, error };
+    return { success: false, error: error as Error };
   }
 } 
