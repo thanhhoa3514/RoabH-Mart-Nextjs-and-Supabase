@@ -16,6 +16,29 @@ interface Product {
   seller: string;
 }
 
+// Define an interface for error objects
+interface ErrorWithMessage {
+  message: string;
+}
+
+// Type guard function to check if an error has a message property
+function isErrorWithMessage(error: unknown): error is ErrorWithMessage {
+  return (
+    typeof error === 'object' && 
+    error !== null && 
+    'message' in error && 
+    typeof (error as Record<string, unknown>).message === 'string'
+  );
+}
+
+// Function to get error message from unknown error
+function getErrorMessage(error: unknown): string {
+  if (isErrorWithMessage(error)) {
+    return error.message;
+  }
+  return 'An unknown error occurred';
+}
+
 export default function TestPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,9 +66,9 @@ export default function TestPage() {
         setProducts([]);
         setError('No products found');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error fetching products:', err);
-      setError(err.message || 'Failed to fetch products');
+      setError(getErrorMessage(err));
       setProducts([]);
     } finally {
       setLoading(false);
