@@ -3,11 +3,9 @@ import AddToCartButton from './AddToCartButton';
 import ProductGallery from './ProductGallery';
 import RelatedProducts from './RelatedProducts';
 
-interface ProductDetailPageProps {
-    params: {
-        id: string;
-    };
-    searchParams: Record<string, string | string[] | undefined>;
+type ProductDetailPageProps = {
+  params: { id: string }
+  searchParams: { [key: string]: string | string[] | undefined }
 }
 
 export default function ProductDetailPage({ params }: ProductDetailPageProps) {
