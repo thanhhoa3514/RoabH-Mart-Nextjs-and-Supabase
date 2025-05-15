@@ -1,18 +1,31 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
-import { ShoppingCart, User, Search, Menu, X, LogOut } from 'lucide-react';
+import { useState, FormEvent } from 'react';
+import { ShoppingCart, User, Search, Menu, X, LogOut, ShoppingBag, Smartphone, Shirt, Home } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
+import { useRouter } from 'next/navigation';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
   const { user, signOut } = useAuth();
 
   const handleSignOut = async () => {
     await signOut();
     setIsUserMenuOpen(false);
+  };
+
+  const handleSearch = (e: FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setIsSearchOpen(false);
+      setSearchQuery('');
+    }
   };
 
   return (
@@ -25,26 +38,59 @@ export default function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
-          <Link href="/products" className="hover:text-secondary-foreground transition-colors">
+          <Link href="/products" className="hover:underline hover:opacity-90 transition-all flex items-center gap-2">
+            <ShoppingBag className="w-5 h-5" />
             All Products
           </Link>
-          <Link href="/products?category=electronics" className="hover:text-secondary-foreground transition-colors">
+          <Link href="/products?category=electronics" className="hover:underline hover:opacity-90 transition-all flex items-center gap-2">
+            <Smartphone className="w-5 h-5" />
             Electronics
           </Link>
-          <Link href="/products?category=clothing" className="hover:text-secondary-foreground transition-colors">
+          <Link href="/products?category=clothing" className="hover:underline hover:opacity-90 transition-all flex items-center gap-2">
+            <Shirt className="w-5 h-5" />
             Clothing
           </Link>
-          <Link href="/products?category=home" className="hover:text-secondary-foreground transition-colors">
+          <Link href="/products?category=home" className="hover:underline hover:opacity-90 transition-all flex items-center gap-2">
+            <Home className="w-5 h-5" />
             Home & Garden
           </Link>
         </nav>
 
         {/* Search, Cart, and User */}
         <div className="hidden md:flex items-center space-x-6">
-          <Link href="/search" className="hover:text-secondary-foreground transition-colors">
-            <Search className="w-6 h-6" />
-          </Link>
-          <Link href="/cart" className="hover:text-secondary-foreground transition-colors relative">
+          <div className="relative">
+            <button
+              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              className="hover:opacity-80 transition-all"
+              aria-label="Search"
+            >
+              <Search className="w-6 h-6" />
+            </button>
+            
+            {/* Desktop Search Dropdown */}
+            {isSearchOpen && (
+              <div className="absolute right-0 mt-2 w-72 bg-white rounded-md shadow-lg p-2 z-10">
+                <form onSubmit={handleSearch} className="flex">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search products..."
+                    className="flex-grow p-2 text-gray-900 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    className="bg-primary text-white p-2 rounded-r-md hover:bg-opacity-90"
+                  >
+                    <Search className="w-5 h-5" />
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
+          
+          <Link href="/cart" className="hover:opacity-80 transition-all relative">
             <ShoppingCart className="w-6 h-6" />
             <span className="absolute -top-2 -right-2 bg-accent-foreground text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
               0
@@ -112,46 +158,60 @@ export default function Header() {
       {isMenuOpen && (
         <div className="md:hidden bg-primary border-t border-primary-foreground">
           <div className="container mx-auto px-4 py-4 flex flex-col space-y-4">
+            {/* Mobile Search Form */}
+            <form onSubmit={handleSearch} className="flex mb-2">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products..."
+                className="flex-grow p-2 text-gray-900 border border-gray-300 rounded-l-md focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="bg-white text-primary p-2 rounded-r-md"
+              >
+                <Search className="w-5 h-5" />
+              </button>
+            </form>
+            
             <Link
               href="/products"
-              className="text-white hover:text-secondary-foreground transition-colors"
+              className="text-white hover:underline hover:opacity-90 transition-all flex items-center gap-2"
               onClick={() => setIsMenuOpen(false)}
             >
+              <ShoppingBag className="w-5 h-5" />
               All Products
             </Link>
             <Link
               href="/products?category=electronics"
-              className="text-white hover:text-secondary-foreground transition-colors"
+              className="text-white hover:underline hover:opacity-90 transition-all flex items-center gap-2"
               onClick={() => setIsMenuOpen(false)}
             >
+              <Smartphone className="w-5 h-5" />
               Electronics
             </Link>
             <Link
               href="/products?category=clothing"
-              className="text-white hover:text-secondary-foreground transition-colors"
+              className="text-white hover:underline hover:opacity-90 transition-all flex items-center gap-2"
               onClick={() => setIsMenuOpen(false)}
             >
+              <Shirt className="w-5 h-5" />
               Clothing
             </Link>
             <Link
               href="/products?category=home"
-              className="text-white hover:text-secondary-foreground transition-colors"
+              className="text-white hover:underline hover:opacity-90 transition-all flex items-center gap-2"
               onClick={() => setIsMenuOpen(false)}
             >
+              <Home className="w-5 h-5" />
               Home & Garden
             </Link>
 
             <div className="flex items-center space-x-6 pt-2 border-t border-primary-foreground">
               <Link
-                href="/search"
-                className="text-white hover:text-secondary-foreground transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <Search className="w-6 h-6" />
-              </Link>
-              <Link
                 href="/cart"
-                className="text-white hover:text-secondary-foreground transition-colors relative"
+                className="text-white hover:opacity-80 transition-all relative"
                 onClick={() => setIsMenuOpen(false)}
               >
                 <ShoppingCart className="w-6 h-6" />
