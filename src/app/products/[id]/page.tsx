@@ -21,9 +21,11 @@ type ProductSpecifications = {
   [key: string]: string;
 }
 
-export default async function ProductDetailPage({ params,
-    searchParams, }: {params: { id: string };
-    searchParams?: { [key: string]: string | string[] };}) {
+export default async function ProductDetailPage({
+    params,
+  }: {
+    params: { id: string };
+  }) {
     const { id } = params;
 
     // Fetch product data from Supabase
