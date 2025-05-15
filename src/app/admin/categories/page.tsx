@@ -65,13 +65,13 @@ export default function CategoriesPage() {
                 const { error } = await deleteCategory(categoryToDelete.id);
                 if (error) throw new Error(error.message);
                 
-            showAlert('success', `Category "${categoryToDelete.name}" deleted successfully`, 3000);
+                showAlert('success', `Category &quot;${categoryToDelete.name}&quot; deleted successfully`, 3000);
                 setCategories(categories.filter(cat => cat.category_id !== categoryToDelete.id));
-            } catch (err) {
+            } catch (_) {
                 showAlert('error', 'Failed to delete category', 5000);
             } finally {
-            setIsDeleteModalOpen(false);
-            setCategoryToDelete(null);
+                setIsDeleteModalOpen(false);
+                setCategoryToDelete(null);
             }
         }
     };
@@ -221,7 +221,7 @@ export default function CategoriesPage() {
                     >
                         <h3 className="text-lg font-medium text-gray-900 mb-4">Delete Category</h3>
                         <p className="text-gray-500 mb-6">
-                            Are you sure you want to delete the category "{categoryToDelete.name}"? This action cannot be undone.
+                            Are you sure you want to delete the category &quot;{categoryToDelete.name}&quot;? This action cannot be undone.
                         </p>
                         <div className="flex justify-end space-x-3">
                             <button

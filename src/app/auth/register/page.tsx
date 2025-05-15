@@ -7,10 +7,10 @@ import { useAuth } from '@/lib/auth/AuthContext';
 import { Lock, Mail, User } from 'lucide-react';
 import { useAlert } from '@/lib/context/alert-context';
 
-interface AuthError {
-  message: string;
-  status?: number;
-}
+// interface AuthError {
+//   message: string;
+//   status?: number;
+// }
 
 export default function RegisterPage() {
   const router = useRouter();

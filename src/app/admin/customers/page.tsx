@@ -39,9 +39,8 @@ const itemVariants = {
 };
 
 // Customer card component
-const CustomerCard = ({ customer, onView }: { 
-    customer: DbCustomer, 
-    onView: (id: number) => void 
+const CustomerCard = ({ customer }: { 
+    customer: DbCustomer
 }) => {
     // Format name for initials
     const initials = customer.first_name && customer.last_name 
@@ -127,7 +126,7 @@ export default function CustomersPage() {
     
     // Pagination state
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+    const pageSize = 10;
     const [totalCustomers, setTotalCustomers] = useState(0);
     
     // Data fetching state
@@ -379,7 +378,6 @@ export default function CustomersPage() {
                                 <CustomerCard 
                                     key={customer.user_id} 
                                     customer={customer} 
-                                    onView={handleViewCustomer} 
                                 />
                             ))
                         ) : (

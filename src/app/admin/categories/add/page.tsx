@@ -22,7 +22,6 @@ export default function AddCategoryPage() {
     });
     
     const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [imageFile, setImageFile] = useState<File | null>(null);
     const [errors, setErrors] = useState<{[key: string]: string}>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     
@@ -72,7 +71,6 @@ export default function AddCategoryPage() {
                 return;
             }
             
-            setImageFile(file);
             setImagePreview(URL.createObjectURL(file));
             
             // Clear error if exists
@@ -87,7 +85,6 @@ export default function AddCategoryPage() {
     
     const removeImage = () => {
         setImagePreview(null);
-        setImageFile(null);
         setFormData({
             ...formData,
             image: null
@@ -127,7 +124,7 @@ export default function AddCategoryPage() {
                 display_order: formData.display_order
             };
             
-            const { data, error } = await createCategory(categoryData);
+            const { error } = await createCategory(categoryData);
             
             if (error) {
                 throw new Error(error.message);

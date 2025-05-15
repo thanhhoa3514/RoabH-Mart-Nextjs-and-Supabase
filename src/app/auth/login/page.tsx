@@ -9,10 +9,10 @@ import { useAlert } from '@/lib/context/alert-context';
 import { useAuth } from '@/lib/auth/AuthContext';
 import TokenHandler from '@/components/auth/TokenHandler';
 
-interface AuthError {
-    message: string;
-    status?: number;
-}
+// interface AuthError {
+//     message: string;
+//     status?: number;
+// }
 
 export default function LoginPage() {
     const router = useRouter();

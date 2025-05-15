@@ -45,18 +45,18 @@ interface Address {
     country: string;
 }
 
-interface PaymentMethod {
-    brand: string;
-    isDefault: boolean;
-    last4: string;
-    expiryDate: string;
-}
+// interface PaymentMethod {
+//     brand: string;
+//     isDefault: boolean;
+//     last4: string;
+//     expiryDate: string;
+// }
 
-interface Note {
-    author: string;
-    date: string;
-    content: string;
-}
+// interface Note {
+//     author: string;
+//     date: string;
+//     content: string;
+// }
 
 // Animation variants
 const containerVariants = {
@@ -166,62 +166,62 @@ const AddressCard = ({ address }: { address: Address }) => {
     );
 };
 
-// Payment method card component
-const PaymentMethodCard = ({ paymentMethod }: { paymentMethod: PaymentMethod }) => {
-    return (
-        <motion.div 
-            variants={itemVariants}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
-        >
-            <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center">
-                    <CreditCard className="h-4 w-4 text-gray-400 mr-2" />
-                    <h3 className="font-medium">{paymentMethod.brand}</h3>
-                </div>
-                {paymentMethod.isDefault && (
-                    <span className="bg-amber-100 text-amber-600 text-xs px-2 py-1 rounded-full">
-                        Default
-                    </span>
-                )}
-            </div>
+// // Payment method card component
+// const PaymentMethodCard = ({ paymentMethod }: { paymentMethod: PaymentMethod }) => {
+//     return (
+//         <motion.div 
+//             variants={itemVariants}
+//             className="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
+//         >
+//             <div className="flex justify-between items-start mb-2">
+//                 <div className="flex items-center">
+//                     <CreditCard className="h-4 w-4 text-gray-400 mr-2" />
+//                     <h3 className="font-medium">{paymentMethod.brand}</h3>
+//                 </div>
+//                 {paymentMethod.isDefault && (
+//                     <span className="bg-amber-100 text-amber-600 text-xs px-2 py-1 rounded-full">
+//                         Default
+//                     </span>
+//                 )}
+//             </div>
             
-            <div className="text-sm text-gray-600 space-y-1">
-                <p>•••• •••• •••• {paymentMethod.last4}</p>
-                <p>Expires {paymentMethod.expiryDate}</p>
-            </div>
+//             <div className="text-sm text-gray-600 space-y-1">
+//                 <p>•••• •••• •••• {paymentMethod.last4}</p>
+//                 <p>Expires {paymentMethod.expiryDate}</p>
+//             </div>
             
-            <div className="mt-3 flex justify-end space-x-2">
-                <button className="text-gray-500 hover:text-amber-500">
-                    <Edit className="h-4 w-4" />
-                </button>
-            </div>
-        </motion.div>
-    );
-};
+//             <div className="mt-3 flex justify-end space-x-2">
+//                 <button className="text-gray-500 hover:text-amber-500">
+//                     <Edit className="h-4 w-4" />
+//                 </button>
+//             </div>
+//         </motion.div>
+//     );
+// };
 
-// Note item component
-const NoteItem = ({ note }: { note: Note }) => {
-    return (
-        <motion.div 
-            variants={itemVariants}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4"
-        >
-            <div className="flex justify-between items-start mb-2">
-                <div className="flex items-start">
-                    <MessageSquare className="h-4 w-4 text-gray-400 mt-1 mr-2" />
-                    <div>
-                        <div className="flex items-center">
-                            <span className="font-medium">{note.author}</span>
-                            <span className="mx-2 text-gray-300">•</span>
-                            <span className="text-sm text-gray-500">{note.date}</span>
-                        </div>
-                        <p className="text-sm mt-1">{note.content}</p>
-                    </div>
-                </div>
-            </div>
-        </motion.div>
-    );
-};
+// // Note item component
+// const NoteItem = ({ note }: { note: Note }) => {
+//     return (
+//         <motion.div 
+//             variants={itemVariants}
+//             className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4"
+//         >
+//             <div className="flex justify-between items-start mb-2">
+//                 <div className="flex items-start">
+//                     <MessageSquare className="h-4 w-4 text-gray-400 mt-1 mr-2" />
+//                     <div>
+//                         <div className="flex items-center">
+//                             <span className="font-medium">{note.author}</span>
+//                             <span className="mx-2 text-gray-300">•</span>
+//                             <span className="text-sm text-gray-500">{note.date}</span>
+//                         </div>
+//                         <p className="text-sm mt-1">{note.content}</p>
+//                     </div>
+//                 </div>
+//             </div>
+//         </motion.div>
+//     );
+// };
 
 export default function CustomerDetailPage() {
     const params = useParams();
@@ -720,7 +720,7 @@ export default function CustomerDetailPage() {
                                 <div className="text-center py-12">
                                     <ShoppingBag className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                                     <h3 className="text-lg font-medium text-gray-700">No orders yet</h3>
-                                    <p className="text-gray-500 mt-1">This customer hasn't placed any orders</p>
+                                    <p className="text-gray-500 mt-1">This customer hasn&apos;t placed any orders</p>
                                 </div>
                             )}
                         </motion.div>
@@ -798,7 +798,7 @@ export default function CustomerDetailPage() {
                                 <div className="text-center py-12">
                                     <MapPin className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                                     <h3 className="text-lg font-medium text-gray-700">No address found</h3>
-                                    <p className="text-gray-500 mt-1">This customer hasn't added any addresses yet</p>
+                                    <p className="text-gray-500 mt-1">This customer hasn&apos;t added any addresses yet</p>
                                     <button 
                                         className="mt-4 px-4 py-2 bg-amber-100 rounded-md text-amber-600 hover:bg-amber-200"
                                         onClick={() => showAlert('info', 'Add address functionality would be implemented here', 2000)}

@@ -8,13 +8,13 @@ import { CompleteUserData } from '@/lib/supabase/user/users.model';
 import { AuthError } from '@supabase/supabase-js';
 
 // Define types for authentication responses
-interface AuthResponse {
-  data?: {
-    user?: User | null;
-    session?: unknown;
-  } | null;
-  error: AuthError | null;
-}
+// interface AuthResponse {
+//   data?: {
+//     user?: User | null;
+//     session?: unknown;
+//   } | null;
+//   error: AuthError | null;
+// }
 
 interface AuthContextType {
     user: User | null;

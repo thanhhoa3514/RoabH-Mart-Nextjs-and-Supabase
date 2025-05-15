@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
+import { Plus, Search, Trash2, Eye } from 'lucide-react';
 import { useAlert } from '@/lib/context/alert-context';
 import Link from 'next/link';
 
@@ -139,10 +139,6 @@ export default function ProductsPage() {
         showAlert('success', `Editing product "${name}"`, 3000);
     };
 
-    const handleView = (id: number, name: string) => {
-        showAlert('info', `Viewing product "${name}" details`, 3000);
-    };
-
     const openDeleteModal = (id: number, name: string) => {
         setProductToDelete({ id, name });
     };
@@ -255,7 +251,7 @@ export default function ProductsPage() {
                     initial="hidden"
                     animate="visible"
                 >
-                    {filteredProducts.map((product, index) => (
+                    {filteredProducts.map((product) => (
                         <motion.div
                             key={product.id}
                             variants={itemVariants}

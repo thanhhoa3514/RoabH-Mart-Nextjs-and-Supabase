@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { Mail } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
-interface AuthError {
-    message: string;
-    status?: number;
-}
+// interface AuthError {
+//     message: string;
+//     status?: number;
+// }
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('');
