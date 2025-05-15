@@ -48,18 +48,22 @@ export default function RegisterPage() {
       console.log('User confirmed:', data?.user?.email_confirmed_at ? 'Yes' : 'No');
       console.log('User ID:', data?.user?.id);
 
+      // Check if confirmation was sent
+      const emailConfirmationSent = !data?.user?.email_confirmed_at;
+      console.log('Email confirmation sent:', emailConfirmationSent);
+
       // Create user record in our database immediately, regardless of verification status
-      if (data?.user?.email) {
+      if (data?.user?.id) {
         try {
           // Import registerUser function để sử dụng
           const { registerUser } = await import('@/lib/supabase');
           
-          console.log('Creating user record in database:', data.user.email);
+          console.log('Creating user record in database with ID:', data.user.id);
           
           // Tạo người dùng trong database với đầy đủ thông tin
           const { success, error } = await registerUser({
-            email: data.user.email,
-            username: data.user.email.split('@')[0],
+            email: data.user.email || '',
+            username: (data.user.email || '').split('@')[0],
             fullName: fullName // Giữ lại fullName để tạo profile
           });
 
@@ -74,21 +78,25 @@ export default function RegisterPage() {
           showAlert('warning', 'Đã đăng ký nhưng có lỗi khi lưu thông tin profile. Vui lòng liên hệ hỗ trợ nếu gặp vấn đề khi đăng nhập.', 8000);
         }
       } else {
-        console.error('No user email returned from registration');
+        console.error('No user ID returned from registration');
       }
 
-      // ALWAYS set success true after registration, regardless of whether all operations succeeded
-      setSuccess(true);
-      
-      // Show alert
-      showAlert('success', 'Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản.', 5000);
+      // Only show success if we need to verify email
+      if (emailConfirmationSent) {
+        // Show alert
+        showAlert('success', 'Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản.', 8000);
+        // Set success state to show confirmation screen
+        setSuccess(true);
+      } else {
+        // User was auto-confirmed - redirect to login
+        showAlert('success', 'Đăng ký thành công! Bạn có thể đăng nhập ngay bây giờ.', 5000);
+        router.push('/auth/login?verified=true');
+      }
       
       // Stop loading
       setLoading(false);
       
       console.log('Registration process completed successfully');
-      
-      // Return immediately to show success screen
       return;
 
     } catch (err: any) {
