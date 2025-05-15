@@ -133,38 +133,38 @@ const OrderItem = ({ order }: { order: Order }) => {
 };
 
 // Address card component
-const AddressCard = ({ address }: { address: Address }) => {
-    return (
-        <motion.div 
-            variants={itemVariants}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
-        >
-            <div className="flex justify-between items-start mb-2">
-                <div className="flex items-center">
-                    <Home className="h-4 w-4 text-gray-400 mr-2" />
-                    <h3 className="font-medium">{address.address_type} Address</h3>
-                </div>
-                {address.is_default && (
-                    <span className="bg-amber-100 text-amber-600 text-xs px-2 py-1 rounded-full">
-                        Default
-                    </span>
-                )}
-            </div>
+// const AddressCard = ({ address }: { address: Address }) => {
+//     return (
+//         <motion.div 
+//             variants={itemVariants}
+//             className="bg-white rounded-lg shadow-sm border border-gray-200 p-4"
+//         >
+//             <div className="flex justify-between items-start mb-2">
+//                 <div className="flex items-center">
+//                     <Home className="h-4 w-4 text-gray-400 mr-2" />
+//                     <h3 className="font-medium">{address.address_type} Address</h3>
+//                 </div>
+//                 {address.is_default && (
+//                     <span className="bg-amber-100 text-amber-600 text-xs px-2 py-1 rounded-full">
+//                         Default
+//                     </span>
+//                 )}
+//             </div>
             
-            <div className="text-sm text-gray-600 space-y-1">
-                <p>{address.street_address}</p>
-                <p>{address.city}, {address.state} {address.postal_code}</p>
-                <p>{address.country}</p>
-            </div>
+//             <div className="text-sm text-gray-600 space-y-1">
+//                 <p>{address.street_address}</p>
+//                 <p>{address.city}, {address.state} {address.postal_code}</p>
+//                 <p>{address.country}</p>
+//             </div>
             
-            <div className="mt-3 flex justify-end space-x-2">
-                <button className="text-gray-500 hover:text-amber-500">
-                    <Edit className="h-4 w-4" />
-                </button>
-            </div>
-        </motion.div>
-    );
-};
+//             <div className="mt-3 flex justify-end space-x-2">
+//                 <button className="text-gray-500 hover:text-amber-500">
+//                     <Edit className="h-4 w-4" />
+//                 </button>
+//             </div>
+//         </motion.div>
+//     );
+// };
 
 // // Payment method card component
 // const PaymentMethodCard = ({ paymentMethod }: { paymentMethod: PaymentMethod }) => {

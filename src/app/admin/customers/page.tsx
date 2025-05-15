@@ -166,10 +166,6 @@ export default function CustomersPage() {
         fetchCustomers();
     }, [page, pageSize, searchQuery, showAlert]);
 
-    const handleViewCustomer = (customerId: number) => {
-        showAlert('info', `Viewing customer profile ${customerId}`, 2000);
-    };
-
     const handleAddCustomer = () => {
         showAlert('info', 'Add new customer functionality would be implemented here', 2000);
     };

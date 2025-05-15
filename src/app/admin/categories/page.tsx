@@ -67,7 +67,7 @@ export default function CategoriesPage() {
                 
                 showAlert('success', `Category &quot;${categoryToDelete.name}&quot; deleted successfully`, 3000);
                 setCategories(categories.filter(cat => cat.category_id !== categoryToDelete.id));
-            } catch (_) {
+            } catch {
                 showAlert('error', 'Failed to delete category', 5000);
             } finally {
                 setIsDeleteModalOpen(false);
