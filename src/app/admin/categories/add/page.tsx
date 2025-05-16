@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Upload, X, Check } from 'lucide-react';
+import { ArrowLeft, Upload, X, Check, Loader2 } from 'lucide-react';
 import { useAlert } from '@/lib/context/alert-context';
 import { createCategory } from '@/lib/supabase';
 
@@ -12,6 +12,7 @@ import Image from 'next/image';
 export default function AddCategoryPage() {
     const router = useRouter();
     const { showAlert } = useAlert();
+    const fileInputRef = useRef<HTMLInputElement>(null);
     
     const [formData, setFormData] = useState({
         name: '',
@@ -22,6 +23,8 @@ export default function AddCategoryPage() {
     });
     
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [errors, setErrors] = useState<{[key: string]: string}>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     
@@ -49,42 +52,81 @@ export default function AddCategoryPage() {
         });
     };
     
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        
+        // Validate file type
+        if (!file.type.match(/image\/(jpeg|jpg|png|webp)/i)) {
+            setErrors({
+                ...errors,
+                image: 'Please select a valid image file (JPEG, PNG, or WebP)'
+            });
+            return;
+        }
+        
+        // Validate file size (max 2MB)
+        if (file.size > 2 * 1024 * 1024) {
+            setErrors({
+                ...errors,
+                image: 'Image size should be less than 2MB'
+            });
+            return;
+        }
+        
+        // Show image preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+        
+        // Clear error if exists
+        if (errors.image) {
+            setErrors({
+                ...errors,
+                image: ''
+            });
+        }
+        
+        // Upload image to Supabase
+        try {
+            setIsUploadingImage(true);
             
-            // Validate file type
-            if (!file.type.match(/image\/(jpeg|jpg|png|webp)/i)) {
-                setErrors({
-                    ...errors,
-                    image: 'Please select a valid image file (JPEG, PNG, or WebP)'
-                });
-                return;
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData,
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(result.error || 'Upload failed');
             }
             
-            // Validate file size (max 2MB)
-            if (file.size > 2 * 1024 * 1024) {
-                setErrors({
-                    ...errors,
-                    image: 'Image size should be less than 2MB'
-                });
-                return;
-            }
-            
-            setImagePreview(URL.createObjectURL(file));
-            
-            // Clear error if exists
-            if (errors.image) {
-                setErrors({
-                    ...errors,
-                    image: ''
-                });
-            }
+            // Save the uploaded image URL
+            setUploadedImageUrl(result.url);
+            showAlert('success', 'Image uploaded successfully', 2000);
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            showAlert('error', `Failed to upload image: ${(error as Error).message}`, 5000);
+        } finally {
+            setIsUploadingImage(false);
         }
     };
     
     const removeImage = () => {
         setImagePreview(null);
+        setUploadedImageUrl(null);
+        
+        // Clear the file input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+        
         setFormData({
             ...formData,
             image: null
@@ -112,14 +154,11 @@ export default function AddCategoryPage() {
         setIsSubmitting(true);
         
         try {
-            // In a real app, you would upload the image to storage
-            // For now, we'll just use the image URL directly if available
-            const imageUrl = imagePreview; // In a real app, upload image and get URL
-            
+            // Use the URL of the uploaded image
             const categoryData = {
                 name: formData.name,
                 description: formData.description || null,
-                image: imageUrl,
+                image: uploadedImageUrl,
                 is_active: formData.is_active,
                 display_order: formData.display_order
             };
@@ -245,6 +284,8 @@ export default function AddCategoryPage() {
                                                     accept="image/jpeg,image/png,image/webp"
                                                     className="sr-only"
                                                     onChange={handleImageChange}
+                                                    ref={fileInputRef}
+                                                    disabled={isUploadingImage}
                                                 />
                                             </label>
                                             <p className="pl-1">or drag and drop</p>
@@ -262,9 +303,16 @@ export default function AddCategoryPage() {
                                         className="object-cover rounded-md"
                                         fill
                                     />
+                                    {isUploadingImage && (
+                                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-10">
+                                            <Loader2 className="h-8 w-8 text-white animate-spin" />
+                                            <span className="text-white ml-2">Uploading...</span>
+                                        </div>
+                                    )}
                                     <button
                                         type="button"
                                         onClick={removeImage}
+                                        disabled={isUploadingImage}
                                         className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 z-10"
                                     >
                                         <X className="h-4 w-4" />
@@ -274,6 +322,12 @@ export default function AddCategoryPage() {
                             
                             {errors.image && (
                                 <p className="mt-1 text-sm text-red-500">{errors.image}</p>
+                            )}
+                            
+                            {uploadedImageUrl && (
+                                <p className="mt-2 text-xs text-green-600 flex items-center">
+                                    <Check className="h-3 w-3 mr-1" /> Image uploaded successfully
+                                </p>
                             )}
                         </div>
                     </div>
@@ -289,10 +343,10 @@ export default function AddCategoryPage() {
                         
                         <motion.button
                             type="submit"
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isUploadingImage}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 flex items-center ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 flex items-center ${(isSubmitting || isUploadingImage) ? 'opacity-70 cursor-not-allowed' : ''}`}
                         >
                             {isSubmitting ? (
                                 <>
