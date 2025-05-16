@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 import { ShoppingBag, ChevronRight, Package, Clock, Ban } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { getOrdersByUserId } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { useAlert } from '@/lib/context/alert-context';
 import { getUserId } from '@/lib/helpers/user-helpers';
 
@@ -61,6 +62,29 @@ export default function OrdersPage() {
         
         // Nếu chuyển trang hoặc có thay đổi về user/userData, cần tải lại
         loadOrders();
+
+        // Thiết lập real-time subscription cho orders
+        let userId = userData?.user?.user_id;
+        if (userId) {
+            const subscription = supabase
+                .channel('orders-changes')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'orders',
+                    filter: `user_id=eq.${userId}`
+                }, (payload) => {
+                    console.log('Real-time update nhận được:', payload);
+                    // Tải lại danh sách đơn hàng khi có thay đổi
+                    loadOrders();
+                })
+                .subscribe();
+
+            // Cleanup subscription khi component unmount
+            return () => {
+                subscription.unsubscribe();
+            };
+        }
     }, [user, userData, authLoading, currentPage, pageSize, router, showAlert, hasChecked, orders.length]);
 
     async function loadOrders() {
