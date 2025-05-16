@@ -6,7 +6,7 @@ export async function middleware(request: NextRequest) {
     console.log('Middleware running for path:', request.nextUrl.pathname);
     
     // Chuẩn bị response
-    let response = NextResponse.next({
+    const response = NextResponse.next({
         request: {
             headers: request.headers,
         },
