@@ -5,18 +5,30 @@ import { useState, FormEvent } from 'react';
 import { ShoppingCart, User, Search, Menu, X, LogOut, ShoppingBag, Smartphone, Shirt, Home } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useRouter } from 'next/navigation';
+import Modal from '@/components/ui/Modal';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
   const { user, signOut } = useAuth();
 
+  const handleLogoutClick = () => {
+    setIsUserMenuOpen(false);
+    setIsLogoutModalOpen(true);
+  };
+
   const handleSignOut = async () => {
     await signOut();
+    setIsLogoutModalOpen(false);
     setIsUserMenuOpen(false);
+  };
+
+  const handleCancelLogout = () => {
+    setIsLogoutModalOpen(false);
   };
 
   const handleSearch = (e: FormEvent) => {
@@ -35,6 +47,31 @@ export default function Header() {
         <Link href="/" className="text-2xl font-bold">
           RoabH Mart
         </Link>
+
+        {/* Modal Xác nhận đăng xuất */}
+        <Modal
+          isOpen={isLogoutModalOpen}
+          onClose={handleCancelLogout}
+          title="Xác nhận đăng xuất"
+        >
+          <div className="py-2">
+            <p className="text-gray-600 mb-6">Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?</p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleCancelLogout}
+                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+              >
+                Đăng xuất
+              </button>
+            </div>
+          </div>
+        </Modal>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-8">
@@ -128,7 +165,7 @@ export default function Header() {
                       My Orders
                     </Link>
                     <button 
-                      onClick={handleSignOut}
+                      onClick={handleLogoutClick}
                       className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center"
                     >
                       <LogOut className="w-4 h-4 mr-2" />
@@ -238,7 +275,7 @@ export default function Header() {
                     My Orders
                   </Link>
                   <button 
-                    onClick={handleSignOut}
+                    onClick={handleLogoutClick}
                     className="text-left text-red-300 hover:text-red-100 transition-colors flex items-center"
                   >
                     <LogOut className="w-4 h-4 mr-2" />
