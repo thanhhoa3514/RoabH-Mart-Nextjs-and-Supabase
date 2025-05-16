@@ -135,7 +135,7 @@ export async function middleware(request: NextRequest) {
         if ((pathname.startsWith('/auth/login') || pathname.startsWith('/auth/register')) && isAuthenticated) {
             console.log('User already logged in, redirecting to account');
             console.log('=== END MIDDLEWARE ===');
-            return NextResponse.redirect(new URL('/account', request.url));
+            return NextResponse.redirect(new URL('/', request.url));
         }
     } catch (error) {
         console.error('Error in middleware:', error);
