@@ -8,7 +8,7 @@ import Cookies from 'js-cookie';
 import { useAlert } from '@/lib/context/alert-context';
 import { useAuth } from '@/lib/auth/AuthContext';
 import TokenHandler from '@/components/auth/TokenHandler';
-import SessionDebugger from '@/components/auth/SessionDebugger';
+
 
 // interface AuthError {
 //     message: string;
@@ -92,7 +92,7 @@ export default function LoginPage() {
     return (
         <div className="container mx-auto px-4 py-16">
             <TokenHandler />
-            <SessionDebugger />
+     
             
             <div className="max-w-md mx-auto">
                 <div className="bg-white rounded-lg shadow-md p-8">
