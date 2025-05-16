@@ -5,11 +5,13 @@ export async function getProducts(category?: string, search?: string) {
         .from('products')
         .select(`
             *,
-            product_images(image_url, is_primary)
+            product_images(image_url, is_primary),
+            subcategories(*, categories(*))
         `);
 
     if (category) {
-        query = query.eq('category', category);
+        // Join để tìm theo category name
+        query = query.eq('subcategories.categories.name', category);
     }
 
     if (search) {
@@ -28,7 +30,8 @@ export async function getProductById(id: string) {
         .from('products')
         .select(`
             *,
-            product_images(image_url, is_primary)
+            product_images(image_url, is_primary),
+            subcategories(*, categories(*))
         `)
         .eq('product_id', id)
         .single();
@@ -41,11 +44,46 @@ export async function getFeaturedProducts(limit: number = 4) {
         .from('products')
         .select(`
             *,
-            product_images(image_url, is_primary)
+            product_images(image_url, is_primary),
+            subcategories(*, categories(*))
         `)
         .eq('is_active', true)
         .order('discount_percentage', { ascending: false })
         .limit(limit);
 
+    return { data, error };
+}
+
+export async function createProduct(productData: {
+    name: string;
+    description: string;
+    price: number;
+    stock_quantity: number;
+    subcategory_id: number;
+    seller_id: number;
+    is_active: boolean;
+    discount_percentage?: number;
+    sku?: string;
+}) {
+    // Insert the product into the products table
+    const { data, error } = await supabase
+        .from('products')
+        .insert([productData])
+        .select();
+    
+    return { data, error };
+}
+
+export async function addProductImage(productId: number, imageUrl: string, isPrimary: boolean = false) {
+    const { data, error } = await supabase
+        .from('product_images')
+        .insert([
+            { 
+                product_id: productId,
+                image_url: imageUrl,
+                is_primary: isPrimary 
+            }
+        ]);
+    
     return { data, error };
 } 
