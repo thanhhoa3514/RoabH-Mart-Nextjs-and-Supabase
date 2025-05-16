@@ -11,6 +11,16 @@ import { supabase } from '@/lib/supabase';
 import { useAlert } from '@/lib/context/alert-context';
 import { getUserId } from '@/lib/helpers/user-helpers';
 
+// Interface cho dữ liệu đơn hàng
+interface Order {
+    order_id: number;
+    user_id: number;
+    order_number: string;
+    total_amount: number;
+    status: string;
+    order_date: string;
+}
+
 // Định dạng trạng thái đơn hàng thành tiếng Việt
 const orderStatusMap: Record<string, { text: string; color: string; icon: React.ReactNode }> = {
     'pending': {
@@ -45,47 +55,12 @@ export default function OrdersPage() {
     const { showAlert } = useAlert();
     const { user, userData, loading: authLoading } = useAuth();
 
-    const [orders, setOrders] = useState<any[]>([]);
+    const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [hasChecked, setHasChecked] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [pageSize] = useState(10);
-
-    // Tải danh sách đơn hàng
-    useEffect(() => {
-        // Nếu đã biết không có đơn hàng và trang hiện tại là 1, không cần tải lại
-        if (hasChecked && orders.length === 0 && currentPage === 1) {
-            setLoading(false);
-            return;
-        }
-        
-        // Nếu chuyển trang hoặc có thay đổi về user/userData, cần tải lại
-        loadOrders();
-
-        // Thiết lập real-time subscription cho orders
-        let userId = userData?.user?.user_id;
-        if (userId) {
-            const subscription = supabase
-                .channel('orders-changes')
-                .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
-                    table: 'orders',
-                    filter: `user_id=eq.${userId}`
-                }, (payload) => {
-                    console.log('Real-time update nhận được:', payload);
-                    // Tải lại danh sách đơn hàng khi có thay đổi
-                    loadOrders();
-                })
-                .subscribe();
-
-            // Cleanup subscription khi component unmount
-            return () => {
-                subscription.unsubscribe();
-            };
-        }
-    }, [user, userData, authLoading, currentPage, pageSize, router, showAlert, hasChecked, orders.length]);
 
     async function loadOrders() {
         if (authLoading) return;
@@ -139,6 +114,41 @@ export default function OrdersPage() {
             setLoading(false);
         }
     }
+
+    // Tải danh sách đơn hàng
+    useEffect(() => {
+        // Nếu đã biết không có đơn hàng và trang hiện tại là 1, không cần tải lại
+        if (hasChecked && orders.length === 0 && currentPage === 1) {
+            setLoading(false);
+            return;
+        }
+        
+        // Nếu chuyển trang hoặc có thay đổi về user/userData, cần tải lại
+        loadOrders();
+
+        // Thiết lập real-time subscription cho orders
+        const userId = userData?.user?.user_id;
+        if (userId) {
+            const subscription = supabase
+                .channel('orders-changes')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'orders',
+                    filter: `user_id=eq.${userId}`
+                }, (payload) => {
+                    console.log('Real-time update nhận được:', payload);
+                    // Tải lại danh sách đơn hàng khi có thay đổi
+                    loadOrders();
+                })
+                .subscribe();
+
+            // Cleanup subscription khi component unmount
+            return () => {
+                subscription.unsubscribe();
+            };
+        }
+    }, [user, userData, authLoading, currentPage, pageSize, router, showAlert, hasChecked, orders.length, loadOrders]);
 
     const changePage = (page: number) => {
         if (page < 1 || page > totalPages) return;
