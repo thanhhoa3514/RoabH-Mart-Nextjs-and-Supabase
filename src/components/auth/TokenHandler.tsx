@@ -87,6 +87,46 @@ export default function TokenHandler() {
     handleAuthParams();
   }, [router, showAlert]);
   
+  useEffect(() => {
+    // Lấy hash URL để kiểm tra token
+    const handleHashChange = async () => {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
+
+      if (accessToken && refreshToken) {
+        console.log('Found auth tokens in URL hash, attempting to set session');
+        try {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          });
+
+          if (error) {
+            console.error('Error setting session:', error);
+          } else {
+            console.log('Session successfully set from URL hash tokens');
+            // Xoá hash từ URL để bảo mật
+            window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+            // Tải lại trang để áp dụng phiên mới
+            router.refresh();
+          }
+        } catch (err) {
+          console.error('Unexpected error handling tokens:', err);
+        }
+      }
+    };
+
+    // Chạy ngay khi component mount
+    handleHashChange();
+
+    // Thêm listener cho hashchange (trong trường hợp SPA navigation)
+    window.addEventListener('hashchange', handleHashChange);
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, [router]);
+  
   // This component doesn't render anything visible
   return null;
 } 

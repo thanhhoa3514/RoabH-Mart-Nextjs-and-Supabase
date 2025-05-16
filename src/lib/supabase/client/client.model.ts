@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -9,18 +10,18 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase environment variables. Check your .env file.');
 }
 
-// Create client with secure session handling for auth
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-        storageKey: 'auth-storage',
-        autoRefreshToken: true,
+// Create client with cookie-based session handling for auth
+export const supabase = typeof window !== 'undefined' 
+  ? createBrowserClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        flowType: 'pkce',
         persistSession: true,
-        detectSessionInUrl: true, // Enable to handle tokens in URL for email verification
-        flowType: 'pkce', // More secure PKCE flow
-    },
-    global: {
-      headers: {
-        'x-application-name': 'roabh-mart',
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
       },
-    }
-}); 
+    }) 
+  : createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false,
+      },
+    }); 
