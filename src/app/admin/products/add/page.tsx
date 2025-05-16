@@ -1,19 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Upload, X } from 'lucide-react';
+import { ArrowLeft, Upload, X, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useAlert } from '@/lib/context/alert-context';
 import { useRouter } from 'next/navigation';
+import { getCategories } from '@/lib/supabase/categories/categories.model';
+import { getSubcategories } from '@/lib/supabase/subcategories/subcategories.model';
+
+interface Category {
+    category_id: number;
+    name: string;
+}
+
+interface Subcategory {
+    subcategory_id: number;
+    category_id: number;
+    name: string;
+}
 
 export default function AddProductPage() {
     const { showAlert } = useAlert();
     const router = useRouter();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+    const [filteredSubcategories, setFilteredSubcategories] = useState<Subcategory[]>([]);
     
     const [formData, setFormData] = useState({
         name: '',
-        category: '',
+        category_id: '',
+        subcategory_id: '',
         price: '',
         description: '',
         stock: '',
@@ -22,7 +41,45 @@ export default function AddProductPage() {
     });
     
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+    
+    // Fetch categories and subcategories
+    useEffect(() => {
+        const fetchCategoriesAndSubcategories = async () => {
+            try {
+                const { data: categoriesData } = await getCategories();
+                if (categoriesData) {
+                    setCategories(categoriesData);
+                }
+                
+                const { data: subcategoriesData } = await getSubcategories();
+                if (subcategoriesData) {
+                    setSubcategories(subcategoriesData);
+                }
+            } catch (error) {
+                console.error('Error fetching categories/subcategories:', error);
+                showAlert('error', 'Failed to load categories', 3000);
+            }
+        };
+        
+        fetchCategoriesAndSubcategories();
+    }, [showAlert]);
+    
+    // Filter subcategories when category changes
+    useEffect(() => {
+        if (formData.category_id) {
+            const categoryId = parseInt(formData.category_id);
+            const filtered = subcategories.filter(sub => sub.category_id === categoryId);
+            setFilteredSubcategories(filtered);
+            
+            // Reset subcategory selection when category changes
+            setFormData(prev => ({ ...prev, subcategory_id: '' }));
+        } else {
+            setFilteredSubcategories([]);
+        }
+    }, [formData.category_id, subcategories]);
     
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
@@ -35,31 +92,128 @@ export default function AddProductPage() {
         }
     };
     
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImagePreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+        if (!file) return;
+        
+        // Show image preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+        
+        // Upload image to server
+        try {
+            setIsUploadingImage(true);
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData,
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(result.error || 'Upload failed');
+            }
+            
+            // Save the uploaded image URL
+            setUploadedImageUrl(result.url);
+            showAlert('success', 'Image uploaded successfully', 2000);
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            showAlert('error', `Failed to upload image: ${(error as Error).message}`, 5000);
+        } finally {
+            setIsUploadingImage(false);
         }
     };
     
     const removeImage = () => {
         setImagePreview(null);
+        setUploadedImageUrl(null);
+        
+        // Clear the file input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
     };
     
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         
-        // Simulate API call
-        setTimeout(() => {
-            showAlert('success', 'Product added successfully!', 3000);
+        if (!formData.subcategory_id) {
+            showAlert('error', 'Please select a subcategory', 3000);
             setIsSubmitting(false);
+            return;
+        }
+        
+        try {
+            // Create product data object for the API
+            const productData = {
+                name: formData.name,
+                description: formData.description,
+                price: formData.price,
+                stock: formData.stock,
+                subcategory_id: parseInt(formData.subcategory_id),
+                seller_id: 1, // Assuming a default seller ID for now
+                status: formData.status,
+                featured: formData.featured
+            };
+            
+            // Call the API endpoint to create the product
+            const response = await fetch('/api/products', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(productData),
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to add product');
+            }
+            
+            // If we have an uploaded image, associate it with the product
+            if (uploadedImageUrl && result.data && result.data.product_id) {
+                const imageData = {
+                    product_id: result.data.product_id,
+                    image_url: uploadedImageUrl,
+                    is_primary: true
+                };
+                
+                const imageResponse = await fetch('/api/product-images', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(imageData),
+                });
+                
+                if (!imageResponse.ok) {
+                    const imageError = await imageResponse.json();
+                    console.error('Error adding product image:', imageError);
+                    // Continue even if image association fails
+                }
+            }
+            
+            // Show success message
+            showAlert('success', 'Product added successfully!', 3000);
+            
+            // Redirect to products page
             router.push('/admin/products');
-        }, 1500);
+        } catch (error) {
+            console.error('Error adding product:', error);
+            showAlert('error', `Failed to add product: ${(error as Error).message}`, 5000);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
     
     return (
@@ -103,41 +257,63 @@ export default function AddProductPage() {
                             
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+                                    <label htmlFor="category_id" className="block text-sm font-medium text-gray-700 mb-1">
                                         Category *
                                     </label>
                                     <select
-                                        id="category"
-                                        name="category"
+                                        id="category_id"
+                                        name="category_id"
                                         required
-                                        value={formData.category}
+                                        value={formData.category_id}
                                         onChange={handleChange}
                                         className="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-300"
                                     >
                                         <option value="">Select category</option>
-                                        <option value="Electronics">Electronics</option>
-                                        <option value="Clothing">Clothing</option>
-                                        <option value="Home & Kitchen">Home & Kitchen</option>
-                                        <option value="Sports">Sports</option>
-                                        <option value="Books">Books</option>
+                                        {categories.map(category => (
+                                            <option key={category.category_id} value={category.category_id}>
+                                                {category.name}
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
                                 
                                 <div>
-                                    <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                                        Price ($) *
+                                    <label htmlFor="subcategory_id" className="block text-sm font-medium text-gray-700 mb-1">
+                                        Subcategory *
                                     </label>
-                                    <input
-                                        type="text"
-                                        id="price"
-                                        name="price"
+                                    <select
+                                        id="subcategory_id"
+                                        name="subcategory_id"
                                         required
-                                        value={formData.price}
+                                        value={formData.subcategory_id}
                                         onChange={handleChange}
                                         className="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-300"
-                                        placeholder="0.00"
-                                    />
+                                        disabled={!formData.category_id}
+                                    >
+                                        <option value="">Select subcategory</option>
+                                        {filteredSubcategories.map(subcategory => (
+                                            <option key={subcategory.subcategory_id} value={subcategory.subcategory_id}>
+                                                {subcategory.name}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
+                            </div>
+                            
+                            <div>
+                                <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
+                                    Price ($) *
+                                </label>
+                                <input
+                                    type="text"
+                                    id="price"
+                                    name="price"
+                                    required
+                                    value={formData.price}
+                                    onChange={handleChange}
+                                    className="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                                    placeholder="0.00"
+                                />
                             </div>
                             
                             <div>
@@ -220,9 +396,16 @@ export default function AddProductPage() {
                                         alt="Product preview" 
                                         className="w-full h-full object-cover"
                                     />
+                                    {isUploadingImage && (
+                                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                                            <Loader2 className="h-8 w-8 text-white animate-spin" />
+                                            <span className="text-white ml-2">Uploading...</span>
+                                        </div>
+                                    )}
                                     <button
                                         type="button"
                                         onClick={removeImage}
+                                        disabled={isUploadingImage}
                                         className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full"
                                     >
                                         <X className="h-4 w-4" />
@@ -247,14 +430,31 @@ export default function AddProductPage() {
                                 accept="image/*"
                                 onChange={handleImageChange}
                                 className="hidden"
+                                ref={fileInputRef}
+                                disabled={isUploadingImage}
                             />
                             
                             <label
                                 htmlFor="image"
-                                className="block w-full text-center py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 cursor-pointer"
+                                className={`block w-full text-center py-2 px-4 border border-gray-300 rounded-md text-sm font-medium ${
+                                    isUploadingImage 
+                                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+                                        : 'text-gray-700 bg-white hover:bg-gray-50 cursor-pointer'
+                                }`}
                             >
-                                {imagePreview ? "Change Image" : "Select Image"}
+                                {isUploadingImage 
+                                    ? "Uploading..."
+                                    : imagePreview 
+                                        ? "Change Image" 
+                                        : "Select Image"
+                                }
                             </label>
+                            
+                            {uploadedImageUrl && (
+                                <p className="mt-2 text-xs text-green-600">
+                                    ✓ Image uploaded successfully
+                                </p>
+                            )}
                         </div>
                     </div>
                     
@@ -271,7 +471,7 @@ export default function AddProductPage() {
                             className="bg-amber-500 text-white px-6 py-2 rounded-md hover:bg-amber-600 flex items-center justify-center min-w-[100px]"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            disabled={isSubmitting}
+                            disabled={isSubmitting || isUploadingImage}
                         >
                             {isSubmitting ? (
                                 <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
