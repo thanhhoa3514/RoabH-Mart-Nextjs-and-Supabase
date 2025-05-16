@@ -5,7 +5,7 @@ export { supabase } from '@/lib/supabase/client/client.model';
 export { signUp, signIn, signOut, getUserProfile } from '@/lib/supabase/auth/auth.model';
 
 // Export user data functions
-export { 
+export {
   getUserData, 
   getUserIdFromAuth, 
   updateLastLogin,
@@ -15,7 +15,7 @@ export {
 } from '@/lib/supabase/user/users.model';
 
 // Export product functions
-export { getProducts, getProductById, getFeaturedProducts } from '@/lib/supabase/products/products.model';
+export { getProducts, getProductById, getFeaturedProducts, createProduct, addProductImage } from '@/lib/supabase/products/products.model';
 
 // Export order functions
 export {
@@ -64,5 +64,15 @@ export {
     getReviewStats,
     getQuarterlySales
 } from '@/lib/supabase/dashboard/dashboard.model';
+
+// Export review functions
+export {
+    getReviewsByProductId,
+    addReview,
+    updateReview,
+    deleteReview,
+    hasUserReviewed,
+    getProductRatingSummary,
+} from './reviews/reviews.model';
 
 

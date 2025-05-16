@@ -19,7 +19,7 @@ export default function AddSubcategoryPage() {
     const categoryId = typeof params.id === 'string' ? parseInt(params.id, 10) : 0;
     
     const [categoryName, setCategoryName] = useState('');
-    const [loading, setLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
     
     const [formData, setFormData] = useState({
         name: '',
@@ -40,7 +40,7 @@ export default function AddSubcategoryPage() {
     useEffect(() => {
         const fetchCategory = async () => {
             try {
-                setLoading(true);
+                setIsLoading(true);
                 const { data, error } = await getCategoryById(categoryId);
                 
                 if (error) {
@@ -50,15 +50,26 @@ export default function AddSubcategoryPage() {
                 if (data) {
                     setCategoryName(data.name);
                 }
-            } catch (err) {
+            } catch (error) {
+                console.error('Failed to load parent category:', error);
                 showAlert('error', 'Failed to load parent category', 3000);
             } finally {
-                setLoading(false);
+                setIsLoading(false);
             }
         };
         
         fetchCategory();
     }, [categoryId, showAlert]);
+    
+    // Hiển thị loading indicator khi đang tải dữ liệu danh mục cha
+    if (isLoading) {
+        return (
+            <div className="flex justify-center items-center min-h-screen">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2">Loading category information...</span>
+            </div>
+        );
+    }
     
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;

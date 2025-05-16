@@ -31,7 +31,15 @@ export async function getProductById(id: string) {
         .select(`
             *,
             product_images(image_url, is_primary),
-            subcategories(*, categories(*))
+            subcategories(*, categories(*)),
+            reviews(
+                review_id,
+                rating,
+                comment,
+                review_date,
+                user_id,
+                users(username, user_profiles(profile_image))
+            )
         `)
         .eq('product_id', id)
         .single();
