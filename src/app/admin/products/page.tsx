@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Search, Trash2, Eye } from 'lucide-react';
+import { Plus, Search, Trash2, Eye, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAlert } from '@/lib/context/alert-context';
 import Link from 'next/link';
+import { getProducts } from '@/lib/supabase/products/products.model';
 
 // Animation variants
 const containerVariants = {
@@ -22,6 +23,28 @@ const itemVariants = {
     visible: { opacity: 1, y: 0 }
 };
 
+interface Product {
+    product_id: number;
+    name: string;
+    description: string;
+    price: number;
+    stock_quantity: number;
+    status?: string;
+    is_active: boolean;
+    discount_percentage: number;
+    sku: string;
+    subcategories: {
+        name: string;
+        categories: {
+            name: string;
+        }
+    };
+    product_images: {
+        image_url: string;
+        is_primary: boolean;
+    }[];
+}
+
 export default function ProductsPage() {
     const { showAlert } = useAlert();
     const [searchQuery, setSearchQuery] = useState('');
@@ -30,125 +53,176 @@ export default function ProductsPage() {
     const [selectedPriceRange, setSelectedPriceRange] = useState('All Prices');
     const [sortBy, setSortBy] = useState('Newest');
     const [productToDelete, setProductToDelete] = useState<{id: number, name: string} | null>(null);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [categories, setCategories] = useState<string[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
 
-    // Mock products data
-    const products = [
-        { 
-            id: 1, 
-            name: 'Premium Laptop Pro', 
-            category: 'Electronics', 
-            price: '$1,299.00', 
-            status: 'In Stock',
-            image: '/laptop.jpg',
-            rating: 4.8,
-            stock: 34,
-            description: 'High-performance laptop with 16GB RAM, 512GB SSD, and dedicated graphics card.'
-        },
-        { 
-            id: 2, 
-            name: 'Wireless Headphones', 
-            category: 'Electronics', 
-            price: '$199.00', 
-            status: 'In Stock',
-            image: '/headphones.jpg',
-            rating: 4.5,
-            stock: 42,
-            description: 'Noise-cancelling wireless headphones with 30-hour battery life.'
-        },
-        { 
-            id: 3, 
-            name: 'Smart Watch Pro', 
-            category: 'Electronics', 
-            price: '$299.00', 
-            status: 'Low Stock',
-            image: '/watch.jpg',
-            rating: 4.7,
-            stock: 8,
-            description: 'Fitness tracking smartwatch with heart rate monitor and GPS.'
-        },
-        { 
-            id: 4, 
-            name: 'Organic Cotton T-shirt', 
-            category: 'Clothing', 
-            price: '$29.99', 
-            status: 'In Stock',
-            image: '/tshirt.jpg',
-            rating: 4.3,
-            stock: 120,
-            description: '100% organic cotton t-shirt, available in multiple colors.'
-        },
-        { 
-            id: 5, 
-            name: 'Ceramic Coffee Mug', 
-            category: 'Home & Kitchen', 
-            price: '$14.99', 
-            status: 'In Stock',
-            image: '/mug.jpg',
-            rating: 4.6,
-            stock: 75,
-            description: 'Handcrafted ceramic coffee mug, microwave and dishwasher safe.'
-        },
-        { 
-            id: 6, 
-            name: 'Bluetooth Speaker', 
-            category: 'Electronics', 
-            price: '$79.99', 
-            status: 'Out of Stock',
-            image: '/speaker.jpg',
-            rating: 4.4,
-            stock: 0,
-            description: 'Portable Bluetooth speaker with 12-hour battery life and water resistance.'
-        },
-        { 
-            id: 7, 
-            name: 'Yoga Mat', 
-            category: 'Sports', 
-            price: '$39.99', 
-            status: 'In Stock',
-            image: '/yogamat.jpg',
-            rating: 4.2,
-            stock: 28,
-            description: 'Non-slip yoga mat made from eco-friendly materials.'
-        },
-        { 
-            id: 8, 
-            name: 'Stainless Steel Water Bottle', 
-            category: 'Sports', 
-            price: '$24.99', 
-            status: 'In Stock',
-            image: '/bottle.jpg',
-            rating: 4.8,
-            stock: 65,
-            description: 'Vacuum insulated stainless steel water bottle, keeps drinks cold for 24 hours.'
-        },
-    ];
+    // Fetch products
+    const fetchProducts = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const { data, error } = await getProducts();
+            
+            if (error) {
+                throw new Error(error.message);
+            }
+            
+            if (data) {
+                setProducts(data);
+                
+                // Extract unique categories
+                const uniqueCategories = Array.from(
+                    new Set(data.map(product => 
+                        product.subcategories?.categories?.name || 'Uncategorized'
+                    ))
+                );
+                setCategories(uniqueCategories);
+            }
+        } catch (err) {
+            setError((err as Error).message);
+            showAlert('error', `Failed to load products: ${(err as Error).message}`, 5000);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-    const handleDelete = (id: number, name: string) => {
+    // Load products on component mount
+    useEffect(() => {
+        fetchProducts();
+    }, []);
+    
+    // Reset to first page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, selectedCategory, selectedStatus, selectedPriceRange]);
+
+    const handleDelete = async (id: number, name: string) => {
         // Show loading state
         showAlert('info', 'Deleting product...', 1000);
         
-        // Simulate API call
-        setTimeout(() => {
+        try {
+            // Call API to delete product
+            const response = await fetch(`/api/products/${id}`, {
+                method: 'DELETE',
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Failed to delete product');
+            }
+            
             showAlert('success', `Product "${name}" has been deleted`, 3000);
-            // In a real app, you would remove the product from the list or refetch the data
+            // Refetch products to update the list
+            fetchProducts();
+        } catch (error) {
+            console.error('Error deleting product:', error);
+            showAlert('error', `Failed to delete product: ${(error as Error).message}`, 5000);
+        } finally {
             setProductToDelete(null);
-        }, 1500);
+        }
     };
 
     const handleEdit = (id: number, name: string) => {
-        showAlert('success', `Editing product "${name}"`, 3000);
+        // Navigate to edit page
+        window.location.href = `/admin/products/edit/${id}`;
     };
 
     const openDeleteModal = (id: number, name: string) => {
         setProductToDelete({ id, name });
     };
 
-    // Filter products based on search query
-    const filteredProducts = products.filter(product =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // Get status based on stock_quantity
+    const getProductStatus = (product: Product) => {
+        if (product.stock_quantity <= 0) return 'Out of Stock';
+        if (product.stock_quantity < 10) return 'Low Stock';
+        return 'In Stock';
+    };
+
+    // Get primary image or placeholder
+    const getProductImage = (product: Product) => {
+        const primaryImage = product.product_images?.find(img => img.is_primary);
+        return primaryImage?.image_url || '';
+    };
+
+    // Format price to currency
+    const formatPrice = (price: number) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD'
+        }).format(price);
+    };
+
+    // Filter products based on search query and filters
+    const filteredProducts = products.filter(product => {
+        // Search filter
+        const matchesSearch = searchQuery === '' || 
+            product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            product.subcategories?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            product.subcategories?.categories?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        // Category filter
+        const matchesCategory = selectedCategory === 'All Categories' ||
+            product.subcategories?.categories?.name === selectedCategory;
+            
+        // Status filter
+        const status = getProductStatus(product);
+        const matchesStatus = selectedStatus === 'All Status' || status === selectedStatus;
+        
+        // Price filter
+        let matchesPrice = true;
+        if (selectedPriceRange !== 'All Prices') {
+            const price = product.price;
+            
+            if (selectedPriceRange === 'Under $50' && price >= 50) matchesPrice = false;
+            else if (selectedPriceRange === '$50 - $200' && (price < 50 || price > 200)) matchesPrice = false;
+            else if (selectedPriceRange === '$200 - $500' && (price < 200 || price > 500)) matchesPrice = false;
+            else if (selectedPriceRange === '$500+' && price < 500) matchesPrice = false;
+        }
+        
+        return matchesSearch && matchesCategory && matchesStatus && matchesPrice;
+    });
+    
+    // Sort products
+    const sortedProducts = [...filteredProducts].sort((a, b) => {
+        if (sortBy === 'Newest') {
+            return (b.product_id || 0) - (a.product_id || 0);
+        } else if (sortBy === 'Price: Low to High') {
+            return a.price - b.price;
+        } else if (sortBy === 'Price: High to Low') {
+            return b.price - a.price;
+        } else if (sortBy === 'Name: A to Z') {
+            return a.name.localeCompare(b.name);
+        } else if (sortBy === 'Name: Z to A') {
+            return b.name.localeCompare(a.name);
+        }
+        return 0;
+    });
+    
+    // Pagination logic
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const currentItems = sortedProducts.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(sortedProducts.length / itemsPerPage);
+    
+    // Change page
+    const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+    const nextPage = () => {
+        if (currentPage < totalPages) {
+            setCurrentPage(currentPage + 1);
+        }
+    };
+    const prevPage = () => {
+        if (currentPage > 1) {
+            setCurrentPage(currentPage - 1);
+        }
+    };
 
     return (
         <div className="p-6">
@@ -158,16 +232,29 @@ export default function ProductsPage() {
                     <p className="text-gray-500 text-sm">Manage your product inventory, add new products, and update existing ones.</p>
                 </div>
 
-                <Link href="/admin/products/add">
+                <div className="flex gap-2">
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="bg-amber-500 text-white px-4 py-2 rounded-md flex items-center"
+                        className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md flex items-center"
+                        onClick={fetchProducts}
+                        disabled={isLoading}
                     >
-                        <Plus className="h-5 w-5 mr-2" />
-                        Add New Product
+                        <RefreshCw className={`h-5 w-5 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                        Refresh
                     </motion.button>
-                </Link>
+                    
+                    <Link href="/admin/products/add">
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="bg-amber-500 text-white px-4 py-2 rounded-md flex items-center"
+                        >
+                            <Plus className="h-5 w-5 mr-2" />
+                            Add New Product
+                        </motion.button>
+                    </Link>
+                </div>
             </div>
 
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -193,10 +280,9 @@ export default function ProductsPage() {
                             onChange={(e) => setSelectedCategory(e.target.value)}
                         >
                             <option>All Categories</option>
-                            <option>Electronics</option>
-                            <option>Clothing</option>
-                            <option>Home & Kitchen</option>
-                            <option>Sports</option>
+                            {categories.map((category, index) => (
+                                <option key={index}>{category}</option>
+                            ))}
                         </select>
                     </div>
 
@@ -245,90 +331,226 @@ export default function ProductsPage() {
                     </div>
                 </div>
 
-                <motion.div
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"
-                    variants={containerVariants}
-                    initial="hidden"
-                    animate="visible"
-                >
-                    {filteredProducts.map((product) => (
-                        <motion.div
-                            key={product.id}
-                            variants={itemVariants}
-                            className="bg-gray-50 rounded-lg overflow-hidden border border-gray-200"
+                {/* Results summary and items per page selector */}
+                <div className="flex justify-between items-center mb-4">
+                    <div className="text-sm text-gray-500">
+                        Showing {sortedProducts.length > 0 ? indexOfFirstItem + 1 : 0} to {Math.min(indexOfLastItem, sortedProducts.length)} of {sortedProducts.length} products
+                    </div>
+                    <div className="flex items-center">
+                        <label className="text-sm text-gray-500 mr-2">Items per page:</label>
+                        <select
+                            className="border border-gray-300 rounded-md py-1 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+                            value={itemsPerPage}
+                            onChange={(e) => {
+                                setItemsPerPage(parseInt(e.target.value));
+                                setCurrentPage(1); // Reset to first page when items per page changes
+                            }}
                         >
-                            <div className="p-4 relative">
-                                <div className="bg-gray-200 h-40 rounded-md flex items-center justify-center mb-3">
-                                    <svg className="h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                    </svg>
-                                </div>
-                                
-                                {product.status === 'In Stock' && (
-                                    <span className="absolute top-6 right-6 bg-green-500 text-white text-xs px-2 py-1 rounded">
-                                        In Stock
-                                    </span>
-                                )}
-                                {product.status === 'Low Stock' && (
-                                    <span className="absolute top-6 right-6 bg-yellow-500 text-white text-xs px-2 py-1 rounded">
-                                        Low Stock
-                                    </span>
-                                )}
-                                {product.status === 'Out of Stock' && (
-                                    <span className="absolute top-6 right-6 bg-red-500 text-white text-xs px-2 py-1 rounded">
-                                        Out of Stock
-                                    </span>
-                                )}
-                                
-                                <div className="text-xs text-amber-500 flex items-center mb-1">
-                                    <span className="mr-1">{product.category}</span>
-                                    <div className="flex items-center ml-auto">
-                                        <span className="text-yellow-500 mr-1">★</span>
-                                        <span>{product.rating}</span>
-                                    </div>
-                                </div>
-                                
-                                <h3 className="font-medium text-gray-900 mb-1 truncate">{product.name}</h3>
-                                <p className="text-xs text-gray-500 mb-2 line-clamp-2">{product.description}</p>
-                                
-                                <div className="flex items-center justify-between">
-                                    <span className="font-bold">{product.price}</span>
-                                    <span className="text-xs text-gray-500">Stock: {product.stock}</span>
-                                </div>
-                                
-                                <div className="flex justify-between mt-4">
-                                    <button 
-                                        className="bg-amber-100 text-amber-600 px-4 py-1 rounded text-sm"
-                                        onClick={() => handleEdit(product.id, product.name)}
-                                    >
-                                        Edit
-                                    </button>
-                                    
-                                    <div className="flex space-x-2">
-                                        <Link href={`/admin/products/${product.id}`}>
-                                            <motion.button
-                                                whileHover={{ scale: 1.1 }}
-                                                whileTap={{ scale: 0.9 }}
-                                                className="p-1 bg-gray-100 rounded"
-                                            >
-                                                <Eye className="h-4 w-4 text-gray-600" />
-                                            </motion.button>
-                                        </Link>
+                            <option value={5}>5</option>
+                            <option value={10}>10</option>
+                            <option value={20}>20</option>
+                            <option value={50}>50</option>
+                        </select>
+                    </div>
+                </div>
+
+                {isLoading ? (
+                    <div className="flex justify-center items-center py-12">
+                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500"></div>
+                    </div>
+                ) : error ? (
+                    <div className="text-center py-12 text-red-500">
+                        <p>Error loading products: {error}</p>
+                        <button 
+                            className="mt-4 px-4 py-2 bg-amber-500 text-white rounded-md"
+                            onClick={fetchProducts}
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                ) : sortedProducts.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">
+                        <p>No products found. Try adjusting your filters or add a new product.</p>
+                    </div>
+                ) : (
+                    <motion.div
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="visible"
+                    >
+                        {currentItems.map((product) => {
+                            const status = getProductStatus(product);
+                            const categoryName = product.subcategories?.categories?.name || 'Uncategorized';
+                            const subcategoryName = product.subcategories?.name || '';
+                            
+                            return (
+                                <motion.div
+                                    key={product.product_id}
+                                    variants={itemVariants}
+                                    className="bg-gray-50 rounded-lg overflow-hidden border border-gray-200"
+                                >
+                                    <div className="p-4 relative">
+                                        <div className="bg-gray-200 h-40 rounded-md flex items-center justify-center mb-3">
+                                            {getProductImage(product) ? (
+                                                <img 
+                                                    src={getProductImage(product)} 
+                                                    alt={product.name}
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            ) : (
+                                                <svg className="h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                                </svg>
+                                            )}
+                                        </div>
                                         
-                                        <motion.button
-                                            whileHover={{ scale: 1.1 }}
-                                            whileTap={{ scale: 0.9 }}
-                                            className="p-1 bg-gray-100 rounded"
-                                            onClick={() => openDeleteModal(product.id, product.name)}
-                                        >
-                                            <Trash2 className="h-4 w-4 text-red-600" />
-                                        </motion.button>
+                                        {status === 'In Stock' && (
+                                            <span className="absolute top-6 right-6 bg-green-500 text-white text-xs px-2 py-1 rounded">
+                                                In Stock
+                                            </span>
+                                        )}
+                                        {status === 'Low Stock' && (
+                                            <span className="absolute top-6 right-6 bg-yellow-500 text-white text-xs px-2 py-1 rounded">
+                                                Low Stock
+                                            </span>
+                                        )}
+                                        {status === 'Out of Stock' && (
+                                            <span className="absolute top-6 right-6 bg-red-500 text-white text-xs px-2 py-1 rounded">
+                                                Out of Stock
+                                            </span>
+                                        )}
+                                        
+                                        <div className="text-xs text-amber-500 flex items-center mb-1">
+                                            <span className="mr-1">{categoryName}</span>
+                                            <span className="ml-1 text-gray-400">/ {subcategoryName}</span>
+                                            <div className="flex items-center ml-auto">
+                                                {product.discount_percentage > 0 && (
+                                                    <span className="text-red-500 mr-1">-{product.discount_percentage}%</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        
+                                        <h3 className="font-medium text-gray-900 mb-1 truncate">{product.name}</h3>
+                                        <p className="text-xs text-gray-500 mb-2 line-clamp-2">{product.description}</p>
+                                        
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-bold">{formatPrice(product.price)}</span>
+                                            <span className="text-xs text-gray-500">Stock: {product.stock_quantity}</span>
+                                        </div>
+                                        
+                                        <div className="flex justify-between mt-4">
+                                            <button 
+                                                className="bg-amber-100 text-amber-600 px-4 py-1 rounded text-sm"
+                                                onClick={() => handleEdit(product.product_id, product.name)}
+                                            >
+                                                Edit
+                                            </button>
+                                            
+                                            <div className="flex space-x-2">
+                                                <Link href={`/admin/products/${product.product_id}`}>
+                                                    <motion.button
+                                                        whileHover={{ scale: 1.1 }}
+                                                        whileTap={{ scale: 0.9 }}
+                                                        className="p-1 bg-gray-100 rounded"
+                                                    >
+                                                        <Eye className="h-4 w-4 text-gray-600" />
+                                                    </motion.button>
+                                                </Link>
+                                                
+                                                <motion.button
+                                                    whileHover={{ scale: 1.1 }}
+                                                    whileTap={{ scale: 0.9 }}
+                                                    className="p-1 bg-gray-100 rounded"
+                                                    onClick={() => openDeleteModal(product.product_id, product.name)}
+                                                >
+                                                    <Trash2 className="h-4 w-4 text-red-600" />
+                                                </motion.button>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
+                                </motion.div>
+                            );
+                        })}
+                    </motion.div>
+                )}
+                
+                {/* Pagination */}
+                {!isLoading && !error && sortedProducts.length > 0 && (
+                    <div className="flex justify-center mt-8">
+                        <nav className="flex items-center">
+                            <button
+                                onClick={prevPage}
+                                disabled={currentPage === 1}
+                                className={`mx-1 p-2 rounded-md ${
+                                    currentPage === 1 
+                                        ? 'text-gray-400 cursor-not-allowed' 
+                                        : 'text-gray-700 hover:bg-amber-100'
+                                }`}
+                            >
+                                <ChevronLeft className="h-5 w-5" />
+                            </button>
+                            
+                            <div className="flex mx-2">
+                                {Array.from({ length: Math.min(5, totalPages) }).map((_, idx) => {
+                                    // Calculate what page numbers to show
+                                    let pageNumber;
+                                    if (totalPages <= 5) {
+                                        // If 5 or fewer pages, show all
+                                        pageNumber = idx + 1;
+                                    } else if (currentPage <= 3) {
+                                        // At the start of pagination
+                                        pageNumber = idx + 1;
+                                    } else if (currentPage >= totalPages - 2) {
+                                        // At the end of pagination
+                                        pageNumber = totalPages - 4 + idx;
+                                    } else {
+                                        // In the middle
+                                        pageNumber = currentPage - 2 + idx;
+                                    }
+                                    
+                                    return (
+                                        <button
+                                            key={idx}
+                                            onClick={() => paginate(pageNumber)}
+                                            className={`mx-1 w-8 h-8 rounded-md ${
+                                                currentPage === pageNumber
+                                                    ? 'bg-amber-500 text-white'
+                                                    : 'bg-gray-100 text-gray-700 hover:bg-amber-100'
+                                            }`}
+                                        >
+                                            {pageNumber}
+                                        </button>
+                                    );
+                                })}
+                                
+                                {totalPages > 5 && currentPage < totalPages - 2 && (
+                                    <>
+                                        <span className="mx-1 text-gray-500">...</span>
+                                        <button
+                                            onClick={() => paginate(totalPages)}
+                                            className="mx-1 w-8 h-8 rounded-md bg-gray-100 text-gray-700 hover:bg-amber-100"
+                                        >
+                                            {totalPages}
+                                        </button>
+                                    </>
+                                )}
                             </div>
-                        </motion.div>
-                    ))}
-                </motion.div>
+                            
+                            <button
+                                onClick={nextPage}
+                                disabled={currentPage === totalPages}
+                                className={`mx-1 p-2 rounded-md ${
+                                    currentPage === totalPages 
+                                        ? 'text-gray-400 cursor-not-allowed' 
+                                        : 'text-gray-700 hover:bg-amber-100'
+                                }`}
+                            >
+                                <ChevronRight className="h-5 w-5" />
+                            </button>
+                        </nav>
+                    </div>
+                )}
             </div>
             
             {/* Delete Confirmation Modal */}
