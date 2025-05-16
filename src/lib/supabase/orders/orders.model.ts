@@ -28,14 +28,47 @@ export async function getOrderById(orderId: number) {
         return { error: orderError, data: null };
     }
 
-    // Get order items
+    // Get order items với sản phẩm (không lấy image)
     const { data: orderItems, error: itemsError } = await supabase
         .from('order_items')
-        .select('*, products(name, image)')
+        .select('*, products(product_id, name)')
         .eq('order_id', orderId);
 
     if (itemsError) {
         return { error: itemsError, data: { order } };
+    }
+
+    // Thêm hình ảnh sản phẩm từ bảng product_images
+    // Lấy thông tin hình ảnh cho từng sản phẩm
+    if (orderItems && orderItems.length > 0) {
+        for (const item of orderItems) {
+            if (item.products && item.products.product_id) {
+                // Lấy hình ảnh chính của sản phẩm
+                const { data: imageData } = await supabase
+                    .from('product_images')
+                    .select('image_url')
+                    .eq('product_id', item.products.product_id)
+                    .eq('is_primary', true)
+                    .maybeSingle();
+
+                // Nếu không có hình ảnh chính, lấy hình đầu tiên
+                if (!imageData || !imageData.image_url) {
+                    const { data: firstImage } = await supabase
+                        .from('product_images')
+                        .select('image_url')
+                        .eq('product_id', item.products.product_id)
+                        .order('display_order', { ascending: true })
+                        .limit(1)
+                        .maybeSingle();
+
+                    if (firstImage && firstImage.image_url) {
+                        item.products.image = firstImage.image_url;
+                    }
+                } else {
+                    item.products.image = imageData.image_url;
+                }
+            }
+        }
     }
 
     // Get payment information

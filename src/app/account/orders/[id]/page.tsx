@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { ArrowLeft, CircleCheck, Package, Truck, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
@@ -40,14 +40,15 @@ const orderStatusMap: Record<string, { text: string; color: string; icon: React.
   }
 };
 
-export default function OrderDetailPage({ params }: { params: { id: string } }) {
+export default function OrderDetailPage() {
   const router = useRouter();
+  const params = useParams();
   const { showAlert } = useAlert();
   const { user, userData, loading: authLoading } = useAuth();
   
   const [orderData, setOrderData] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const orderId = parseInt(params.id, 10);
+  const orderId = params?.id ? parseInt(params.id as string, 10) : NaN;
 
   // Format tiền tệ
   const formatCurrency = (amount: number | undefined) => {
