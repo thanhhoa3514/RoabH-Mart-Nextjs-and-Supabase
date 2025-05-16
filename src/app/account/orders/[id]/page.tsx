@@ -5,11 +5,72 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useParams } from 'next/navigation';
 import { format } from 'date-fns';
-import { ArrowLeft, CircleCheck, Package, Truck, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Package, Truck, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/AuthContext';
 import { getOrderById } from '@/lib/supabase';
 import { useAlert } from '@/lib/context/alert-context';
 import { getUserId } from '@/lib/helpers/user-helpers';
+
+// Định nghĩa interface cho dữ liệu đơn hàng
+interface OrderItem {
+  order_item_id: number;
+  order_id: number;
+  product_id: number;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+  products?: {
+    product_id: number;
+    name: string;
+    image?: string;
+  };
+}
+
+interface Order {
+  order_id: number;
+  user_id: number;
+  order_number: string;
+  total_amount: number;
+  status: string;
+  order_date: string;
+}
+
+interface Payment {
+  payment_id: number;
+  order_id: number;
+  amount: number;
+  payment_method: string;
+  status: string;
+  transaction_id?: string | null;
+  payment_date: string;
+}
+
+interface Shipping {
+  shipping_id: number;
+  order_id: number;
+  shipping_method: string;
+  shipping_cost: number;
+  tracking_number?: string | null;
+  status: string;
+  delivery_address?: string | null;
+  estimated_delivery?: string | null;
+  actual_delivery?: string | null;
+}
+
+interface OrderUser {
+  user_id: number;
+  username: string;
+  email: string;
+  phone?: string | null;
+}
+
+interface OrderData {
+  order: Order;
+  orderItems: OrderItem[];
+  payment?: Payment | null;
+  shipping?: Shipping | null;
+  user?: OrderUser | null;
+}
 
 // Định dạng trạng thái đơn hàng thành tiếng Việt
 const orderStatusMap: Record<string, { text: string; color: string; icon: React.ReactNode }> = {
@@ -46,7 +107,7 @@ export default function OrderDetailPage() {
   const { showAlert } = useAlert();
   const { user, userData, loading: authLoading } = useAuth();
   
-  const [orderData, setOrderData] = useState<any | null>(null);
+  const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const orderId = params?.id ? parseInt(params.id as string, 10) : NaN;
 
@@ -89,15 +150,30 @@ export default function OrderDetailPage() {
           return;
         }
         
+        if (!data || !data.order) {
+          showAlert('error', 'Không tìm thấy thông tin đơn hàng', 3000);
+          router.push('/account/orders');
+          return;
+        }
+        
         // Kiểm tra xem đơn hàng có thuộc về người dùng hiện tại không
         const userId = getUserId(userData);
-        if (data?.order && data.order.user_id !== userId) {
+        if (data.order && data.order.user_id !== userId) {
           showAlert('error', 'Bạn không có quyền xem đơn hàng này', 3000);
           router.push('/account/orders');
           return;
         }
         
-        setOrderData(data);
+        // Ép kiểu dữ liệu từ API về đúng kiểu OrderData
+        const typedData: OrderData = {
+          order: data.order,
+          orderItems: data.orderItems || [],
+          payment: data.payment || null,
+          shipping: data.shipping || null,
+          user: data.user || null
+        };
+        
+        setOrderData(typedData);
       } catch (error) {
         console.error('Unexpected error:', error);
         showAlert('error', 'Đã xảy ra lỗi khi tải đơn hàng', 3000);
@@ -290,7 +366,7 @@ export default function OrderDetailPage() {
           </div>
         ) : (
           <ul className="divide-y divide-gray-200">
-            {orderItems.map((item: any) => (
+            {orderItems.map((item: OrderItem) => (
               <li key={item.order_item_id} className="p-6 flex flex-wrap md:flex-nowrap">
                 <div className="w-full md:w-auto md:flex-shrink-0 mb-4 md:mb-0 md:mr-4">
                   {item.products?.image ? (
