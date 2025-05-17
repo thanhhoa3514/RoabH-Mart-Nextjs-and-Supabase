@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Filter, Eye, FileText, Download, Calendar, Clock, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import Link from 'next/link';
@@ -38,7 +38,10 @@ const itemVariants = {
 };
 
 // Order status badge component
-const StatusBadge = ({ status }: { status: string }) => {
+const StatusBadge = ({ status, orderId, onStatusUpdate, isUpdating }: { status: string; orderId: number; onStatusUpdate: (orderId: number, newStatus: string) => void; isUpdating: boolean }) => {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
     const getStatusStyles = () => {
         switch (status.toLowerCase()) {
             case 'completed':
@@ -56,10 +59,74 @@ const StatusBadge = ({ status }: { status: string }) => {
         }
     };
 
+    const statusOptions = [
+        { value: 'pending', label: 'Pending', style: 'bg-yellow-100 text-yellow-800' },
+        { value: 'processing', label: 'Processing', style: 'bg-blue-100 text-blue-800' },
+        { value: 'shipped', label: 'Shipped', style: 'bg-purple-100 text-purple-800' },
+        { value: 'completed', label: 'Completed', style: 'bg-green-100 text-green-800' },
+        { value: 'cancelled', label: 'Cancelled', style: 'bg-red-100 text-red-800' }
+    ];
+
+    const handleStatusChange = (newStatus: string) => {
+        onStatusUpdate(orderId, newStatus);
+        setIsMenuOpen(false);
+    };
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setIsMenuOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
     return (
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusStyles()}`}>
-            {status}
-        </span>
+        <div className="relative">
+            <span 
+                className={`px-3 py-1 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 ${getStatusStyles()} ${isUpdating ? 'opacity-50' : ''}`}
+                onClick={() => !isUpdating && setIsMenuOpen(!isMenuOpen)}
+                title={isUpdating ? "Updating status..." : "Click to change status"}
+            >
+                {isUpdating ? (
+                    <span className="flex items-center">
+                        <Loader2 className="animate-spin h-3 w-3 mr-1" />
+                        {status}
+                    </span>
+                ) : (
+                    status
+                )}
+            </span>
+            
+            {isMenuOpen && !isUpdating && (
+                <div 
+                    ref={menuRef}
+                    className="absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
+                >
+                    <div className="py-1">
+                        {statusOptions.map((option) => (
+                            <button
+                                key={option.value}
+                                onClick={() => handleStatusChange(option.value)}
+                                className={`block w-full text-left px-4 py-2 text-sm ${
+                                    status.toLowerCase() === option.value 
+                                    ? 'font-bold ' + option.style 
+                                    : 'text-gray-700 hover:bg-gray-100'
+                                }`}
+                                disabled={isUpdating}
+                            >
+                                {option.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
 
@@ -76,54 +143,94 @@ export default function OrdersPage() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalOrders, setTotalOrders] = useState(0);
-    const pageSize = 10;
+    const [updatingStatus, setUpdatingStatus] = useState<number | null>(null);
+    const [pageSize, setPageSize] = useState(10);
+    const [loadingPage, setLoadingPage] = useState(false);
 
     // Fetch orders from Supabase
     useEffect(() => {
-        const fetchOrders = async () => {
-            try {
-                setLoading(true);
-                const { data, error, count } = await getOrders(currentPage, pageSize);
-                
-                if (error) {
-                    throw new Error(error.message);
-                }
-                
-                if (data) {
-                    // Transform data to match our UI format
-                    const formattedOrders = data.map(order => {
-                        // Format date and time
-                        const orderDate = new Date(order.order_date);
-                        const formattedDate = orderDate.toISOString().split('T')[0];
-                        const formattedTime = orderDate.toTimeString().split(' ')[0].substring(0, 5);
-                        
-                        return {
-                            id: order.order_number,
-                            orderId: order.order_id,
-                            customer: `Customer #${order.user_id}`, // We'll replace this with actual user data in a real app
-                            email: "customer@example.com", // Placeholder
-                            date: formattedDate,
-                            time: formattedTime,
-                            status: order.status.charAt(0).toUpperCase() + order.status.slice(1),
-                            total: `$${order.total_amount.toFixed(2)}`,
-                            items: 0, // This would be populated from order items in a real app
-                            paymentMethod: "Credit Card" // This would be populated from payment info in a real app
-                        };
-                    });
-                    
-                    setOrders(formattedOrders);
-                    setTotalOrders(count || 0);
-                }
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'Failed to load orders');
-                showAlert('error', 'Failed to load orders', 5000);
-            } finally {
-                setLoading(false);
-            }
-        };
-        
         fetchOrders();
-    }, [currentPage, showAlert]);
+    }, [currentPage, pageSize]); // eslint-disable-line react-hooks/exhaustive-deps
+    
+    const fetchOrders = async () => {
+        try {
+            setLoading(true);
+            const { data, error, count } = await getOrders(currentPage, pageSize);
+            
+            if (error) {
+                throw new Error(error.message);
+            }
+            
+            if (data) {
+                // Transform data to match our UI format
+                const formattedOrders = data.map(order => {
+                    // Format date and time
+                    const orderDate = new Date(order.order_date);
+                    const formattedDate = orderDate.toISOString().split('T')[0];
+                    const formattedTime = orderDate.toTimeString().split(' ')[0].substring(0, 5);
+                    
+                    return {
+                        id: order.order_number,
+                        orderId: order.order_id,
+                        customer: `Customer #${order.user_id}`, // We'll replace this with actual user data in a real app
+                        email: "customer@example.com", // Placeholder
+                        date: formattedDate,
+                        time: formattedTime,
+                        status: order.status.charAt(0).toUpperCase() + order.status.slice(1),
+                        total: `$${order.total_amount.toFixed(2)}`,
+                        items: 0, // This would be populated from order items in a real app
+                        paymentMethod: "Credit Card" // This would be populated from payment info in a real app
+                    };
+                });
+                
+                setOrders(formattedOrders);
+                setTotalOrders(count || 0);
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to load orders');
+            showAlert('error', 'Failed to load orders', 5000);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Hàm cập nhật trạng thái đơn hàng 
+    const handleUpdateOrderStatus = async (orderId: number, newStatus: string) => {
+        try {
+            setUpdatingStatus(orderId);
+            
+            // Gọi API để cập nhật trạng thái đơn hàng
+            const response = await fetch(`/api/orders/${orderId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: newStatus }),
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to update order status');
+            }
+            
+            // Cập nhật trạng thái trong state
+            setOrders(prevOrders => 
+                prevOrders.map(order => 
+                    order.orderId === orderId 
+                        ? { ...order, status: newStatus.charAt(0).toUpperCase() + newStatus.slice(1) }
+                        : order
+                )
+            );
+            
+            showAlert('success', `Order status updated to ${newStatus}`, 2000);
+        } catch (error) {
+            console.error('Error updating order status:', error);
+            showAlert('error', error instanceof Error ? error.message : 'Failed to update order status', 3000);
+        } finally {
+            setUpdatingStatus(null);
+        }
+    };
 
     const handleExportOrders = () => {
         // Simulate processing time
@@ -480,7 +587,9 @@ Thank you for your business!
                                                 </div>
                                             </td>
                                             <td className="py-4 px-4 whitespace-nowrap">
-                                                <StatusBadge status={order.status} />
+                                                <StatusBadge status={order.status} orderId={order.orderId} onStatusUpdate={(id, newStatus) => {
+                                                    handleUpdateOrderStatus(id, newStatus);
+                                                }} isUpdating={updatingStatus === order.orderId} />
                                             </td>
                                             <td className="py-4 px-4 whitespace-nowrap">
                                                 <div className="font-medium text-gray-900">{order.total}</div>
