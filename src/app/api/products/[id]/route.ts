@@ -3,11 +3,11 @@ import { supabase } from '@/lib/supabase/client/client.model';
 
 export async function DELETE(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ): Promise<NextResponse> {
   try {
-    const productId = context.params.id;
-    
+    const productId = params.id;
+
     if (!productId) {
       return NextResponse.json(
         { error: 'Product ID is required' },
@@ -50,4 +50,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-} 
+}
