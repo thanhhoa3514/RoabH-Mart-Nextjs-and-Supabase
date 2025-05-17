@@ -91,3 +91,40 @@ RoabH Mart is a modern e-commerce platform built with Next.js, React, Tailwind C
    - Configure production environment
    - Deploy to hosting platform
    - Set up monitoring and analytics
+
+## Docker Deployment
+
+This project has been configured to run in Docker containers. Here's how to build and run it:
+
+### Prerequisites
+
+- Docker
+- Docker Compose
+
+### Building and Running with Docker
+
+1. Build and start the containers:
+
+```bash
+docker-compose up -d
+```
+
+2. The application will be available at http://localhost:3000
+
+### Building without Docker Compose
+
+```bash
+# Build the Docker image
+docker build -t roabh-mart .
+
+# Run the container
+docker run -p 3000:3000 roabh-mart
+```
+
+### Development with Docker
+
+For development, you can use volume mounts to sync changes:
+
+```bash
+docker-compose -f docker-compose.dev.yml up
+```

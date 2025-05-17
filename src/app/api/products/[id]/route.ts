@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client/client.model';
 
+
+interface Context {
+  params: {
+    id: string;
+  };
+}
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: Context
 ): Promise<NextResponse> {
   try {
     const productId = params.id;

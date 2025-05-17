@@ -1,0 +1,26 @@
+# Versioning and metadata
+.git
+.gitignore
+.dockerignore
+
+# Build dependencies
+node_modules
+npm-debug.log
+
+# Environment (contains sensitive data)
+.env
+.env.*
+
+# Files not required for production
+README.md
+**/Dockerfile
+**/docker-compose.yml
+
+# Build output
+.next
+out
+
+# Misc
+.vscode
+.idea
+coverage 
