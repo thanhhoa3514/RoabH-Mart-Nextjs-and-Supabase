@@ -36,8 +36,8 @@ export async function getCategoriesWithImages() {
         
         // If it's a Supabase storage path, create the full URL
         const { data: imageUrl } = supabase.storage
-            .from('categories')
-            .getPublicUrl(category.image);
+            .from('roabh-mart')
+            .getPublicUrl(`category-images/${category.image}`);
             
         return {
             ...category,
@@ -81,8 +81,8 @@ export async function getCategoryWithImageById(id: number) {
     
     // If it's a Supabase storage path, create the full URL
     const { data: imageUrl } = supabase.storage
-        .from('categories')
-        .getPublicUrl(data.image);
+        .from('roabh-mart')
+        .getPublicUrl(`category-images/${data.image}`);
         
     return { 
         data: {
@@ -115,14 +115,19 @@ export async function createCategory(categoryData: Omit<Category, 'category_id'>
     if (imageFile) {
         const fileName = `${Date.now()}-${imageFile.name}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('categories')
-            .upload(fileName, imageFile);
+            .from('roabh-mart')
+            .upload(`category-images/${fileName}`, imageFile);
             
         if (uploadError) {
             return { data: null, error: uploadError };
         }
         
-        imagePath = fileName;
+        // Get the public URL for the uploaded image
+        const { data: publicUrlData } = supabase.storage
+            .from('roabh-mart')
+            .getPublicUrl(`category-images/${fileName}`);
+            
+        imagePath = publicUrlData.publicUrl;
     }
     
     // Now create the category with the image path
@@ -149,14 +154,19 @@ export async function updateCategory(
     if (imageFile) {
         const fileName = `${Date.now()}-${imageFile.name}`;
         const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('categories')
-            .upload(fileName, imageFile);
+            .from('roabh-mart')
+            .upload(`category-images/${fileName}`, imageFile);
             
         if (uploadError) {
             return { data: null, error: uploadError };
         }
         
-        imagePath = fileName;
+        // Get the public URL for the uploaded image
+        const { data: publicUrlData } = supabase.storage
+            .from('roabh-mart')
+            .getPublicUrl(`category-images/${fileName}`);
+            
+        imagePath = publicUrlData.publicUrl;
     }
     
     // Now update the category with the new data

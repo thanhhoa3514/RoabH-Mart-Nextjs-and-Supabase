@@ -162,6 +162,7 @@ export default function CategoryDetailPage() {
             
             const formData = new FormData();
             formData.append('file', file);
+            formData.append('folder', 'category-images');
             
             const response = await fetch('/api/upload', {
                 method: 'POST',

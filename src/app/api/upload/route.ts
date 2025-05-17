@@ -7,6 +7,8 @@ export async function POST(request: NextRequest) {
         // Chỉ chấp nhận form data
         const formData = await request.formData();
         const file = formData.get('file') as File;
+        // Get folder from formData or use default
+        const folder = formData.get('folder') as string || 'product-images';
 
         if (!file) {
             return NextResponse.json(
@@ -39,7 +41,7 @@ export async function POST(request: NextRequest) {
         // Tạo tên file duy nhất
         const fileExtension = file.name.split('.').pop();
         const fileName = `${uuidv4()}.${fileExtension}`;
-        const filePath = `product-images/${fileName}`;
+        const filePath = `${folder}/${fileName}`;
 
         // Upload file lên Supabase Storage
         const { error } = await supabase
