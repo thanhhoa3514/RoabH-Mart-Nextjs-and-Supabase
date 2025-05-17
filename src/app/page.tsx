@@ -35,11 +35,8 @@ export default async function Home() {
           className="object-cover"
           priority
         />
-        <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center text-white p-8">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 text-center">Welcome to RoabH Mart</h1>
-          <p className="text-xl md:text-2xl mb-8 text-center max-w-2xl">
-            Your one-stop destination for all your shopping needs
-          </p>
+        <div className="absolute inset-0 bg-black bg-opacity-10 flex flex-col items-center justify-center text-white p-8">
+          
           <Link 
             href="/products" 
             className="bg-primary hover:bg-opacity-90 text-white px-8 py-3 rounded-md text-lg font-medium transition-colors"
