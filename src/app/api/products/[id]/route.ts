@@ -3,10 +3,10 @@ import { supabase } from '@/lib/supabase/client/client.model';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ): Promise<NextResponse> {
   try {
-    const productId = params.id;
+    const productId = context.params.id;
     
     if (!productId) {
       return NextResponse.json(
