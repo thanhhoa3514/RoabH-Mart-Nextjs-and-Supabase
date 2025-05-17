@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { getFeaturedProducts } from '@/lib/supabase/products/products.model';
-import { getCategories } from '@/lib/supabase/categories/categories.model';
+import { getCategoriesWithImages } from '@/lib/supabase/categories/categories.model';
 
 // Define interface for product image
 interface ProductImage {
@@ -13,8 +13,8 @@ export default async function Home() {
   // Fetch featured products from Supabase
   const { data: featuredProductsData, error: featuredProductsError } = await getFeaturedProducts(4);
   
-  // Fetch categories from Supabase
-  const { data: categoriesData, error: categoriesError } = await getCategories();
+  // Fetch categories from Supabase with full image URLs
+  const { data: categoriesData, error: categoriesError } = await getCategoriesWithImages();
   
   // Fallback data in case of errors
   const featuredProducts = featuredProductsError ? [] : featuredProductsData || [];
