@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase/client/client.model';
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
-) {
+): Promise<NextResponse> {
   try {
     const productId = params.id;
     
