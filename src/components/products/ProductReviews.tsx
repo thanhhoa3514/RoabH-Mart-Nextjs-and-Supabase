@@ -30,12 +30,16 @@ interface Review {
 
 interface ApiReview {
   review_id: number;
+  product_id: number;
+  user_id: number;
   rating: number;
   comment: string;
   review_date: string;
-  user_id: number;
   is_verified_purchase?: boolean;
-  users: User | null;
+  users: {
+    username: string;
+    user_profiles: UserProfile[];
+  }[];
 }
 
 interface RatingSummary {
@@ -74,14 +78,14 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
         if (summaryError) throw new Error(summaryError.message);
         
         // Chuyển đổi kiểu dữ liệu từ API sang đúng định dạng Review[]
-        const formattedReviews: Review[] = reviewsData ? reviewsData.map((review: any) => ({
+        const formattedReviews: Review[] = reviewsData ? reviewsData.map((review: ApiReview) => ({
           review_id: review.review_id,
           rating: review.rating,
           comment: review.comment,
           review_date: review.review_date,
           user_id: review.user_id,
           is_verified_purchase: review.is_verified_purchase,
-          users: review.users
+          users: review.users[0] // Get the first user from the array
         })) : [];
         
         setReviews(formattedReviews);
