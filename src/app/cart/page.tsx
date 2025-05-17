@@ -40,14 +40,14 @@ export default function CartPage() {
             name: 'Smartphone XS Max',
             price: 1299.99,
             quantity: 1,
-            image: 'https://placekitten.com/200/200'
+            image: 'https://dituqzgjijnwjroetrqj.supabase.co/storage/v1/object/public/roabh-mart/product-images/fdd230a8-be99-4228-8204-e09585658394.png'
         },
         {
             id: 2,
             name: 'Wireless Headphones',
             price: 199.99,
             quantity: 1,
-            image: 'https://placekitten.com/201/201'
+            image: 'https://dituqzgjijnwjroetrqj.supabase.co/storage/v1/object/public/roabh-mart/product-images/2955f612-2e6c-45c3-87b3-07348051a4f2.jpg'
         }
     ]);
     
