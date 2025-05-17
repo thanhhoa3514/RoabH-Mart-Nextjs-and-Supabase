@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { 
@@ -10,10 +10,13 @@ import {
     Tag, 
     Save,
     Loader2,
-    Plus
+    Plus,
+    Image as ImageIcon,
+    Upload,
+    X
 } from 'lucide-react';
 import { useAlert } from '@/lib/context/alert-context';
-import { getCategoryById, updateCategory, deleteCategory, getSubcategories } from '@/lib/supabase';
+import { getCategoryWithImageById, deleteCategory, getSubcategories } from '@/lib/supabase';
 import { Category, Subcategory } from '@/types';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -38,11 +41,13 @@ export default function CategoryDetailPage() {
     const params = useParams();
     const router = useRouter();
     const { showAlert } = useAlert();
+    const fileInputRef = useRef<HTMLInputElement>(null);
     
     const [isEditing, setIsEditing] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [error, setError] = useState<string | null>(null);
     
     // Get category ID from URL params
@@ -59,6 +64,11 @@ export default function CategoryDetailPage() {
         image: ''
     });
     
+    // State for image preview and file
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+    
     // State for subcategories
     const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
     const [loadingSubcategories, setLoadingSubcategories] = useState(true);
@@ -68,7 +78,7 @@ export default function CategoryDetailPage() {
         const fetchCategory = async () => {
             try {
                 setIsLoading(true);
-                const { data, error } = await getCategoryById(categoryId);
+                const { data, error } = await getCategoryWithImageById(categoryId);
                 
                 if (error) {
                     throw new Error(error.message);
@@ -83,6 +93,7 @@ export default function CategoryDetailPage() {
                         display_order: data.display_order,
                         image: data.image || ''
                     });
+                    setImagePreview(data.image || null);
                     
                     // Fetch subcategories for this category
                     fetchSubcategories(data.category_id);
@@ -132,6 +143,68 @@ export default function CategoryDetailPage() {
         });
     };
     
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        
+        // Show image preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+        
+        setImageFile(file);
+        
+        // Upload image to server via API
+        try {
+            setIsUploadingImage(true);
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData,
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(result.error || 'Upload failed');
+            }
+            
+            // Save the uploaded image URL
+            setUploadedImageUrl(result.url);
+            setFormData(prev => ({ ...prev, image: result.url }));
+            showAlert('success', 'Image uploaded successfully', 2000);
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            showAlert('error', `Failed to upload image: ${(error as Error).message}`, 5000);
+        } finally {
+            setIsUploadingImage(false);
+        }
+    };
+    
+    const removeImage = () => {
+        setImagePreview(null);
+        setUploadedImageUrl(null);
+        setImageFile(null);
+        setFormData(prev => ({ ...prev, image: '' }));
+        
+        // Clear the file input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+    
+    const handleImageUploadClick = () => {
+        // Trigger the hidden file input
+        if (fileInputRef.current) {
+            fileInputRef.current.click();
+        }
+    };
+    
     const handleEdit = () => {
         setIsEditing(true);
     };
@@ -146,6 +219,9 @@ export default function CategoryDetailPage() {
                 display_order: categoryData.display_order,
                 image: categoryData.image || ''
             });
+            setImagePreview(categoryData.image || null);
+            setImageFile(null);
+            setUploadedImageUrl(null);
         }
         setIsEditing(false);
     };
@@ -154,24 +230,50 @@ export default function CategoryDetailPage() {
         setIsSaving(true);
         
         try {
-            const { data, error } = await updateCategory(categoryId, {
-                name: formData.name,
-                description: formData.description || null,
-                is_active: formData.is_active,
-                display_order: formData.display_order,
-                image: formData.image || null
-            });
-            
-            if (error) {
-                throw new Error(error.message);
+            // Validate form data
+            if (!formData.name.trim()) {
+                showAlert('error', 'Category name is required', 3000);
+                setIsSaving(false);
+                return;
             }
             
-            if (data && data[0]) {
-                setCategoryData(data[0]);
+            // Using the user-friendly API endpoint that's already working
+            const response = await fetch(`/api/categories/${categoryId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: formData.name,
+                    description: formData.description || null,
+                    is_active: formData.is_active,
+                    display_order: formData.display_order,
+                    image: formData.image || null
+                }),
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(result.error || 'Update failed');
+            }
+            
+            // Update the local state with the updated data
+            if (result.data) {
+                setCategoryData(result.data);
+                setFormData({
+                    name: result.data.name,
+                    description: result.data.description || '',
+                    is_active: result.data.is_active,
+                    display_order: result.data.display_order,
+                    image: result.data.image || ''
+                });
+                setImagePreview(result.data.image || null);
             }
             
             showAlert('success', 'Category updated successfully', 3000);
             setIsEditing(false);
+            setImageFile(null);
         } catch (error) {
             showAlert('error', error instanceof Error ? error.message : 'Failed to update category', 3000);
         } finally {
@@ -383,20 +485,6 @@ export default function CategoryDetailPage() {
                                         />
                                     </div>
                                     
-                                    {/* Image URL */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                            Image URL
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="image"
-                                            value={formData.image}
-                                            onChange={handleInputChange}
-                                            className="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-300"
-                                        />
-                                    </div>
-                                    
                                     {/* Active Status */}
                                     <div className="flex items-center">
                                         <input
@@ -414,17 +502,79 @@ export default function CategoryDetailPage() {
                                 </div>
                                 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Image Preview
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Category Image
                                     </label>
-                                    <div className="mt-1 border rounded-md overflow-hidden relative h-64">
-                                        <Image 
-                                            src={formData.image || 'https://placekitten.com/800/400'} 
-                                            alt="Preview" 
-                                            className="object-cover"
-                                            fill
-                                        />
-                                    </div>
+                                    
+                                    {imagePreview ? (
+                                        <div className="relative rounded-lg overflow-hidden h-64 mb-4">
+                                            <img 
+                                                src={imagePreview} 
+                                                alt="Category preview" 
+                                                className="w-full h-full object-cover"
+                                            />
+                                            {isUploadingImage && (
+                                                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                                                    <Loader2 className="h-8 w-8 text-white animate-spin" />
+                                                    <span className="text-white ml-2">Uploading...</span>
+                                                </div>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={removeImage}
+                                                disabled={isUploadingImage}
+                                                className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div 
+                                            className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center h-64 mb-4 cursor-pointer hover:bg-gray-50"
+                                            onClick={handleImageUploadClick}
+                                        >
+                                            <Upload className="h-10 w-10 text-gray-400 mb-2" />
+                                            <p className="text-sm text-gray-500 text-center">
+                                                Drag and drop an image here, or click to select a file
+                                            </p>
+                                            <p className="text-xs text-gray-400 mt-1">
+                                                PNG, JPG up to 5MB
+                                            </p>
+                                        </div>
+                                    )}
+                                    
+                                    <input
+                                        type="file"
+                                        id="image"
+                                        name="image"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                        className="hidden"
+                                        ref={fileInputRef}
+                                        disabled={isUploadingImage}
+                                    />
+                                    
+                                    <label
+                                        htmlFor="image"
+                                        className={`block w-full text-center py-2 px-4 border border-gray-300 rounded-md text-sm font-medium ${
+                                            isUploadingImage 
+                                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+                                                : 'text-gray-700 bg-white hover:bg-gray-50 cursor-pointer'
+                                        }`}
+                                    >
+                                        {isUploadingImage 
+                                            ? "Uploading..."
+                                            : imagePreview 
+                                                ? "Change Image" 
+                                                : "Select Image"
+                                        }
+                                    </label>
+                                    
+                                    {uploadedImageUrl && (
+                                        <p className="mt-2 text-xs text-green-600">
+                                            ✓ Image uploaded successfully
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                             
@@ -433,7 +583,7 @@ export default function CategoryDetailPage() {
                                     type="button"
                                     onClick={handleCancelEdit}
                                     className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                                    disabled={isSaving}
+                                    disabled={isSaving || isUploadingImage}
                                 >
                                     Cancel
                                 </button>
@@ -441,7 +591,7 @@ export default function CategoryDetailPage() {
                                 <button
                                     type="button"
                                     onClick={handleSave}
-                                    disabled={isSaving}
+                                    disabled={isSaving || isUploadingImage}
                                     className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 flex items-center ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
                                 >
                                     {isSaving ? (

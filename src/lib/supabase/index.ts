@@ -29,7 +29,9 @@ export {
 // Export category functions
 export { 
     getCategories, 
-    getCategoryById, 
+    getCategoriesWithImages,
+    getCategoryById,
+    getCategoryWithImageById, 
     deleteCategory, 
     createCategory, 
     updateCategory 
