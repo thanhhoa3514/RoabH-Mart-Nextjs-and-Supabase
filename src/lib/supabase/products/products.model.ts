@@ -94,4 +94,81 @@ export async function addProductImage(productId: number, imageUrl: string, isPri
         ]);
     
     return { data, error };
+}
+
+/**
+ * Update an existing product
+ * @param id Product ID to update
+ * @param productData Object containing the product fields to update
+ * @returns Result of the update operation
+ */
+export async function updateProduct(
+    id: string | number,
+    productData: {
+        name?: string;
+        description?: string;
+        price?: number;
+        stock_quantity?: number;
+        subcategory_id?: number;
+        discount_percentage?: number;
+        is_active?: boolean;
+        sku?: string;
+    }
+) {
+    const { data, error } = await supabase
+        .from('products')
+        .update(productData)
+        .eq('product_id', id)
+        .select();
+    
+    return { data, error };
+}
+
+/**
+ * Delete all images for a product
+ * @param productId Product ID to remove images for
+ */
+export async function removeAllProductImages(productId: string | number) {
+    const { data, error } = await supabase
+        .from('product_images')
+        .delete()
+        .eq('product_id', productId);
+    
+    return { data, error };
+}
+
+/**
+ * Set a specific image as the primary image for a product
+ * @param imageId Image ID to set as primary
+ * @param productId Product ID the image belongs to
+ */
+export async function setImageAsPrimary(imageId: number, productId: string | number) {
+    // First, set all images of this product as non-primary
+    await supabase
+        .from('product_images')
+        .update({ is_primary: false })
+        .eq('product_id', productId);
+    
+    // Then set the selected image as primary
+    const { data, error } = await supabase
+        .from('product_images')
+        .update({ is_primary: true })
+        .eq('image_id', imageId)
+        .eq('product_id', productId);
+    
+    return { data, error };
+}
+
+/**
+ * Get all images for a product
+ * @param productId Product ID to get images for
+ */
+export async function getProductImages(productId: string | number) {
+    const { data, error } = await supabase
+        .from('product_images')
+        .select('*')
+        .eq('product_id', productId)
+        .order('display_order', { ascending: true });
+    
+    return { data, error };
 } 
