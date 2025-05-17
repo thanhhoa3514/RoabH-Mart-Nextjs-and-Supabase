@@ -1,5 +1,56 @@
 import { createProduct, addProductImage } from '@/lib/supabase/products/products.model';
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { getProducts } from '@/lib/supabase/products/client/product.query';
+
+export async function GET(request: NextRequest) {
+  try {
+    // Get query parameters
+    const searchParams = request.nextUrl.searchParams;
+    const category = searchParams.get('category') || undefined;
+    const excludeId = searchParams.get('exclude');
+    const limitParam = searchParams.get('limit');
+    const limit = limitParam ? parseInt(limitParam, 10) : 4;
+    
+    // Get products
+    const { data, error, count } = await getProducts({
+      category,
+      limit
+    });
+    
+    if (error) {
+      console.error('Error fetching products:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch products' },
+        { status: 500 }
+      );
+    }
+    
+    // If there's an exclude ID, filter out that product
+    let filteredData = data;
+    if (excludeId && data) {
+      filteredData = data.filter(product => product.id !== excludeId);
+      
+      // If we need to maintain the limit after filtering
+      if (filteredData.length < limit) {
+        // We could fetch more products here if needed
+      }
+    }
+    
+    return NextResponse.json({
+      success: true,
+      data: filteredData,
+      count: count
+    });
+    
+  } catch (error) {
+    console.error('Error in GET products API:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {

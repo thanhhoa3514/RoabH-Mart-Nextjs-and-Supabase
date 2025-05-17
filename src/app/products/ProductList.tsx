@@ -66,7 +66,11 @@ export default function ProductList({
           setProducts([]);
         } else if (data && data.length > 0) {
           // Data successfully fetched
-          setProducts(data);
+          setProducts(data.map(item => ({
+            ...item,
+            product_id: item.id,
+            stock_quantity: item.stock
+          })));
           setError(null);
           setPagination({
             count: count || 0,

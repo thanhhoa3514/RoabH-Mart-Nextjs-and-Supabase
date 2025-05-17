@@ -63,8 +63,18 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
       try {
         setIsLoading(true);
         
+        // Ensure we have a valid number for productId
+        const productIdNumber = typeof productId === 'string' ? parseInt(productId, 10) : productId;
+        
+        if (isNaN(productIdNumber)) {
+          console.error('Invalid product ID');
+          setError('Invalid product ID');
+          setIsLoading(false);
+          return;
+        }
+        
         // Lấy dữ liệu đánh giá
-        const { data: reviewsData, error: reviewsError } = await getReviewsByProductId(productId);
+        const { data: reviewsData, error: reviewsError } = await getReviewsByProductId(productIdNumber);
         
         // Lấy tổng quan đánh giá
         const { 
@@ -72,7 +82,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
           totalReviews, 
           ratingDistribution, 
           error: summaryError 
-        } = await getProductRatingSummary(productId);
+        } = await getProductRatingSummary(productIdNumber);
         
         if (reviewsError) throw new Error(reviewsError.message);
         if (summaryError) throw new Error(summaryError.message);

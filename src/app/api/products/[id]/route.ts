@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client/client.model';
 import { updateProduct, getProductById, removeAllProductImages } from '@/lib/supabase/products/products.model';
+import { createClient } from '@supabase/supabase-js';
 
 type Context = {
   params: {
@@ -207,6 +208,95 @@ export async function PUT(
     console.error('Error in PUT product API:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const productId = params.id;
+    
+    if (!productId) {
+      return NextResponse.json(
+        { error: 'Product ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Create Supabase client
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    // Get product details
+    const { data: product, error: productError } = await supabase
+      .from('products')
+      .select(`
+        *,
+        product_images (*)
+      `)
+      .eq('product_id', productId)
+      .single();
+
+    if (productError) {
+      console.error('Error fetching product:', productError);
+      return NextResponse.json(
+        { error: productError.message || 'Failed to fetch product' },
+        { status: 404 }
+      );
+    }
+
+    if (!product) {
+      return NextResponse.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      );
+    }
+
+    // Format product for frontend
+    const formattedProduct: any = {
+      id: product.product_id,
+      product_id: product.product_id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      stock: product.stock_quantity,
+      stock_quantity: product.stock_quantity,
+      discount_percentage: product.discount_percentage || 0,
+      images: product.product_images?.map((img: any) => img.image_url) || [],
+      category: product.subcategory_id?.toString(),
+      createdAt: new Date(product.created_at || Date.now()).toISOString(),
+      updatedAt: new Date(product.updated_at || Date.now()).toISOString()
+    };
+
+    // Get reviews count and average rating
+    const { data: ratingData, error: ratingError } = await supabase
+      .from('reviews')
+      .select('rating')
+      .eq('product_id', productId);
+
+    if (!ratingError && ratingData && ratingData.length > 0) {
+      const ratings = ratingData.map((r: any) => r.rating);
+      const averageRating = ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length;
+      
+      formattedProduct.rating = parseFloat(averageRating.toFixed(1));
+      formattedProduct.reviews_count = ratings.length;
+    }
+
+    return NextResponse.json({ 
+      data: formattedProduct,
+      success: true
+    });
+    
+  } catch (error) {
+    console.error('Error in product API:', error);
+    return NextResponse.json(
+      { error: 'An unexpected error occurred' },
       { status: 500 }
     );
   }

@@ -3,80 +3,98 @@
 import { useState } from 'react';
 import { ShoppingCart } from 'lucide-react';
 import { Product } from '@/types';
+import { useAlert } from '@/lib/context/alert-context';
+import { useRouter } from 'next/navigation';
 
 interface AddToCartButtonProps {
     product: Product;
+    quantity: number;
+    className?: string;
+    onAddToCart?: () => void;
 }
 
-export default function AddToCartButton({ product }: AddToCartButtonProps) {
-    const [quantity, setQuantity] = useState(1);
+export default function AddToCartButton({ 
+    product, 
+    quantity, 
+    className = '', 
+    onAddToCart 
+}: AddToCartButtonProps) {
     const [isAdding, setIsAdding] = useState(false);
+    const { showAlert } = useAlert();
+    const router = useRouter();
 
-    const handleDecrement = () => {
-        if (quantity > 1) {
-            setQuantity(quantity - 1);
-        }
-    };
-
-    const handleIncrement = () => {
-        if (quantity < product.stock) {
-            setQuantity(quantity + 1);
-        }
-    };
-
-    const handleAddToCart = () => {
+    const handleAddToCart = async () => {
         setIsAdding(true);
-
-        // In a real app, this would dispatch an action to add to cart
-        setTimeout(() => {
-            console.log(`Added ${quantity} of ${product.name} to cart`);
+        
+        try {
+            // Check if the product is in stock
+            if (product.stock_quantity < quantity) {
+                showAlert('error', 'Not enough items in stock', 3000);
+                return;
+            }
+            
+            // Call API to add item to cart
+            const response = await fetch('/api/cart', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    product_id: product.product_id,
+                    quantity: quantity
+                }),
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                let errorData;
+                
+                try {
+                    // Try to parse the error response
+                    errorData = JSON.parse(errorText);
+                } catch (e) {
+                    console.error('Failed to parse error response:', errorText);
+                    throw new Error('Failed to add to cart');
+                }
+                
+                throw new Error(errorData?.message || errorData?.error || 'Failed to add to cart');
+            }
+            
+            // Show success message
+            showAlert('success', `${quantity} ${product.name} added to your cart`, 2000);
+            
+            // Call the callback if provided
+            if (onAddToCart) {
+                onAddToCart();
+            }
+            
+            // Optionally refresh the page data to update stock counts
+            router.refresh();
+        } catch (error) {
+            console.error('Error adding to cart:', error);
+            showAlert('error', 'Failed to add to cart. Please try again.', 3000);
+        } finally {
             setIsAdding(false);
-        }, 500);
+        }
     };
-
-    if (product.stock <= 0) {
-        return (
-            <button
-                className="w-full bg-gray-300 text-gray-600 py-3 rounded-md cursor-not-allowed"
-                disabled
-            >
-                Out of Stock
-            </button>
-        );
-    }
 
     return (
-        <div>
-            <div className="flex items-center mb-4">
-                <label htmlFor="quantity" className="mr-4">Quantity:</label>
-                <div className="flex items-center border rounded-md">
-                    <button
-                        onClick={handleDecrement}
-                        className="px-3 py-2 border-r hover:bg-gray-100"
-                        disabled={quantity <= 1}
-                    >
-                        -
-                    </button>
-                    <span className="px-4 py-2">{quantity}</span>
-                    <button
-                        onClick={handleIncrement}
-                        className="px-3 py-2 border-l hover:bg-gray-100"
-                        disabled={quantity >= product.stock}
-                    >
-                        +
-                    </button>
-                </div>
-            </div>
-
-            <button
-                onClick={handleAddToCart}
-                disabled={isAdding}
-                className={`w-full bg-primary text-white py-3 rounded-md flex items-center justify-center ${isAdding ? 'opacity-70 cursor-not-allowed' : 'hover:bg-opacity-90'
-                    } transition-colors`}
-            >
-                <ShoppingCart className="mr-2 h-5 w-5" />
-                {isAdding ? 'Adding...' : 'Add to Cart'}
-            </button>
-        </div>
+        <button
+            onClick={handleAddToCart}
+            disabled={isAdding}
+            className={`bg-amber-500 hover:bg-amber-600 text-white py-2 px-4 rounded-md flex items-center justify-center ${className} ${isAdding ? 'opacity-70 cursor-not-allowed' : ''}`}
+        >
+            {isAdding ? (
+                <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Adding...
+                </>
+            ) : (
+                <>
+                    <ShoppingCart className="w-5 h-5 mr-2" />
+                    Add to Cart
+                </>
+            )}
+        </button>
     );
 } 

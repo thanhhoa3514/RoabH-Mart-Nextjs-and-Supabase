@@ -1,12 +1,22 @@
 // Product types
 export interface Product {
-    id: string;
+    id: number;
+    product_id: number;
     name: string;
     description: string;
     price: number;
-    images: string[];
-    category: string;
+    stock_quantity: number;
     stock: number;
+    discount_percentage?: number;
+    rating?: number;
+    is_featured?: boolean;
+    images: string[];
+    category?: string;
+    subcategory?: string;
+    seller?: {
+        id: number;
+        name: string;
+    };
     createdAt: string;
     updatedAt: string;
 }

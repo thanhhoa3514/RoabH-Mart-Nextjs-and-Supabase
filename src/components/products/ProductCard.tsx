@@ -1,71 +1,72 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingCart } from 'lucide-react';
+import Image from 'next/image';
+import { Star } from 'lucide-react';
 import { Product } from '@/types';
-import { useState } from 'react';
 
 interface ProductCardProps {
-    product: Product;
+  product: Product;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-    const [imageError, setImageError] = useState(false);
-    
-    const handleAddToCart = () => {
-        // This would be replaced with actual cart functionality
-        console.log(`Added ${product.name} to cart`);
-        // In a real implementation, this would dispatch an action to add to cart
-    };
+  const imageUrl = product.images && product.images.length > 0 
+    ? product.images[0] 
+    : 'https://placekitten.com/300/300'; // Placeholder
 
-    // Determine the image source with fallbacks
-    const getImageSrc = () => {
-        // If image error occurred or no images available, use placeholder
-        if (imageError || !product.images || product.images.length === 0) {
-            return 'https://placekitten.com/300/300'; // Fallback image
-        }
-        return product.images[0];
-    };
-
-    return (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden transition-all hover:shadow-lg">
-            <Link href={`/products/${product.id}`}>
-                <div className="relative h-64">
-                    <Image
-                        src={getImageSrc()}
-                        alt={product.name}
-                        fill
-                        className="object-cover"
-                        onError={() => setImageError(true)}
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    />
-                </div>
-            </Link>
-            <div className="p-4">
-                <Link href={`/products/${product.id}`}>
-                    <h3 className="font-medium text-lg mb-2 hover:text-primary transition-colors">
-                        {product.name}
-                    </h3>
-                </Link>
-                <div className="flex justify-between items-center">
-                    <p className="text-primary font-bold">${product.price.toFixed(2)}</p>
-                    <button
-                        onClick={handleAddToCart}
-                        className="bg-primary text-white p-2 rounded-full hover:bg-opacity-90 transition-colors"
-                        aria-label={`Add ${product.name} to cart`}
-                    >
-                        <ShoppingCart className="w-5 h-5" />
-                    </button>
-                </div>
-                <div className="mt-2 text-sm text-gray-500">
-                    {product.stock > 0 ? (
-                        <span className="text-green-600">In Stock</span>
-                    ) : (
-                        <span className="text-red-600">Out of Stock</span>
-                    )}
-                </div>
+  return (
+    <Link href={`/products/${product.id}`} className="group">
+      <div className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+        <div className="relative h-48 bg-gray-100">
+          <Image
+            src={imageUrl}
+            alt={product.name}
+            fill
+            className="object-contain"
+          />
+          {product.discount_percentage && product.discount_percentage > 0 && (
+            <div className="absolute top-2 right-2 bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded">
+              {product.discount_percentage}% OFF
             </div>
+          )}
         </div>
-    );
+        
+        <div className="p-4">
+          <h3 className="font-medium text-gray-800 group-hover:text-amber-500 transition-colors">
+            {product.name}
+          </h3>
+          
+          <div className="flex items-center mt-1">
+            <div className="flex">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  className={`h-3 w-3 ${
+                    star <= (product.rating || 0)
+                      ? 'text-amber-400 fill-amber-400'
+                      : 'text-gray-300'
+                  }`}
+                />
+              ))}
+            </div>
+            {product.rating && (
+              <span className="text-xs text-gray-500 ml-1">
+                ({product.rating.toFixed(1)})
+              </span>
+            )}
+          </div>
+          
+          <div className="mt-2 flex justify-between items-center">
+            <span className="font-bold">${product.price.toFixed(2)}</span>
+            
+            {product.stock_quantity <= 0 ? (
+              <span className="text-xs text-red-500">Out of Stock</span>
+            ) : (
+              <span className="text-xs text-green-600">In Stock</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
 } 

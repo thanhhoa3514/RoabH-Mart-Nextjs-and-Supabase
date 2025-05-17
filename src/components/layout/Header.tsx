@@ -6,6 +6,7 @@ import { ShoppingCart, User, Search, Menu, X, LogOut, ShoppingBag, Smartphone, S
 import { useAuth } from '@/lib/auth/AuthContext';
 import { useRouter } from 'next/navigation';
 import Modal from '@/components/ui/Modal';
+import CartCount from './CartCount';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -127,12 +128,7 @@ export default function Header() {
             )}
           </div>
           
-          <Link href="/cart" className="hover:opacity-80 transition-all relative">
-            <ShoppingCart className="w-6 h-6" />
-            <span className="absolute -top-2 -right-2 bg-accent-foreground text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-              0
-            </span>
-          </Link>
+                    <CartCount />
           
           {/* User Menu */}
           <div className="relative">
