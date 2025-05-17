@@ -452,25 +452,22 @@ Thank you for your business!
                         </thead>
                         <tbody>
                             {sortedOrders.length > 0 ? (
-                                <motion.div
-                                    variants={containerVariants}
-                                    initial="hidden"
-                                    animate="visible"
-                                    className="contents"
-                                >
+                                <>
                                     {sortedOrders.map((order) => (
                                         <motion.tr
                                             key={order.id}
                                             variants={itemVariants}
+                                            initial="hidden"
+                                            animate="visible"
                                             className="border-b hover:bg-gray-50"
                                         >
                                             <td className="py-4 px-4 whitespace-nowrap">
                                                 <div className="font-medium text-gray-900">{order.id}</div>
-                                                        <div className="text-xs text-gray-500">{order.items || 'N/A'} items</div>
+                                                <div className="text-xs text-gray-500">{order.items || 'N/A'} items</div>
                                             </td>
                                             <td className="py-4 px-4 whitespace-nowrap">
                                                 <div className="font-medium text-gray-900">{order.customer}</div>
-                                                        <div className="text-xs text-gray-500">{order.email || 'N/A'}</div>
+                                                <div className="text-xs text-gray-500">{order.email || 'N/A'}</div>
                                             </td>
                                             <td className="py-4 px-4 whitespace-nowrap">
                                                 <div className="flex items-center">
@@ -487,11 +484,11 @@ Thank you for your business!
                                             </td>
                                             <td className="py-4 px-4 whitespace-nowrap">
                                                 <div className="font-medium text-gray-900">{order.total}</div>
-                                                        <div className="text-xs text-gray-500">{order.paymentMethod || 'N/A'}</div>
+                                                <div className="text-xs text-gray-500">{order.paymentMethod || 'N/A'}</div>
                                             </td>
                                             <td className="py-4 px-4 whitespace-nowrap">
                                                 <div className="flex space-x-2">
-                                                            <Link href={`/admin/orders/${order.orderId}`}>
+                                                    <Link href={`/admin/orders/${order.orderId}`}>
                                                         <motion.button
                                                             whileHover={{ scale: 1.1 }}
                                                             whileTap={{ scale: 0.9 }}
@@ -515,7 +512,7 @@ Thank you for your business!
                                             </td>
                                         </motion.tr>
                                     ))}
-                                </motion.div>
+                                </>
                             ) : (
                                 <tr>
                                     <td colSpan={6} className="py-8 text-center text-gray-500">
