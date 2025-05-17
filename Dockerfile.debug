@@ -2,25 +2,21 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Install dependencies
+# Copy package files and install dependencies
 COPY package.json package-lock.json ./
 RUN npm ci
 
 # Copy the rest of the application
 COPY . .
 
-# Disable Next.js telemetry
+# Disable telemetry during the build
 ENV NEXT_TELEMETRY_DISABLED 1
 
-# Build the application
-RUN npm run build
+# Show detailed build output
+RUN set -x && npm run build
 
-# Set production environment
+# Set up for production
 ENV NODE_ENV production
-ENV PORT 3000
-ENV HOSTNAME "0.0.0.0"
-
 EXPOSE 3000
 
-# Start the application
 CMD ["npm", "start"] 
