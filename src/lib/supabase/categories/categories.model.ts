@@ -109,34 +109,65 @@ export async function deleteCategory(id: number) {
  * If an image file is provided, it will be uploaded to Supabase storage
  */
 export async function createCategory(categoryData: Omit<Category, 'category_id'>, imageFile?: File) {
-    // If there's an image file, upload it to Supabase storage first
-    let imagePath = categoryData.image;
-    
-    if (imageFile) {
-        const fileName = `${Date.now()}-${imageFile.name}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('roabh-mart')
-            .upload(`category-images/${fileName}`, imageFile);
+    try {
+        console.log('Creating category with data:', JSON.stringify(categoryData));
+        
+        // If there's an image file, upload it to Supabase storage first
+        let imagePath = categoryData.image;
+        
+        if (imageFile) {
+            const fileName = `${Date.now()}-${imageFile.name}`;
+            const { data: uploadData, error: uploadError } = await supabase.storage
+                .from('roabh-mart')
+                .upload(`category-images/${fileName}`, imageFile);
+                
+            if (uploadError) {
+                console.error('Image upload error:', uploadError);
+                return { data: null, error: uploadError };
+            }
             
-        if (uploadError) {
-            return { data: null, error: uploadError };
+            // Get the public URL for the uploaded image
+            const { data: publicUrlData } = supabase.storage
+                .from('roabh-mart')
+                .getPublicUrl(`category-images/${fileName}`);
+                
+            imagePath = publicUrlData.publicUrl;
         }
         
-        // Get the public URL for the uploaded image
-        const { data: publicUrlData } = supabase.storage
-            .from('roabh-mart')
-            .getPublicUrl(`category-images/${fileName}`);
-            
-        imagePath = publicUrlData.publicUrl;
-    }
-    
-    // Now create the category with the image path
-    const { data, error } = await supabase
-        .from('categories')
-        .insert([{...categoryData, image: imagePath}])
-        .select();
+        // Create a clean object for the database
+        // Make sure we don't include any category_id that might be in the data
+        const { category_id, ...rest } = categoryData as any;
         
-    return { data, error };
+        const categoryToInsert = {
+            name: rest.name,
+            description: rest.description || null,
+            image: imagePath || null,
+            is_active: rest.is_active !== undefined ? rest.is_active : true,
+            display_order: rest.display_order || 0
+        };
+        
+        console.log('Inserting category:', JSON.stringify(categoryToInsert));
+        
+        // Now create the category with the image path
+        const { data, error } = await supabase
+            .from('categories')
+            .insert([categoryToInsert])
+            .select();
+            
+        if (error) {
+            console.error('Category insert error:', JSON.stringify(error));
+        } else {
+            console.log('Category created successfully:', data);
+        }
+            
+        return { data, error };
+    } catch (err) {
+        console.error('Exception in createCategory:', err);
+        return { 
+            data: null, 
+            error: { message: err instanceof Error ? err.message : 'Unknown error in category creation' } 
+        };
+    }
 }
 
 /**

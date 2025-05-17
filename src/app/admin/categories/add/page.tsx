@@ -95,6 +95,7 @@ export default function AddCategoryPage() {
             
             const formData = new FormData();
             formData.append('file', file);
+            formData.append('folder', 'category-images');
             
             const response = await fetch('/api/upload', {
                 method: 'POST',
@@ -107,8 +108,17 @@ export default function AddCategoryPage() {
                 throw new Error(result.error || 'Upload failed');
             }
             
+            console.log('Image upload result:', result);
+            
             // Save the uploaded image URL
             setUploadedImageUrl(result.url);
+            
+            // Also update the form data with the image URL
+            setFormData(prev => ({
+                ...prev,
+                image: result.url
+            }));
+            
             showAlert('success', 'Image uploaded successfully', 2000);
         } catch (error) {
             console.error('Error uploading image:', error);
@@ -127,10 +137,13 @@ export default function AddCategoryPage() {
             fileInputRef.current.value = '';
         }
         
-        setFormData({
-            ...formData,
+        // Clear the image field in form data
+        setFormData(prev => ({
+            ...prev,
             image: null
-        });
+        }));
+        
+        console.log('Image removed. Form data after removal:', formData);
     };
     
     const validateForm = () => {
@@ -154,24 +167,33 @@ export default function AddCategoryPage() {
         setIsSubmitting(true);
         
         try {
+            console.log('Submitting category with image URL:', uploadedImageUrl);
+            
             // Use the URL of the uploaded image
             const categoryData = {
-                name: formData.name,
-                description: formData.description || null,
+                name: formData.name.trim(),
+                description: formData.description ? formData.description.trim() : null,
                 image: uploadedImageUrl,
                 is_active: formData.is_active,
                 display_order: formData.display_order
             };
             
-            const { error } = await createCategory(categoryData);
+            // Ensure there's no category_id in the data
+            const { category_id, ...dataToSubmit } = categoryData as any;
+            
+            console.log('Creating category with data:', dataToSubmit);
+            const { data, error } = await createCategory(dataToSubmit);
             
             if (error) {
-                throw new Error(error.message);
+                console.error('Error from createCategory:', JSON.stringify(error));
+                throw new Error(error.message || 'Failed to create category');
             }
             
+            console.log('Category created successfully:', data);
             showAlert('success', 'Category created successfully', 3000);
             router.push('/admin/categories');
         } catch (error) {
+            console.error('Error in form submission:', error);
             showAlert('error', error instanceof Error ? error.message : 'Failed to create category', 3000);
         } finally {
             setIsSubmitting(false);

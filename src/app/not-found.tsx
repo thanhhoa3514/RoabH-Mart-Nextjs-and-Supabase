@@ -29,7 +29,7 @@ export default function NotFound() {
             className="relative w-64 h-64"
           >
             <Image
-              src="https://placekitten.com/400/400"
+              src="/images/404-cat.png"
               alt="Cute cat 404 image"
               width={256}
               height={256}
