@@ -29,7 +29,7 @@ export default async function Home() {
       {/* Hero Section */}
       <section className="relative h-[500px] rounded-xl overflow-hidden mb-12">
         <Image
-          src="https://placekitten.com/1200/500"
+          src="https://dituqzgjijnwjroetrqj.supabase.co/storage/v1/object/public/roabh-mart/product-images/52c8d3bd-8661-40ba-a551-a394c03bb299.png"
           alt="RoabH Mart Hero"
           fill
           className="object-cover"
