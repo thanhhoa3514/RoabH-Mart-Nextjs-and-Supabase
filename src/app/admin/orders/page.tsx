@@ -144,13 +144,12 @@ export default function OrdersPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalOrders, setTotalOrders] = useState(0);
     const [updatingStatus, setUpdatingStatus] = useState<number | null>(null);
-    const [pageSize, setPageSize] = useState(10);
-    const [loadingPage, setLoadingPage] = useState(false);
+    const pageSize = 10;
 
     // Fetch orders from Supabase
     useEffect(() => {
         fetchOrders();
-    }, [currentPage, pageSize]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [currentPage]); // eslint-disable-line react-hooks/exhaustive-deps
     
     const fetchOrders = async () => {
         try {
