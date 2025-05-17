@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Plus, Search, Trash2, Eye, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAlert } from '@/lib/context/alert-context';
 import Link from 'next/link';
+import Image from 'next/image';
 import { getProducts } from '@/lib/supabase/products/products.model';
 
 // Animation variants
@@ -128,7 +129,7 @@ export default function ProductsPage() {
         }
     };
 
-    const handleEdit = (id: number, name: string) => {
+    const handleEdit = (id: number) => {
         // Navigate to edit page
         window.location.href = `/admin/products/edit/${id}`;
     };
@@ -393,9 +394,11 @@ export default function ProductsPage() {
                                     <div className="p-4 relative">
                                         <div className="bg-gray-200 h-40 rounded-md flex items-center justify-center mb-3">
                                             {getProductImage(product) ? (
-                                                <img 
+                                                <Image 
                                                     src={getProductImage(product)} 
                                                     alt={product.name}
+                                                    width={160}
+                                                    height={160}
                                                     className="h-full w-full object-cover"
                                                 />
                                             ) : (
@@ -442,7 +445,7 @@ export default function ProductsPage() {
                                         <div className="flex justify-between mt-4">
                                             <button 
                                                 className="bg-amber-100 text-amber-600 px-4 py-1 rounded text-sm"
-                                                onClick={() => handleEdit(product.product_id, product.name)}
+                                                onClick={() => handleEdit(product.product_id)}
                                             >
                                                 Edit
                                             </button>

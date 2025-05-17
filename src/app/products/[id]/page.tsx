@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, notFound } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import AddToCartButton from './AddToCartButton';
 import ProductGallery from './ProductGallery';
 import RelatedProducts from './RelatedProducts';
 import ProductReviews from '@/components/products/ProductReviews';
 import ReviewForm from '@/components/products/ReviewForm';
 import { getProductById } from '@/lib/supabase';
+import { Product as BaseProduct } from '@/types';
 
 type ProductImage = {
   image_url: string;
@@ -18,9 +19,15 @@ type ProductSpecifications = {
   [key: string]: string;
 }
 
+// Extend the base Product interface with additional properties needed in this component
+interface ProductWithDetails extends BaseProduct {
+  features: string[];
+  specifications: ProductSpecifications;
+}
+
 export default function ProductDetailPage() {
   const { id } = useParams();
-  const [product, setProduct] = useState<any>(null);
+  const [product, setProduct] = useState<ProductWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reviewsKey, setReviewsKey] = useState(0); // Used to force refresh reviews component
@@ -43,13 +50,13 @@ export default function ProductDetailPage() {
         }
         
         // Format the product data
-        const formattedProduct = {
-          id: data.product_id,
+        const formattedProduct: ProductWithDetails = {
+          id: data.product_id.toString(),
           name: data.name,
           description: data.description,
           price: data.price,
           images: data.product_images?.map((img: ProductImage) => img.image_url) || [],
-          category: data.subcategory_id,
+          category: data.subcategory_id.toString(),
           stock: data.stock_quantity,
           features: data.features || [
               'Premium quality',

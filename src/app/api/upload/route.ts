@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
         const filePath = `product-images/${fileName}`;
 
         // Upload file lên Supabase Storage
-        const { data, error } = await supabase
+        const { error } = await supabase
             .storage
             .from('roabh-mart')
             .upload(filePath, buffer, {

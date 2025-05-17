@@ -38,7 +38,7 @@ const itemVariants = {
 export default function CheckoutPage() {
     const router = useRouter();
     const { showAlert } = useAlert();
-    const { user, userData } = useAuth();
+    const { userData } = useAuth();
     
     // Mock cart data - would normally be fetched from the server or state management
     const [cart] = useState({

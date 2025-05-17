@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+// import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { 
     CheckCircle, 
@@ -33,11 +33,10 @@ const itemVariants = {
 };
 
 export default function OrderConfirmationPage() {
-    const router = useRouter();
     const searchParams = useSearchParams();
     const orderId = searchParams.get('id');
     
-    const [orderData, setOrderData] = useState({
+    const orderData = {
         id: orderId || '12345678',
         date: new Date().toLocaleDateString(),
         total: 1664.97,
@@ -45,7 +44,7 @@ export default function OrderConfirmationPage() {
         estimatedDelivery: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString(),
         shippingAddress: '123 Main St, Anytown, Province, 12345',
         paymentMethod: 'Credit Card (**** 1234)'
-    });
+    };
     
     return (
         <div className="bg-gray-50 min-h-screen py-12">
@@ -140,7 +139,7 @@ export default function OrderConfirmationPage() {
                                 Next Steps
                             </h2>
                             <p className="text-gray-600 text-sm">
-                                We'll send you shipping confirmation when your item(s) are on the way! You can check the status of your order at any time by visiting your account.
+                                We&apos;ll send you shipping confirmation when your item(s) are on the way! You can check the status of your order at any time by visiting your account.
                             </p>
                         </div>
                     </motion.div>
