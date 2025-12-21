@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Upload, X, Check, Loader2 } from 'lucide-react';
-import { useAlert } from '@/lib/context/alert-context';
+import { useAlert } from '@/providers/alert-provider';
 import { createCategory } from '@/lib/supabase';
 
 import Image from 'next/image';

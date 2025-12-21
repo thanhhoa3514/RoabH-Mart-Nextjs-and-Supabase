@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { ShoppingBag, ChevronRight, Package, Clock, Ban } from 'lucide-react';
-import { useAuth } from '@/lib/auth/AuthContext';
-import { getOrdersByUserId } from '@/lib/supabase';
-import { supabase } from '@/lib/supabase';
-import { useAlert } from '@/lib/context/alert-context';
+import { useAuth } from '@/providers/auth-provider';
+import { getOrdersByUser } from '@/lib/supabase/orders/order.service';
+import { useAlert } from '@/providers/alert-provider';
 import { getUserId } from '@/lib/helpers/user-helpers';
+import { getSupabaseClient } from '@/lib/supabase';
 
 // Interface cho dữ liệu đơn hàng
 interface Order {
@@ -64,7 +64,7 @@ export default function OrdersPage() {
 
     async function loadOrders() {
         if (authLoading) return;
-        
+
         if (!user || !userData) {
             // Nếu không có người dùng đăng nhập, chuyển hướng về trang đăng nhập
             showAlert('error', 'Vui lòng đăng nhập để xem đơn hàng của bạn', 3000);
@@ -72,18 +72,11 @@ export default function OrdersPage() {
             return;
         }
 
-        // Debug user data
-        console.log('User data from auth context:', {
-            user,
-            userData,
-            userIdFromUserData: userData?.user?.user_id
-        });
-
         try {
             setLoading(true);
             // Lấy user_id từ userData
-            const userId = getUserId(userData);
-            
+            const userId = userData.user_id;
+
             if (!userId) {
                 showAlert('error', 'Không tìm thấy thông tin người dùng', 3000);
                 setHasChecked(true);
@@ -91,24 +84,20 @@ export default function OrdersPage() {
                 return;
             }
 
-            const { data, error, count } = await getOrdersByUserId(userId, currentPage, pageSize);
-            
+            const { data, error } = await getOrdersByUser(userId);
+
             if (error) {
-                console.error('Error fetching orders:', error);
+
                 showAlert('error', 'Không thể tải đơn hàng: ' + error.message, 3000);
                 setHasChecked(true);
                 setLoading(false);
                 return;
             }
-            
+
             setOrders(data || []);
             setHasChecked(true);
-            
-            if (count !== null) {
-                setTotalPages(Math.ceil(count / pageSize));
-            }
+
         } catch (error) {
-            console.error('Unexpected error:', error);
             showAlert('error', 'Đã xảy ra lỗi khi tải đơn hàng', 3000);
         } finally {
             setLoading(false);
@@ -122,30 +111,39 @@ export default function OrdersPage() {
             setLoading(false);
             return;
         }
-        
+
         // Nếu chuyển trang hoặc có thay đổi về user/userData, cần tải lại
         loadOrders();
 
         // Thiết lập real-time subscription cho orders
-        const userId = userData?.user?.user_id;
+        const userId = userData?.user_id;
+        let subscription: any = null;
+
         if (userId) {
-            const subscription = supabase
-                .channel('orders-changes')
-                .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
-                    table: 'orders',
-                    filter: `user_id=eq.${userId}`
-                }, (payload) => {
-                    console.log('Real-time update nhận được:', payload);
-                    // Tải lại danh sách đơn hàng khi có thay đổi
-                    loadOrders();
-                })
-                .subscribe();
+            const setupSubscription = async () => {
+                const supabase = await getSupabaseClient();
+                subscription = supabase
+                    .channel('orders-changes')
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'orders',
+                        filter: `user_id=eq.${userId}`
+                    }, (payload: any) => {
+                        console.log('Real-time update nhận được:', payload);
+                        // Tải lại danh sách đơn hàng khi có thay đổi
+                        loadOrders();
+                    })
+                    .subscribe();
+            };
+
+            setupSubscription();
 
             // Cleanup subscription khi component unmount
             return () => {
-                subscription.unsubscribe();
+                if (subscription) {
+                    subscription.unsubscribe();
+                }
             };
         }
     }, [user, userData, authLoading, currentPage, pageSize, router, showAlert, hasChecked, orders.length, loadOrders]);
@@ -272,8 +270,8 @@ export default function OrdersPage() {
                                 key={i}
                                 onClick={() => changePage(i + 1)}
                                 className={`px-3 py-1 rounded ${currentPage === i + 1
-                                        ? 'bg-blue-600 text-white'
-                                        : 'text-blue-600 hover:bg-blue-100'
+                                    ? 'bg-blue-600 text-white'
+                                    : 'text-blue-600 hover:bg-blue-100'
                                     }`}
                             >
                                 {i + 1}

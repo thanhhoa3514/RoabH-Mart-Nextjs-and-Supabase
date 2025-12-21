@@ -18,8 +18,8 @@ import {
     Loader2
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAlert } from '@/lib/context/alert-context';
-import { getCustomers, searchCustomers } from '@/lib/supabase/customers/customers.model';
+import { useAlert } from '@/providers/alert-provider';
+import { getCustomers, searchCustomers } from '@/lib/supabase/customers/customer.service';
 import { DbCustomer } from '@/types/user/customer.model';
 
 // Animation variants
@@ -481,3 +481,4 @@ export default function CustomersPage() {
         </div>
     );
 } 
+

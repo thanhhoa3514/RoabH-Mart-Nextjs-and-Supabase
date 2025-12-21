@@ -6,9 +6,9 @@ import Image from 'next/image';
 import { useRouter, useParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { ArrowLeft, Package, Truck, CheckCircle2 } from 'lucide-react';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/providers/auth-provider';
 import { getOrderById } from '@/lib/supabase';
-import { useAlert } from '@/lib/context/alert-context';
+import { useAlert } from '@/providers/alert-provider';
 import { getUserId } from '@/lib/helpers/user-helpers';
 
 // Định nghĩa interface cho dữ liệu đơn hàng
