@@ -5,16 +5,16 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Upload, X, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useAlert } from '@/lib/context/alert-context';
+import { useAlert } from '@/providers/alert-provider';
 import { useParams, useRouter } from 'next/navigation';
-import { getProductById, getProductImages } from '@/lib/supabase/products/products.model';
+import { getProductById, getProductImages } from '@/lib/supabase/products/product.service';
 
 export default function EditProductPage() {
     const { id } = useParams();
     const { showAlert } = useAlert();
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    
+
     const [isLoading, setIsLoading] = useState(true);
     const [formData, setFormData] = useState({
         name: '',
@@ -26,7 +26,7 @@ export default function EditProductPage() {
         discount_percentage: '0',
         sku: ''
     });
-    
+
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [imageFile, setImageFile] = useState<File | null>(null);
@@ -34,31 +34,31 @@ export default function EditProductPage() {
     const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
     const [existingImages, setExistingImages] = useState<any[]>([]);
     const [error, setError] = useState<string | null>(null);
-    
+
     // Fetch product data
     useEffect(() => {
         async function fetchProductData() {
             try {
                 setIsLoading(true);
-                
+
                 // Get product data
                 const { data: product, error: productError } = await getProductById(id as string);
-                
+
                 if (productError) {
                     throw new Error(productError.message);
                 }
-                
+
                 if (!product) {
                     throw new Error('Product not found');
                 }
-                
+
                 // Get product images
                 const { data: images, error: imagesError } = await getProductImages(id as string);
-                
+
                 if (imagesError) {
                     console.error('Error fetching product images:', imagesError);
                 }
-                
+
                 // Set form data
                 setFormData({
                     name: product.name || '',
@@ -70,11 +70,11 @@ export default function EditProductPage() {
                     discount_percentage: product.discount_percentage?.toString() || '0',
                     sku: product.sku || ''
                 });
-                
+
                 // Set existing images
                 if (images && images.length > 0) {
                     setExistingImages(images);
-                    
+
                     // Find primary image for preview
                     const primaryImage = images.find(img => img.is_primary);
                     if (primaryImage) {
@@ -83,7 +83,7 @@ export default function EditProductPage() {
                         setImagePreview(images[0].image_url);
                     }
                 }
-                
+
             } catch (err) {
                 console.error('Error fetching product:', err);
                 setError(err instanceof Error ? err.message : 'Failed to load product');
@@ -92,15 +92,15 @@ export default function EditProductPage() {
                 setIsLoading(false);
             }
         }
-        
+
         if (id) {
             fetchProductData();
         }
     }, [id, showAlert]);
-    
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
-        
+
         if ((e.target as HTMLInputElement).type === 'checkbox') {
             const checked = (e.target as HTMLInputElement).checked;
             setFormData(prev => ({ ...prev, [name]: checked }));
@@ -108,11 +108,11 @@ export default function EditProductPage() {
             setFormData(prev => ({ ...prev, [name]: value }));
         }
     };
-    
+
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        
+
         try {
             // Show image preview
             const reader = new FileReader();
@@ -120,27 +120,27 @@ export default function EditProductPage() {
                 setImagePreview(reader.result as string);
             };
             reader.readAsDataURL(file);
-            
+
             setImageFile(file);
-            
+
             // Upload image to server via API
             setIsUploadingImage(true);
-            
+
             const formData = new FormData();
             formData.append('file', file);
             formData.append('folder', 'product-images');
-            
+
             const response = await fetch('/api/upload', {
                 method: 'POST',
                 body: formData,
             });
-            
+
             const result = await response.json();
-            
+
             if (!response.ok) {
                 throw new Error(result.error || 'Upload failed');
             }
-            
+
             // Save the uploaded image URL
             setUploadedImageUrl(result.url);
             showAlert('success', 'Image uploaded successfully', 2000);
@@ -151,29 +151,29 @@ export default function EditProductPage() {
             setIsUploadingImage(false);
         }
     };
-    
+
     const removeImage = () => {
         setImagePreview(null);
         setUploadedImageUrl(null);
         setImageFile(null);
-        
+
         // Clear the file input
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
     };
-    
+
     const handleImageUploadClick = () => {
         // Trigger the hidden file input
         if (fileInputRef.current) {
             fileInputRef.current.click();
         }
     };
-    
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
-        
+
         try {
             // Validate form
             if (!formData.name.trim()) {
@@ -181,19 +181,19 @@ export default function EditProductPage() {
                 setIsSubmitting(false);
                 return;
             }
-            
+
             // Prepare the data for submission
             const productData = {
                 name: formData.name,
                 description: formData.description,
                 price: parseFloat(formData.price),
                 stock_quantity: parseInt(formData.stock_quantity),
-                subcategory_id: parseInt(formData.subcategory_id),
+                subcategory_id: formData.subcategory_id,
                 is_active: formData.is_active,
                 discount_percentage: parseFloat(formData.discount_percentage) || 0,
                 sku: formData.sku
             };
-            
+
             // Update the product
             const response = await fetch(`/api/products/${id}`, {
                 method: 'PUT',
@@ -202,13 +202,13 @@ export default function EditProductPage() {
                 },
                 body: JSON.stringify(productData),
             });
-            
+
             const result = await response.json();
-            
+
             if (!response.ok) {
                 throw new Error(result.error || 'Failed to update product');
             }
-            
+
             // If a new image was uploaded, add it as a product image
             if (uploadedImageUrl) {
                 const imageResponse = await fetch('/api/products/images', {
@@ -222,14 +222,14 @@ export default function EditProductPage() {
                         is_primary: existingImages.length === 0, // Make primary if it's the first image
                     }),
                 });
-                
+
                 const imageResult = await imageResponse.json();
-                
+
                 if (!imageResponse.ok) {
                     throw new Error(imageResult.error || 'Failed to add product image');
                 }
             }
-            
+
             showAlert('success', 'Product updated successfully!', 3000);
             router.push(`/admin/products/${id}`);
         } catch (error) {
@@ -239,7 +239,7 @@ export default function EditProductPage() {
             setIsSubmitting(false);
         }
     };
-    
+
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-screen">
@@ -251,7 +251,7 @@ export default function EditProductPage() {
             </div>
         );
     }
-    
+
     if (error) {
         return (
             <div className="p-6">
@@ -259,7 +259,7 @@ export default function EditProductPage() {
                     <div className="text-center">
                         <h2 className="text-xl font-medium text-gray-900">Product not found</h2>
                         <p className="mt-2 text-gray-500">The product you're looking for doesn't exist or has been removed.</p>
-                        <button 
+                        <button
                             onClick={() => router.push('/admin/products')}
                             className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-amber-500 hover:bg-amber-600"
                         >
@@ -271,7 +271,7 @@ export default function EditProductPage() {
             </div>
         );
     }
-    
+
     return (
         <div className="p-6">
             <div className="mb-6">
@@ -280,11 +280,11 @@ export default function EditProductPage() {
                     Back to Product Details
                 </Link>
             </div>
-            
+
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold">Edit Product</h1>
             </div>
-            
+
             <motion.div
                 className="bg-white rounded-lg shadow-md p-6"
                 initial={{ opacity: 0, y: 20 }}
@@ -310,14 +310,14 @@ export default function EditProductPage() {
                                     placeholder="Enter product name"
                                 />
                             </div>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label htmlFor="subcategory_id" className="block text-sm font-medium text-gray-700 mb-1">
                                         Subcategory ID *
                                     </label>
                                     <input
-                                        type="number"
+                                        type="text"
                                         id="subcategory_id"
                                         name="subcategory_id"
                                         required
@@ -327,7 +327,7 @@ export default function EditProductPage() {
                                         placeholder="Enter subcategory ID"
                                     />
                                 </div>
-                                
+
                                 <div>
                                     <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
                                         Price *
@@ -346,7 +346,7 @@ export default function EditProductPage() {
                                     />
                                 </div>
                             </div>
-                            
+
                             <div>
                                 <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
                                     Description *
@@ -362,7 +362,7 @@ export default function EditProductPage() {
                                     placeholder="Enter product description"
                                 ></textarea>
                             </div>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label htmlFor="stock_quantity" className="block text-sm font-medium text-gray-700 mb-1">
@@ -380,7 +380,7 @@ export default function EditProductPage() {
                                         placeholder="0"
                                     />
                                 </div>
-                                
+
                                 <div>
                                     <label htmlFor="discount_percentage" className="block text-sm font-medium text-gray-700 mb-1">
                                         Discount Percentage
@@ -399,7 +399,7 @@ export default function EditProductPage() {
                                     />
                                 </div>
                             </div>
-                            
+
                             <div>
                                 <label htmlFor="sku" className="block text-sm font-medium text-gray-700 mb-1">
                                     SKU
@@ -414,7 +414,7 @@ export default function EditProductPage() {
                                     placeholder="Enter SKU"
                                 />
                             </div>
-                            
+
                             <div className="flex items-center">
                                 <input
                                     type="checkbox"
@@ -429,18 +429,18 @@ export default function EditProductPage() {
                                 </label>
                             </div>
                         </div>
-                        
+
                         {/* Right Column - Product Image */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Product Image
                             </label>
-                            
+
                             {imagePreview ? (
                                 <div className="relative rounded-lg overflow-hidden h-64 mb-4">
-                                    <Image 
-                                        src={imagePreview} 
-                                        alt="Product preview" 
+                                    <Image
+                                        src={imagePreview}
+                                        alt="Product preview"
                                         className="w-full h-full object-cover"
                                         width={400}
                                         height={400}
@@ -461,7 +461,7 @@ export default function EditProductPage() {
                                     </button>
                                 </div>
                             ) : (
-                                <div 
+                                <div
                                     className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center h-64 mb-4 cursor-pointer hover:bg-gray-50"
                                     onClick={handleImageUploadClick}
                                 >
@@ -474,7 +474,7 @@ export default function EditProductPage() {
                                     </p>
                                 </div>
                             )}
-                            
+
                             <input
                                 type="file"
                                 id="image"
@@ -485,29 +485,28 @@ export default function EditProductPage() {
                                 ref={fileInputRef}
                                 disabled={isUploadingImage}
                             />
-                            
+
                             <label
                                 htmlFor="image"
-                                className={`block w-full text-center py-2 px-4 border border-gray-300 rounded-md text-sm font-medium ${
-                                    isUploadingImage 
-                                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-                                        : 'text-gray-700 bg-white hover:bg-gray-50 cursor-pointer'
-                                }`}
+                                className={`block w-full text-center py-2 px-4 border border-gray-300 rounded-md text-sm font-medium ${isUploadingImage
+                                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                    : 'text-gray-700 bg-white hover:bg-gray-50 cursor-pointer'
+                                    }`}
                             >
-                                {isUploadingImage 
+                                {isUploadingImage
                                     ? "Uploading..."
-                                    : imagePreview 
-                                        ? "Change Image" 
+                                    : imagePreview
+                                        ? "Change Image"
                                         : "Select Image"
                                 }
                             </label>
-                            
+
                             {uploadedImageUrl && (
                                 <p className="mt-2 text-xs text-green-600">
                                     ✓ Image uploaded successfully
                                 </p>
                             )}
-                            
+
                             {existingImages.length > 0 && (
                                 <div className="mt-4">
                                     <p className="text-sm font-medium text-gray-700 mb-2">
@@ -520,15 +519,15 @@ export default function EditProductPage() {
                             )}
                         </div>
                     </div>
-                    
+
                     <div className="mt-8 flex justify-end">
-                        <Link 
+                        <Link
                             href={`/admin/products/${id}`}
                             className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md mr-4 hover:bg-gray-200"
                         >
                             Cancel
                         </Link>
-                        
+
                         <motion.button
                             type="submit"
                             className="bg-amber-500 text-white px-6 py-2 rounded-md hover:bg-amber-600 flex items-center justify-center min-w-[100px]"

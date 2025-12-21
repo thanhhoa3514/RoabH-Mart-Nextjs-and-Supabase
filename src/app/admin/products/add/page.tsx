@@ -4,10 +4,10 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Upload, X, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useAlert } from '@/lib/context/alert-context';
+import { useAlert } from '@/providers/alert-provider';
 import { useRouter } from 'next/navigation';
-import { getCategories } from '@/lib/supabase/categories/categories.model';
-import { getSubcategories } from '@/lib/supabase/subcategories/subcategories.model';
+import { getCategories } from '@/lib/supabase/categories/category.service';
+import { getSubcategories } from '@/lib/supabase/subcategories/subcategory.service';
 
 interface Category {
     category_id: number;
@@ -486,3 +486,4 @@ export default function AddProductPage() {
         </div>
     );
 } 
+

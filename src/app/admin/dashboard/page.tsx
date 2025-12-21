@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Search, Bell, Users, ThumbsUp, ShoppingCart, Package, HelpCircle, Loader2 } from 'lucide-react';
-import { useAlert } from '@/lib/context/alert-context';
+import { useAlert } from '@/providers/alert-provider';
 import { getDashboardStats, getTopProducts, getReviewStats, getQuarterlySales } from '@/lib/supabase';
 import React from 'react';
 
