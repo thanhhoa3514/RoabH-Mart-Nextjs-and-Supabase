@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Filter, Eye, FileText, Download, Calendar, Clock, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useAlert } from '@/lib/context/alert-context';
+import { useAlert } from '@/providers/alert-provider';
 import { getOrders } from '@/lib/supabase';
 
 // Define interfaces for order data

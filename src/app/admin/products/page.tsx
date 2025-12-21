@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Search, Trash2, Eye, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useAlert } from '@/lib/context/alert-context';
+import { useAlert } from '@/providers/alert-provider';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getProducts } from '@/lib/supabase/products/products.model';
+import { getProducts } from '@/lib/supabase/products/product.service';
 
 // Animation variants
 const containerVariants = {
@@ -594,3 +594,4 @@ export default function ProductsPage() {
         </div>
     );
 } 
+
