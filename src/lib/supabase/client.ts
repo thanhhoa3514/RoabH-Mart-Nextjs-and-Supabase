@@ -15,9 +15,4 @@ export const createClient = () => {
   });
 };
 
-/**
- * Singleton instance for simple client-side usage
- */
-export const supabase = typeof window !== 'undefined'
-  ? createClient()
-  : null as unknown as ReturnType<typeof createClient>;
+// Client instance is primarily created via the getSupabaseClient factory or manually on the client

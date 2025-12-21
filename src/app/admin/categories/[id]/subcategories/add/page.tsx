@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Upload, X, Check, Loader2 } from 'lucide-react';
-import { useAlert } from '@/lib/context/alert-context';
+import { useAlert } from '@/providers/alert-provider';
 import { getCategoryById, createSubcategory } from '@/lib/supabase';
 
 import Image from 'next/image';
@@ -14,13 +14,13 @@ export default function AddSubcategoryPage() {
     const router = useRouter();
     const { showAlert } = useAlert();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    
+
     // Get category ID from URL params
-    const categoryId = typeof params.id === 'string' ? parseInt(params.id, 10) : 0;
-    
+    const categoryId = typeof params.id === 'string' ? params.id : '';
+
     const [categoryName, setCategoryName] = useState('');
     const [isLoading, setIsLoading] = useState(true);
-    
+
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -29,38 +29,38 @@ export default function AddSubcategoryPage() {
         image: null as string | null,
         category_id: categoryId
     });
-    
+
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
-    const [errors, setErrors] = useState<{[key: string]: string}>({});
+    const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+
     // Fetch parent category name
     useEffect(() => {
         const fetchCategory = async () => {
             try {
                 setIsLoading(true);
                 const { data, error } = await getCategoryById(categoryId);
-                
+
                 if (error) {
                     throw new Error(error.message);
                 }
-                
+
                 if (data) {
                     setCategoryName(data.name);
                 }
             } catch (error) {
-                console.error('Failed to load parent category:', error);
+
                 showAlert('error', 'Failed to load parent category', 3000);
             } finally {
                 setIsLoading(false);
             }
         };
-        
+
         fetchCategory();
     }, [categoryId, showAlert]);
-    
+
     // Hiển thị loading indicator khi đang tải dữ liệu danh mục cha
     if (isLoading) {
         return (
@@ -70,14 +70,14 @@ export default function AddSubcategoryPage() {
             </div>
         );
     }
-    
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData({
             ...formData,
             [name]: name === 'display_order' ? parseInt(value, 10) || 0 : value
         });
-        
+
         // Clear error when field is edited
         if (errors[name]) {
             setErrors({
@@ -86,7 +86,7 @@ export default function AddSubcategoryPage() {
             });
         }
     };
-    
+
     const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, checked } = e.target;
         setFormData({
@@ -94,11 +94,11 @@ export default function AddSubcategoryPage() {
             [name]: checked
         });
     };
-    
+
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        
+
         // Validate file type
         if (!file.type.match(/image\/(jpeg|jpg|png|webp)/i)) {
             setErrors({
@@ -107,7 +107,7 @@ export default function AddSubcategoryPage() {
             });
             return;
         }
-        
+
         // Validate file size (max 2MB)
         if (file.size > 2 * 1024 * 1024) {
             setErrors({
@@ -116,14 +116,14 @@ export default function AddSubcategoryPage() {
             });
             return;
         }
-        
+
         // Show image preview
         const reader = new FileReader();
         reader.onloadend = () => {
             setImagePreview(reader.result as string);
         };
         reader.readAsDataURL(file);
-        
+
         // Clear error if exists
         if (errors.image) {
             setErrors({
@@ -131,71 +131,71 @@ export default function AddSubcategoryPage() {
                 image: ''
             });
         }
-        
+
         // Upload image to Supabase
         try {
             setIsUploadingImage(true);
-            
+
             const formData = new FormData();
             formData.append('file', file);
-            
+
             const response = await fetch('/api/upload', {
                 method: 'POST',
                 body: formData,
             });
-            
+
             const result = await response.json();
-            
+
             if (!response.ok) {
                 throw new Error(result.error || 'Upload failed');
             }
-            
+
             // Save the uploaded image URL
             setUploadedImageUrl(result.url);
             showAlert('success', 'Image uploaded successfully', 2000);
         } catch (error) {
-            console.error('Error uploading image:', error);
+
             showAlert('error', `Failed to upload image: ${(error as Error).message}`, 5000);
         } finally {
             setIsUploadingImage(false);
         }
     };
-    
+
     const removeImage = () => {
         setImagePreview(null);
         setUploadedImageUrl(null);
-        
+
         // Clear the file input
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
-        
+
         setFormData({
             ...formData,
             image: null
         });
     };
-    
+
     const validateForm = () => {
-        const newErrors: {[key: string]: string} = {};
-        
+        const newErrors: { [key: string]: string } = {};
+
         if (!formData.name.trim()) {
             newErrors.name = 'Subcategory name is required';
         }
-        
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
-    
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!validateForm()) {
             return;
         }
-        
+
         setIsSubmitting(true);
-        
+
         try {
             // Use the URL of the uploaded image
             const subcategoryData = {
@@ -206,13 +206,13 @@ export default function AddSubcategoryPage() {
                 display_order: formData.display_order,
                 category_id: categoryId
             };
-            
+
             const { error } = await createSubcategory(subcategoryData);
-            
+
             if (error) {
                 throw new Error(error.message);
             }
-            
+
             showAlert('success', 'Subcategory created successfully', 3000);
             router.push(`/admin/categories/${categoryId}`);
         } catch (error) {
@@ -221,22 +221,22 @@ export default function AddSubcategoryPage() {
             setIsSubmitting(false);
         }
     };
-    
+
     return (
         <div className="p-6">
             <div className="mb-6">
-                <button 
+                <button
                     onClick={() => router.push(`/admin/categories/${categoryId}`)}
                     className="flex items-center text-gray-600 hover:text-amber-500 mb-4"
                 >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to {categoryName || 'Category'}
                 </button>
-                
+
                 <h1 className="text-2xl font-bold">Add New Subcategory</h1>
                 <p className="text-gray-500 text-sm">Create a new subcategory for {categoryName}</p>
             </div>
-            
+
             <div className="bg-white rounded-lg shadow-md p-6">
                 <form onSubmit={handleSubmit}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -258,7 +258,7 @@ export default function AddSubcategoryPage() {
                                     <p className="mt-1 text-sm text-red-500">{errors.name}</p>
                                 )}
                             </div>
-                            
+
                             {/* Subcategory Description */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -273,7 +273,7 @@ export default function AddSubcategoryPage() {
                                     placeholder="Describe this subcategory..."
                                 />
                             </div>
-                            
+
                             {/* Display Order */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -291,7 +291,7 @@ export default function AddSubcategoryPage() {
                                     Subcategories with lower numbers will be displayed first
                                 </p>
                             </div>
-                            
+
                             {/* Active Status */}
                             <div className="flex items-center">
                                 <input
@@ -307,13 +307,13 @@ export default function AddSubcategoryPage() {
                                 </label>
                             </div>
                         </div>
-                        
+
                         {/* Subcategory Image Upload */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Subcategory Image
                             </label>
-                            
+
                             {!imagePreview ? (
                                 <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
                                     <div className="space-y-1 text-center">
@@ -363,11 +363,11 @@ export default function AddSubcategoryPage() {
                                     </button>
                                 </div>
                             )}
-                            
+
                             {errors.image && (
                                 <p className="mt-1 text-sm text-red-500">{errors.image}</p>
                             )}
-                            
+
                             {uploadedImageUrl && (
                                 <p className="mt-2 text-xs text-green-600 flex items-center">
                                     <Check className="h-3 w-3 mr-1" /> Image uploaded successfully
@@ -375,7 +375,7 @@ export default function AddSubcategoryPage() {
                             )}
                         </div>
                     </div>
-                    
+
                     <div className="mt-8 flex justify-end space-x-3">
                         <button
                             type="button"
@@ -384,7 +384,7 @@ export default function AddSubcategoryPage() {
                         >
                             Cancel
                         </button>
-                        
+
                         <motion.button
                             type="submit"
                             disabled={isSubmitting || isUploadingImage}

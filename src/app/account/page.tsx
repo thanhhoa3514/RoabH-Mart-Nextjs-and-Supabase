@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { User, Package, CreditCard, Heart, LogOut } from 'lucide-react';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/providers/auth-provider';
     
 export default function AccountPage() {
     const [activeTab, setActiveTab] = useState('profile');
