@@ -44,36 +44,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const response = await fetch('/api/cart');
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         let errorData;
-        
+
         try {
-          // Try to parse error response as JSON
           errorData = JSON.parse(errorText);
         } catch (e) {
-          // If parsing fails, use the raw text
           console.error('Failed to parse error response:', errorText);
           throw new Error('Failed to fetch cart');
         }
-        
+
         throw new Error(errorData?.error || 'Failed to fetch cart');
       }
-      
-      // Parse JSON safely
+
       const responseText = await response.text();
       let data;
-      
+
       try {
         data = responseText ? JSON.parse(responseText) : {};
       } catch (e) {
         console.error('Failed to parse cart response:', responseText);
         throw new Error('Invalid cart data received');
       }
-      
+
       setItems(data.items || []);
       setTotalItems(data.total_items || 0);
       setTotalPrice(data.total_price || 0);
@@ -88,7 +85,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addToCart = async (productId: number, quantity: number) => {
     try {
       setError(null);
-      
+
       const response = await fetch('/api/cart', {
         method: 'POST',
         headers: {
@@ -99,26 +96,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
           quantity
         }),
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Cart API error response:', response.status, errorText);
-        
         let errorData;
-        
+
         try {
-          // Try to parse error response as JSON
           errorData = JSON.parse(errorText);
         } catch (e) {
-          // If parsing fails, use the raw text
-          console.error('Failed to parse error response:', errorText);
           throw new Error(`Failed to add to cart: ${response.status} ${response.statusText}`);
         }
-        
+
         throw new Error(errorData?.error || 'Failed to add to cart');
       }
-      
-      // Refresh cart data
+
       await fetchCart();
     } catch (err) {
       console.error('Error adding to cart:', err);
@@ -130,28 +121,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const removeFromCart = async (cartItemId: number) => {
     try {
       setError(null);
-      
+
       const response = await fetch(`/api/cart/items/${cartItemId}`, {
         method: 'DELETE',
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         let errorData;
-        
+
         try {
-          // Try to parse error response as JSON
           errorData = JSON.parse(errorText);
         } catch (e) {
-          // If parsing fails, use the raw text
-          console.error('Failed to parse error response:', errorText);
           throw new Error('Failed to remove from cart');
         }
-        
+
         throw new Error(errorData?.error || 'Failed to remove from cart');
       }
-      
-      // Refresh cart data
+
       await fetchCart();
     } catch (err) {
       console.error('Error removing from cart:', err);
@@ -163,7 +150,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const updateQuantity = async (cartItemId: number, quantity: number) => {
     try {
       setError(null);
-      
+
       const response = await fetch(`/api/cart/items/${cartItemId}`, {
         method: 'PATCH',
         headers: {
@@ -173,24 +160,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
           quantity
         }),
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         let errorData;
-        
+
         try {
-          // Try to parse error response as JSON
           errorData = JSON.parse(errorText);
         } catch (e) {
-          // If parsing fails, use the raw text
-          console.error('Failed to parse error response:', errorText);
           throw new Error('Failed to update quantity');
         }
-        
+
         throw new Error(errorData?.error || 'Failed to update quantity');
       }
-      
-      // Refresh cart data
+
       await fetchCart();
     } catch (err) {
       console.error('Error updating quantity:', err);
@@ -202,28 +185,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clearCart = async () => {
     try {
       setError(null);
-      
+
       const response = await fetch('/api/cart', {
         method: 'DELETE',
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         let errorData;
-        
+
         try {
-          // Try to parse error response as JSON
           errorData = JSON.parse(errorText);
         } catch (e) {
-          // If parsing fails, use the raw text
-          console.error('Failed to parse error response:', errorText);
           throw new Error('Failed to clear cart');
         }
-        
+
         throw new Error(errorData?.error || 'Failed to clear cart');
       }
-      
-      // Reset local state
+
       setItems([]);
       setTotalItems(0);
       setTotalPrice(0);
@@ -234,7 +213,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Public method to force refresh the cart
   const refreshCart = async () => {
     return fetchCart();
   };
@@ -263,4 +241,4 @@ export function useCart() {
     throw new Error('useCart must be used within a CartProvider');
   }
   return context;
-} 
+}
