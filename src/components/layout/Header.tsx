@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState, FormEvent } from 'react';
 import { ShoppingCart, User, Search, Menu, X, LogOut, ShoppingBag, Smartphone, Shirt, Home } from 'lucide-react';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/providers/auth-provider';
 import { useRouter } from 'next/navigation';
 import Modal from '@/components/ui/Modal';
 import CartCount from './CartCount';

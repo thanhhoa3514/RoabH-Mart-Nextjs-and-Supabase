@@ -2,7 +2,7 @@
 
 import { ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
-import { useCart } from '@/lib/context/cart-context';
+import { useCart } from '@/providers/cart-provider';
 
 export default function CartCount() {
   const { totalItems, isLoading } = useCart();
