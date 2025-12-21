@@ -3,11 +3,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { 
-    ArrowLeft, 
-    Edit, 
-    Trash2, 
-    Tag, 
+import {
+    ArrowLeft,
+    Edit,
+    Trash2,
+    Tag,
     Save,
     Loader2,
     Plus,
@@ -15,8 +15,8 @@ import {
     Upload,
     X
 } from 'lucide-react';
-import { useAlert } from '@/lib/context/alert-context';
-import { getCategoryWithImageById, deleteCategory, getSubcategories } from '@/lib/supabase';
+import { useAlert } from '@/providers/alert-provider';
+import { getCategoryById, deleteCategory, getSubcategories } from '@/lib/supabase/categories/category.service';
 import { Category, Subcategory } from '@/types';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -42,20 +42,20 @@ export default function CategoryDetailPage() {
     const router = useRouter();
     const { showAlert } = useAlert();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    
+
     const [isEditing, setIsEditing] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    
+
     // Get category ID from URL params
-    const categoryId = typeof params.id === 'string' ? parseInt(params.id, 10) : 0;
-    
+    const categoryId = typeof params.id === 'string' ? params.id : '';
+
     // State for category data
     const [categoryData, setCategoryData] = useState<Category | null>(null);
-    
+
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -63,27 +63,27 @@ export default function CategoryDetailPage() {
         display_order: 0,
         image: ''
     });
-    
+
     // State for image preview and file
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
-    
+
     // State for subcategories
     const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
     const [loadingSubcategories, setLoadingSubcategories] = useState(true);
-    
+
     // Fetch category data
     useEffect(() => {
         const fetchCategory = async () => {
             try {
                 setIsLoading(true);
-                const { data, error } = await getCategoryWithImageById(categoryId);
-                
+                const { data, error } = await getCategoryById(categoryId);
+
                 if (error) {
                     throw new Error(error.message);
                 }
-                
+
                 if (data) {
                     setCategoryData(data);
                     setFormData({
@@ -94,7 +94,7 @@ export default function CategoryDetailPage() {
                         image: data.image || ''
                     });
                     setImagePreview(data.image || null);
-                    
+
                     // Fetch subcategories for this category
                     fetchSubcategories(data.category_id);
                 }
@@ -105,20 +105,20 @@ export default function CategoryDetailPage() {
                 setIsLoading(false);
             }
         };
-        
+
         fetchCategory();
     }, [categoryId, showAlert]);
-    
+
     // Fetch subcategories for the category
-    const fetchSubcategories = async (catId: number) => {
+    const fetchSubcategories = async (catId: string) => {
         try {
             setLoadingSubcategories(true);
             const { data, error } = await getSubcategories(catId);
-            
+
             if (error) {
                 throw new Error(error.message);
             }
-            
+
             setSubcategories(data || []);
         } catch (err) {
             console.error('Error fetching subcategories:', err);
@@ -126,7 +126,7 @@ export default function CategoryDetailPage() {
             setLoadingSubcategories(false);
         }
     };
-    
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData({
@@ -134,7 +134,7 @@ export default function CategoryDetailPage() {
             [name]: name === 'display_order' ? parseInt(value, 10) || 0 : value
         });
     };
-    
+
     const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, checked } = e.target;
         setFormData({
@@ -142,39 +142,39 @@ export default function CategoryDetailPage() {
             [name]: checked
         });
     };
-    
+
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        
+
         // Show image preview
         const reader = new FileReader();
         reader.onloadend = () => {
             setImagePreview(reader.result as string);
         };
         reader.readAsDataURL(file);
-        
+
         setImageFile(file);
-        
+
         // Upload image to server via API
         try {
             setIsUploadingImage(true);
-            
+
             const formData = new FormData();
             formData.append('file', file);
             formData.append('folder', 'category-images');
-            
+
             const response = await fetch('/api/upload', {
                 method: 'POST',
                 body: formData,
             });
-            
+
             const result = await response.json();
-            
+
             if (!response.ok) {
                 throw new Error(result.error || 'Upload failed');
             }
-            
+
             // Save the uploaded image URL
             setUploadedImageUrl(result.url);
             setFormData(prev => ({ ...prev, image: result.url }));
@@ -186,30 +186,30 @@ export default function CategoryDetailPage() {
             setIsUploadingImage(false);
         }
     };
-    
+
     const removeImage = () => {
         setImagePreview(null);
         setUploadedImageUrl(null);
         setImageFile(null);
         setFormData(prev => ({ ...prev, image: '' }));
-        
+
         // Clear the file input
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
     };
-    
+
     const handleImageUploadClick = () => {
         // Trigger the hidden file input
         if (fileInputRef.current) {
             fileInputRef.current.click();
         }
     };
-    
+
     const handleEdit = () => {
         setIsEditing(true);
     };
-    
+
     const handleCancelEdit = () => {
         // Reset form data to original values
         if (categoryData) {
@@ -226,10 +226,10 @@ export default function CategoryDetailPage() {
         }
         setIsEditing(false);
     };
-    
+
     const handleSave = async () => {
         setIsSaving(true);
-        
+
         try {
             // Validate form data
             if (!formData.name.trim()) {
@@ -237,7 +237,7 @@ export default function CategoryDetailPage() {
                 setIsSaving(false);
                 return;
             }
-            
+
             // Using the user-friendly API endpoint that's already working
             const response = await fetch(`/api/categories/${categoryId}`, {
                 method: 'PUT',
@@ -252,13 +252,13 @@ export default function CategoryDetailPage() {
                     image: formData.image || null
                 }),
             });
-            
+
             const result = await response.json();
-            
+
             if (!response.ok) {
                 throw new Error(result.error || 'Update failed');
             }
-            
+
             // Update the local state with the updated data
             if (result.data) {
                 setCategoryData(result.data);
@@ -271,7 +271,7 @@ export default function CategoryDetailPage() {
                 });
                 setImagePreview(result.data.image || null);
             }
-            
+
             showAlert('success', 'Category updated successfully', 3000);
             setIsEditing(false);
             setImageFile(null);
@@ -281,19 +281,19 @@ export default function CategoryDetailPage() {
             setIsSaving(false);
         }
     };
-    
+
     const handleDelete = () => {
         setIsDeleting(true);
     };
-    
+
     const confirmDelete = async () => {
         try {
             const { error } = await deleteCategory(categoryId);
-            
+
             if (error) {
                 throw new Error(error.message);
             }
-            
+
             showAlert('success', 'Category deleted successfully', 3000);
             router.push('/admin/categories');
         } catch (error) {
@@ -301,11 +301,11 @@ export default function CategoryDetailPage() {
             setIsDeleting(false);
         }
     };
-    
+
     const cancelDelete = () => {
         setIsDeleting(false);
     };
-    
+
     if (isLoading) {
         return (
             <div className="p-6 flex justify-center items-center h-64">
@@ -316,7 +316,7 @@ export default function CategoryDetailPage() {
             </div>
         );
     }
-    
+
     if (error || !categoryData) {
         return (
             <div className="p-6">
@@ -324,7 +324,7 @@ export default function CategoryDetailPage() {
                     <div className="text-center">
                         <h2 className="text-xl font-medium text-gray-900">Category not found</h2>
                         <p className="mt-2 text-gray-500">The category you&apos;re looking for doesn&apos;t exist or has been removed.</p>
-                        <button 
+                        <button
                             onClick={() => router.push('/admin/categories')}
                             className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-amber-500 hover:bg-amber-600"
                         >
@@ -336,18 +336,18 @@ export default function CategoryDetailPage() {
             </div>
         );
     }
-    
+
     return (
         <div className="p-6">
             <div className="mb-6">
-                <button 
+                <button
                     onClick={() => router.back()}
                     className="flex items-center text-gray-600 hover:text-amber-500 mb-4"
                 >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Categories
                 </button>
-                
+
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                     <div className="mb-4 md:mb-0">
                         <h1 className="text-2xl font-bold">{categoryData.name}</h1>
@@ -356,7 +356,7 @@ export default function CategoryDetailPage() {
                             <span>Category ID: {categoryData.category_id}</span>
                         </div>
                     </div>
-                    
+
                     {!isEditing && (
                         <div className="flex space-x-3">
                             <motion.button
@@ -368,7 +368,7 @@ export default function CategoryDetailPage() {
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit
                             </motion.button>
-                            
+
                             <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
@@ -382,11 +382,11 @@ export default function CategoryDetailPage() {
                     )}
                 </div>
             </div>
-            
+
             {/* Delete Confirmation Modal */}
             {isDeleting && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <motion.div 
+                    <motion.div
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
@@ -412,28 +412,27 @@ export default function CategoryDetailPage() {
                     </motion.div>
                 </div>
             )}
-            
+
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
                 {/* Category Image Banner */}
                 <div className="relative h-48 md:h-64 bg-gray-200">
-                    <Image 
-                        src={categoryData.image || 'https://placekitten.com/800/400'} 
-                        alt={categoryData.name} 
+                    <Image
+                        src={categoryData.image || 'https://placekitten.com/800/400'}
+                        alt={categoryData.name}
                         className="object-cover"
                         fill
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                     <div className="absolute bottom-4 left-6">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            categoryData.is_active 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-gray-100 text-gray-800'
-                        }`}>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${categoryData.is_active
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                            }`}>
                             {categoryData.is_active ? 'Active' : 'Inactive'}
                         </span>
                     </div>
                 </div>
-                
+
                 <div className="p-6">
                     {isEditing ? (
                         /* Edit Form */
@@ -456,7 +455,7 @@ export default function CategoryDetailPage() {
                                             className="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-300"
                                         />
                                     </div>
-                                    
+
                                     {/* Description */}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -470,7 +469,7 @@ export default function CategoryDetailPage() {
                                             className="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-300"
                                         />
                                     </div>
-                                    
+
                                     {/* Display Order */}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -485,7 +484,7 @@ export default function CategoryDetailPage() {
                                             className="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-300"
                                         />
                                     </div>
-                                    
+
                                     {/* Active Status */}
                                     <div className="flex items-center">
                                         <input
@@ -501,17 +500,17 @@ export default function CategoryDetailPage() {
                                         </label>
                                     </div>
                                 </div>
-                                
+
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Category Image
                                     </label>
-                                    
+
                                     {imagePreview ? (
                                         <div className="relative rounded-lg overflow-hidden h-64 mb-4">
-                                            <img 
-                                                src={imagePreview} 
-                                                alt="Category preview" 
+                                            <img
+                                                src={imagePreview}
+                                                alt="Category preview"
                                                 className="w-full h-full object-cover"
                                             />
                                             {isUploadingImage && (
@@ -530,7 +529,7 @@ export default function CategoryDetailPage() {
                                             </button>
                                         </div>
                                     ) : (
-                                        <div 
+                                        <div
                                             className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center h-64 mb-4 cursor-pointer hover:bg-gray-50"
                                             onClick={handleImageUploadClick}
                                         >
@@ -543,7 +542,7 @@ export default function CategoryDetailPage() {
                                             </p>
                                         </div>
                                     )}
-                                    
+
                                     <input
                                         type="file"
                                         id="image"
@@ -554,23 +553,22 @@ export default function CategoryDetailPage() {
                                         ref={fileInputRef}
                                         disabled={isUploadingImage}
                                     />
-                                    
+
                                     <label
                                         htmlFor="image"
-                                        className={`block w-full text-center py-2 px-4 border border-gray-300 rounded-md text-sm font-medium ${
-                                            isUploadingImage 
-                                                ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-                                                : 'text-gray-700 bg-white hover:bg-gray-50 cursor-pointer'
-                                        }`}
+                                        className={`block w-full text-center py-2 px-4 border border-gray-300 rounded-md text-sm font-medium ${isUploadingImage
+                                            ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                            : 'text-gray-700 bg-white hover:bg-gray-50 cursor-pointer'
+                                            }`}
                                     >
-                                        {isUploadingImage 
+                                        {isUploadingImage
                                             ? "Uploading..."
-                                            : imagePreview 
-                                                ? "Change Image" 
+                                            : imagePreview
+                                                ? "Change Image"
                                                 : "Select Image"
                                         }
                                     </label>
-                                    
+
                                     {uploadedImageUrl && (
                                         <p className="mt-2 text-xs text-green-600">
                                             ✓ Image uploaded successfully
@@ -578,7 +576,7 @@ export default function CategoryDetailPage() {
                                     )}
                                 </div>
                             </div>
-                            
+
                             <div className="mt-6 flex justify-end space-x-3">
                                 <button
                                     type="button"
@@ -588,7 +586,7 @@ export default function CategoryDetailPage() {
                                 >
                                     Cancel
                                 </button>
-                                
+
                                 <button
                                     type="button"
                                     onClick={handleSave}
@@ -622,14 +620,14 @@ export default function CategoryDetailPage() {
                                     {categoryData.description || 'No description provided.'}
                                 </p>
                             </motion.div>
-                            
+
                             <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                                 <div>
                                     <h3 className="text-sm font-medium text-gray-500 mb-1">Display Order</h3>
                                     <p className="text-gray-900">{categoryData.display_order}</p>
                                 </div>
                             </motion.div>
-                            
+
                             {/* Subcategories Section */}
                             <motion.div variants={itemVariants} className="mt-8">
                                 <div className="flex justify-between items-center mb-4">
@@ -645,7 +643,7 @@ export default function CategoryDetailPage() {
                                         </motion.button>
                                     </Link>
                                 </div>
-                                
+
                                 {loadingSubcategories ? (
                                     <div className="text-center py-8">
                                         <Loader2 className="h-6 w-6 animate-spin text-amber-500 mx-auto" />
@@ -692,11 +690,10 @@ export default function CategoryDetailPage() {
                                                             {subcategory.name}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap">
-                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                                subcategory.is_active 
-                                                                    ? 'bg-green-100 text-green-800' 
-                                                                    : 'bg-gray-100 text-gray-800'
-                                                            }`}>
+                                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${subcategory.is_active
+                                                                ? 'bg-green-100 text-green-800'
+                                                                : 'bg-gray-100 text-gray-800'
+                                                                }`}>
                                                                 {subcategory.is_active ? 'Active' : 'Inactive'}
                                                             </span>
                                                         </td>
