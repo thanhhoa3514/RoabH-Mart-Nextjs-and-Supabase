@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { addProductImage, setImageAsPrimary } from '@/lib/supabase/products/products.model';
+import { addProductImage, setImageAsPrimary } from '@/lib/supabase/products/product.service';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
