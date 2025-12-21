@@ -3,9 +3,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import { Providers } from '@/lib/providers';
-import { CartProvider } from '@/lib/context/cart-context';
-import { AlertProvider } from '@/lib/context/alert-context';
+import { Providers } from '@/providers';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -22,19 +20,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className} suppressHydrationWarning>
-        <AlertProvider>
-          <Providers>
-            <CartProvider>
-              <div className="flex flex-col min-h-screen">
-                <Header />
-                <main className="flex-grow">
-                  {children}
-                </main>
-                <Footer />
-              </div>
-            </CartProvider>
-          </Providers>
-        </AlertProvider>
+        <Providers>
+          <div className="flex flex-col min-h-screen">
+            <Header />
+            <main className="flex-grow">
+              {children}
+            </main>
+            <Footer />
+          </div>
+        </Providers>
       </body>
     </html>
   );
