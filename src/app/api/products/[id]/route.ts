@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client/client.model';
-import { updateProduct, getProductById, removeAllProductImages } from '@/lib/supabase/products/products.model';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient, updateProduct, getProductById } from '@/lib/supabase';
 
 type Context = {
   params: {
@@ -15,7 +13,8 @@ export async function DELETE(
 ): Promise<NextResponse> {
   try {
     const productId = context.params.id;
-    
+    const supabase = await getSupabaseClient();
+
     if (!productId) {
       return NextResponse.json(
         { error: 'Product ID is required' },
@@ -25,14 +24,14 @@ export async function DELETE(
 
     // Check if product exists
     const { data: product, error: productError } = await getProductById(productId);
-    
+
     if (productError) {
       return NextResponse.json(
-        { error: `Error checking product: ${productError.message}` },
+        { error: `Error checking product: ${productError.message} ` },
         { status: 500 }
       );
     }
-    
+
     if (!product) {
       return NextResponse.json(
         { error: 'Product not found' },
@@ -45,55 +44,55 @@ export async function DELETE(
       .from('cart_items')
       .delete()
       .eq('product_id', productId);
-      
+
     if (cartItemsError) {
       console.error('Error deleting cart items:', cartItemsError);
       return NextResponse.json(
-        { error: `Failed to delete product from carts: ${cartItemsError.message}` },
+        { error: `Failed to delete product from carts: ${cartItemsError.message} ` },
         { status: 500 }
       );
     }
-    
+
     // Delete related reviews
     const { error: reviewsError } = await supabase
       .from('reviews')
       .delete()
       .eq('product_id', productId);
-      
+
     if (reviewsError) {
       console.error('Error deleting reviews:', reviewsError);
       return NextResponse.json(
-        { error: `Failed to delete product reviews: ${reviewsError.message}` },
+        { error: `Failed to delete product reviews: ${reviewsError.message} ` },
         { status: 500 }
       );
     }
-    
+
     // Check if product is in any orders
     const { data: orderItems, error: orderItemsCheckError } = await supabase
       .from('order_items')
       .select('order_item_id')
       .eq('product_id', productId)
       .limit(1);
-      
+
     if (orderItemsCheckError) {
       console.error('Error checking order items:', orderItemsCheckError);
       return NextResponse.json(
-        { error: `Failed to check if product is in orders: ${orderItemsCheckError.message}` },
+        { error: `Failed to check if product is in orders: ${orderItemsCheckError.message} ` },
         { status: 500 }
       );
     }
-    
+
     // If product is in orders, don't delete it but mark as inactive instead
     if (orderItems && orderItems.length > 0) {
       const { error: updateError } = await updateProduct(productId, { is_active: false });
-      
+
       if (updateError) {
         return NextResponse.json(
-          { error: `Failed to mark product as inactive: ${updateError.message}` },
+          { error: `Failed to mark product as inactive: ${updateError.message} ` },
           { status: 500 }
         );
       }
-      
+
       return NextResponse.json({
         success: true,
         message: 'Product has been marked inactive as it exists in orders',
@@ -102,12 +101,15 @@ export async function DELETE(
     }
 
     // Delete product images
-    const { error: imagesError } = await removeAllProductImages(productId);
+    const { error: imagesError } = await supabase
+      .from('product_images')
+      .delete()
+      .eq('product_id', productId);
 
     if (imagesError) {
       console.error('Error deleting product images:', imagesError);
       return NextResponse.json(
-        { error: `Failed to delete product images: ${imagesError.message}` },
+        { error: `Failed to delete product images: ${imagesError.message} ` },
         { status: 500 }
       );
     }
@@ -120,7 +122,7 @@ export async function DELETE(
 
     if (error) {
       return NextResponse.json(
-        { error: `Failed to delete product: ${error.message}` },
+        { error: `Failed to delete product: ${error.message} ` },
         { status: 500 }
       );
     }
@@ -144,7 +146,7 @@ export async function PUT(
 ): Promise<NextResponse> {
   try {
     const productId = context.params.id;
-    
+
     if (!productId) {
       return NextResponse.json(
         { error: 'Product ID is required' },
@@ -194,7 +196,7 @@ export async function PUT(
 
     if (error) {
       return NextResponse.json(
-        { error: `Failed to update product: ${error.message}` },
+        { error: `Failed to update product: ${error.message} ` },
         { status: 500 }
       );
     }
@@ -219,7 +221,8 @@ export async function GET(
 ) {
   try {
     const productId = params.id;
-    
+    const supabase = await getSupabaseClient();
+
     if (!productId) {
       return NextResponse.json(
         { error: 'Product ID is required' },
@@ -227,19 +230,14 @@ export async function GET(
       );
     }
 
-    // Create Supabase client
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
 
     // Get product details
     const { data: product, error: productError } = await supabase
       .from('products')
       .select(`
-        *,
-        product_images (*)
-      `)
+  *,
+  product_images(*)
+    `)
       .eq('product_id', productId)
       .single();
 
@@ -283,16 +281,16 @@ export async function GET(
     if (!ratingError && ratingData && ratingData.length > 0) {
       const ratings = ratingData.map((r: any) => r.rating);
       const averageRating = ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length;
-      
+
       formattedProduct.rating = parseFloat(averageRating.toFixed(1));
       formattedProduct.reviews_count = ratings.length;
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       data: formattedProduct,
       success: true
     });
-    
+
   } catch (error) {
     console.error('Error in product API:', error);
     return NextResponse.json(

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '@/lib/supabase';
 
 // Update cart item quantity
 export async function PATCH(
@@ -10,6 +9,7 @@ export async function PATCH(
     try {
         const cartItemId = params.id;
         const { quantity } = await request.json();
+        const supabase = await getSupabaseClient();
 
         // Validate request
         if (!cartItemId || quantity === undefined || quantity < 1) {
@@ -18,12 +18,6 @@ export async function PATCH(
                 { status: 400 }
             );
         }
-
-        // Create Supabase client
-        const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
 
         // Get cart item to verify it exists and check product stock
         const { data: cartItem, error: fetchError } = await supabase
@@ -94,6 +88,7 @@ export async function DELETE(
 ) {
     try {
         const cartItemId = params.id;
+        const supabase = await getSupabaseClient();
 
         if (!cartItemId) {
             return NextResponse.json(
@@ -101,12 +96,6 @@ export async function DELETE(
                 { status: 400 }
             );
         }
-
-        // Create Supabase client
-        const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-        );
 
         // Get cart ID before deletion for total count update
         const { data: cartItem, error: fetchError } = await supabase
@@ -156,4 +145,4 @@ export async function DELETE(
             { status: 500 }
         );
     }
-} 
+}
