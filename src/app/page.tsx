@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { getFeaturedProducts } from '@/lib/supabase/products/products.model';
-import { getCategoriesWithImages } from '@/lib/supabase/categories/categories.model';
+import { getFeaturedProducts } from '@/lib/supabase/products/product.service';
+import { getCategoriesWithImages } from '@/lib/supabase/categories/category.service';
 
 // Define interface for product image
 interface ProductImage {
@@ -158,3 +158,4 @@ export default async function Home() {
     </div>
   );
 }
+

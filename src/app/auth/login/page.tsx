@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Lock, Mail, CheckCircle } from 'lucide-react';
 import Cookies from 'js-cookie';
-import { useAlert } from '@/lib/context/alert-context';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAlert } from '@/providers/alert-provider';
+import { useAuth } from '@/providers/auth-provider';
 import TokenHandler from '@/components/auth/TokenHandler';
 
 

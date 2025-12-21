@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAuth } from '@/providers/auth-provider';
 import { Lock, Mail, User } from 'lucide-react';
-import { useAlert } from '@/lib/context/alert-context';
+import { useAlert } from '@/providers/alert-provider';
 
 // interface AuthError {
 //   message: string;

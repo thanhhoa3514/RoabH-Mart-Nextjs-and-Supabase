@@ -13,8 +13,8 @@ import {
     Check,
     Loader2
 } from 'lucide-react';
-import { useAlert } from '@/lib/context/alert-context';
-import { useAuth } from '@/lib/auth/AuthContext';
+import { useAlert } from '@/providers/alert-provider';
+import { useAuth } from '@/providers/auth-provider';
 import { createOrder } from '@/lib/supabase';
 import Link from 'next/link';
 import Image from 'next/image';
