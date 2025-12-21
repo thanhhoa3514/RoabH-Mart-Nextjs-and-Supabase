@@ -1,7 +1,6 @@
-// Product types
 export interface Product {
-    id: number;
-    product_id: number;
+    id: string;
+    product_id: string;
     name: string;
     description: string;
     price: number;
@@ -14,7 +13,7 @@ export interface Product {
     category?: string;
     subcategory?: string;
     seller?: {
-        id: number;
+        id: string;
         name: string;
     };
     createdAt: string;
@@ -94,7 +93,7 @@ export interface ThemeConfig {
 
 // Category types
 export interface Category {
-    category_id: number;
+    category_id: string;
     name: string;
     description: string | null;
     image: string | null;
@@ -103,8 +102,8 @@ export interface Category {
 }
 
 export interface Subcategory {
-    subcategory_id: number;
-    category_id: number;
+    subcategory_id: string;
+    category_id: string;
     name: string;
     description: string | null;
     image: string | null;
