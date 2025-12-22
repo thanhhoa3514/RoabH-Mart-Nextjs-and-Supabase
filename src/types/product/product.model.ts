@@ -1,19 +1,28 @@
 import { Subcategory } from "../category/subcategory.model";
 import { ProductImage, Seller } from "../supabase";
 
-export type Product = {
-    product_id: string;
-    subcategory_id?: string;
-    seller_id: string;
+export interface Product {
+    product_id: number;
+    subcategory_id: number;
+    seller_id: number;
     name: string;
-    description?: string;
+    description: string | null;
     price: number;
     stock_quantity: number;
-    discount_percentage?: number;
-    sku?: string;
+    discount_percentage: number | null;
+    sku: string | null;
     is_active: boolean;
+    created_at: string;
+    updated_at: string;
+    deleted_at: string | null;
+
+    // Virtual/Join fields
     subcategory?: Subcategory;
     seller?: Seller;
     images?: ProductImage[];
-    slug?: string; // For URL-friendly paths
-};
+    slug?: string;
+
+    // Legacy support (to be removed once all components are updated)
+    id?: number;
+    stock?: number;
+}
