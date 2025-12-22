@@ -45,3 +45,24 @@ export const isValidUrl = (url: string): boolean => {
     return false;
   }
 };
+
+export const generateRequestId = (): string => {
+  // Option 1: Simple timestamp-based
+  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  // Option 2: UUID (requires 'uuid' package)
+  // return uuidv4();
+}
+
+export const getDefaultHeaders = (): Record<string, string> => {
+  return {
+    'Content-Type': 'application/json',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+    // CORS headers (adjust based on your needs)
+    'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_CORS_ORIGIN || '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+}
