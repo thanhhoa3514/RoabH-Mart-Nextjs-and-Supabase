@@ -7,4 +7,5 @@ export interface Subcategory {
     image: string | null;
     is_active: boolean;
     display_order: number;
-} 
+}
+
