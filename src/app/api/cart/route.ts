@@ -166,7 +166,7 @@ export async function POST(request: Request) {
 
         if (countError) throw new Error(countError.message);
 
-        const totalItems = (cartItems as any[]).reduce((sum, item) => sum + item.quantity, 0);
+        const totalItems = (cartItems as { quantity: number }[]).reduce((sum, item) => sum + item.quantity, 0);
 
         return NextResponse.json({
             success: true,
@@ -175,8 +175,7 @@ export async function POST(request: Request) {
             total_items: totalItems
         });
 
-    } catch (error) {
-
+    } catch {
         return NextResponse.json(
             { error: 'Failed to add item to cart' },
             { status: 500 }
@@ -217,7 +216,7 @@ export async function GET() {
                             .single();
                         cart_id = guestCart?.cart_id;
                     }
-                } catch (e) {
+                } catch {
                     cart_id = null;
                 }
             }
@@ -254,12 +253,22 @@ export async function GET() {
         let totalItems = 0;
         let totalPrice = 0;
 
-        const formattedItems = (cartItems as any[]).map((item) => {
+        const formattedItems = (cartItems as unknown as {
+            cart_item_id: number;
+            quantity: number;
+            products: {
+                product_id: number;
+                name: string;
+                price: number;
+                stock_quantity: number;
+                product_images: { image_url: string, is_primary: boolean }[];
+            };
+        }[]).map((item) => {
             const product = item.products;
             totalItems += item.quantity;
             totalPrice += item.quantity * product.price;
 
-            const primaryImage = product.product_images.find((img: any) => img.is_primary)?.image_url
+            const primaryImage = product.product_images.find((img) => img.is_primary)?.image_url
                 || product.product_images[0]?.image_url
                 || null;
 
@@ -281,7 +290,7 @@ export async function GET() {
             total_price: totalPrice
         });
 
-    } catch (error) {
+    } catch {
         return NextResponse.json(
             { error: 'Failed to fetch cart' },
             { status: 500 }
@@ -334,7 +343,7 @@ export async function DELETE() {
             message: 'Cart cleared successfully'
         });
 
-    } catch (error) {
+    } catch {
         return NextResponse.json(
             { error: 'Failed to clear cart' },
             { status: 500 }

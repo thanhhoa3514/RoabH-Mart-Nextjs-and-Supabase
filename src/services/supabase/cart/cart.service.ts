@@ -5,11 +5,13 @@ export const getUserCart = async (userId: string) => {
     const supabase = await getSupabaseClient();
 
     // First, get or create the user's cart
-    let { data: cart, error: cartError } = await supabase
+    const { data: initialCart, error: cartError } = await supabase
         .from('carts')
         .select('*')
         .eq('user_id', userId)
         .single();
+
+    let cart = initialCart;
 
     if (cartError && cartError.code === 'PGRST116') { // Record not found
         const { data: newCart, error: newCartError } = await supabase
@@ -26,6 +28,10 @@ export const getUserCart = async (userId: string) => {
         cart = newCart;
     } else if (cartError) {
         return { error: cartError };
+    }
+
+    if (!cart) {
+        return { error: { message: 'Cart not found and could not be created' } };
     }
 
     // Now get the cart items

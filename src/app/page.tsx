@@ -85,8 +85,8 @@ export default async function Home() {
                     <div className="p-4">
                       <h3 className="font-medium text-lg mb-2">{product.name}</h3>
                       <div className="flex justify-between items-center">
-                        <p className="text-primary font-bold">${parseFloat(product.price).toFixed(2)}</p>
-                        {product.discount_percentage > 0 && (
+                        <p className="text-primary font-bold">${product.price.toFixed(2)}</p>
+                        {(product.discount_percentage ?? 0) > 0 && (
                           <span className="bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded">
                             {product.discount_percentage}% OFF
                           </span>

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getProducts } from '@/services/supabase';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const { data, error } = await getProducts({ limit: 5 });
 
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({ data });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

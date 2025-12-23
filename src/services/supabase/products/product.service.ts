@@ -24,7 +24,7 @@ export const getProducts = async (options: {
         .from('products')
         .select(`
       *,
-      subcategory:subcategories!inner(*),
+      subcategories:subcategories!inner(*, categories:categories(*)),
       seller:sellers(*),
       product_images(*)
     `, { count: 'exact' })
@@ -57,13 +57,38 @@ export const getProducts = async (options: {
     const { data, error, count } = await query;
 
     return {
-        data: (data as (Product & { product_images: ProductImage[] })[])?.map(p => ({
+        data: (data as unknown as (Product & { product_images: ProductImage[] })[])?.map(p => ({
             ...p,
             images: p.product_images || []
         })) || [],
         error,
         count,
         totalPages: count ? Math.ceil(count / limit) : 0
+    };
+};
+
+/**
+ * Get featured products for homepage
+ */
+export const getFeaturedProducts = async (limit = 4) => {
+    const supabase = await getSupabaseClient();
+    const { data, error } = await supabase
+        .from('products')
+        .select(`
+            *,
+            product_images(*)
+        `)
+        .eq('is_active', true)
+        .limit(limit);
+
+    if (error) return { data: [], error };
+
+    return {
+        data: (data as unknown as (Product & { product_images: ProductImage[] })[])?.map(p => ({
+            ...p,
+            images: p.product_images || []
+        })) || [],
+        error: null
     };
 };
 

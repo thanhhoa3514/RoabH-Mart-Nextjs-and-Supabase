@@ -25,7 +25,7 @@ export const truncateText = (text: string, maxLength: number): string => {
  * Get URL-friendly query string from objects
  */
 export const getQueryString = (params: Record<string, string | number | boolean | undefined>): string => {
-  const validParams = Object.entries(params).filter(([_, value]) => value !== undefined);
+  const validParams = Object.entries(params).filter(([, value]) => value !== undefined);
 
   if (validParams.length === 0) return '';
 
@@ -41,7 +41,7 @@ export const isValidUrl = (url: string): boolean => {
   try {
     new URL(url);
     return true;
-  } catch (error) {
+  } catch {
     return false;
   }
 };

@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getProducts } from '@/services/supabase';
 import { Product } from '@/types/supabase';
-import { filterAndSortProducts } from '@/services/supabase/products/product.utils';
 import { PRODUCTS_PER_PAGE } from '@/services/constants';
 
 export function useProducts(categoryId?: string, subcategoryId?: string) {
@@ -33,7 +32,7 @@ export function useProducts(categoryId?: string, subcategoryId?: string) {
         categoryId,
         subcategoryId,
         search: query,
-        sort: sort as any,
+        sort: sort as string,
         page,
         limit: PRODUCTS_PER_PAGE
       });

@@ -2,7 +2,7 @@
 /**
  * ApiResponse with formatted response
  */
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
     success: boolean;
     data?: T;
     error?: ApiError;
@@ -15,7 +15,7 @@ export interface ApiResponse<T = any> {
 export interface ApiError {
     code: string;
     message: string;
-    details?: any;
+    details?: unknown;
     stack?: string; // Chỉ có trong development
 }
 
@@ -26,7 +26,7 @@ export interface ApiMeta {
     timestamp: string;
     requestId?: string;
     pagination?: PaginationMeta;
-    [key: string]: any; // Allow additional meta fields
+    [key: string]: unknown; // Allow additional meta fields
 }
 
 /**

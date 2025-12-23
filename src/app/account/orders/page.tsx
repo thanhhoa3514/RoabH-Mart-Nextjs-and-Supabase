@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
@@ -9,6 +9,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { getOrdersByUser } from '@/services/supabase/orders/order.service';
 import { useAlert } from '@/providers/alert-provider';
 import { getSupabaseClient } from '@/services/supabase';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 // Interface cho dữ liệu đơn hàng
 interface Order {
@@ -58,10 +59,10 @@ export default function OrdersPage() {
     const [loading, setLoading] = useState(true);
     const [hasChecked, setHasChecked] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
+    const [totalPages] = useState(1);
     const [pageSize] = useState(10);
 
-    async function loadOrders() {
+    const loadOrders = useCallback(async () => {
         if (authLoading) return;
 
         if (!user || !userData) {
@@ -96,12 +97,12 @@ export default function OrdersPage() {
             setOrders(data || []);
             setHasChecked(true);
 
-        } catch (error) {
+        } catch {
             showAlert('error', 'Đã xảy ra lỗi khi tải đơn hàng', 3000);
         } finally {
             setLoading(false);
         }
-    }
+    }, [authLoading, user, userData, showAlert, router]);
 
     // Tải danh sách đơn hàng
     useEffect(() => {
@@ -116,7 +117,7 @@ export default function OrdersPage() {
 
         // Thiết lập real-time subscription cho orders
         const userId = userData?.user_id;
-        let subscription: any = null;
+        let subscription: RealtimeChannel | null = null;
 
         if (userId) {
             const setupSubscription = async () => {
@@ -128,7 +129,7 @@ export default function OrdersPage() {
                         schema: 'public',
                         table: 'orders',
                         filter: `user_id=eq.${userId}`
-                    }, (payload: any) => {
+                    }, (payload) => {
                         console.log('Real-time update nhận được:', payload);
                         // Tải lại danh sách đơn hàng khi có thay đổi
                         loadOrders();

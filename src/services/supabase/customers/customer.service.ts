@@ -127,7 +127,7 @@ export async function getCustomerStats(userId: number) {
         .select('total_amount')
         .eq('user_id', userId);
 
-    const totalSpent = (spentData as any[]) ? (spentData as any[]).reduce((sum, order) => sum + order.total_amount, 0) : 0;
+    const totalSpent = (spentData as unknown as { total_amount: number }[])?.reduce((sum, order) => sum + order.total_amount, 0) || 0;
 
     // Get last order date
     const { data: lastOrder, error: lastOrderError } = await supabase
