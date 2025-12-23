@@ -7,7 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAlert } from '@/providers/alert-provider';
 import { useParams, useRouter } from 'next/navigation';
-import { getProductById, getProductImages } from '@/lib/supabase/products/product.service';
+import { getProductById, getProductImages } from '@/services/supabase/products/product.service';
 
 export default function EditProductPage() {
     const { id } = useParams();

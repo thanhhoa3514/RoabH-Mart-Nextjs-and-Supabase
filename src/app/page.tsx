@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { getFeaturedProducts } from '@/lib/supabase/products/product.service';
-import { getCategoriesWithImages } from '@/lib/supabase/categories/category.service';
+import { getFeaturedProducts } from '@/services/supabase/products/product.service';
+import { getCategoriesWithImages } from '@/services/supabase/categories/category.service';
 
 // Define interface for product image
 interface ProductImage {
@@ -12,10 +12,10 @@ interface ProductImage {
 export default async function Home() {
   // Fetch featured products from Supabase
   const { data: featuredProductsData, error: featuredProductsError } = await getFeaturedProducts(4);
-  
+
   // Fetch categories from Supabase with full image URLs
   const { data: categoriesData, error: categoriesError } = await getCategoriesWithImages();
-  
+
   // Fallback data in case of errors
   const featuredProducts = featuredProductsError ? [] : featuredProductsData || [];
   const categories = categoriesError ? [] : categoriesData || [];
@@ -36,9 +36,9 @@ export default async function Home() {
           priority
         />
         <div className="absolute inset-0 bg-black bg-opacity-10 flex flex-col items-center justify-center text-white p-8">
-          
-          <Link 
-            href="/products" 
+
+          <Link
+            href="/products"
             className="bg-primary hover:bg-opacity-90 text-white px-8 py-3 rounded-md text-lg font-medium transition-colors"
           >
             Shop Now
@@ -50,8 +50,8 @@ export default async function Home() {
       <section className="mb-12">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">Featured Products</h2>
-          <Link 
-            href="/products" 
+          <Link
+            href="/products"
             className="text-primary hover:underline"
           >
             View All
@@ -66,10 +66,10 @@ export default async function Home() {
               const primaryImage = product.product_images?.find((img: ProductImage) => img.is_primary)?.image_url;
               const firstImage = product.product_images?.[0]?.image_url;
               const imageUrl = primaryImage || firstImage || "https://placekitten.com/300/300";
-              
+
               return (
-                <Link 
-                  key={product.product_id} 
+                <Link
+                  key={product.product_id}
                   href={`/products/${product.product_id}`}
                   className="group"
                 >
@@ -109,8 +109,8 @@ export default async function Home() {
             <p className="col-span-3 text-center py-8 text-gray-500">No categories available</p>
           ) : (
             categories.map((category) => (
-              <Link 
-                key={category.category_id} 
+              <Link
+                key={category.category_id}
                 href={`/products?category=${category.name.toLowerCase()}`}
                 className="group"
               >
