@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Mail } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/services/supabase';
 
 // interface AuthError {
 //     message: string;
@@ -22,12 +22,13 @@ export default function ForgotPasswordPage() {
         setError(null);
 
         try {
+            const supabase = await getSupabaseClient();
             // Use secure cookie-based auth with no URL parameters
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
                 redirectTo: `${window.location.origin}/auth/reset-password`,
                 // Ensure token is handled securely via cookies, not URL parameters
             });
-            
+
             if (error) {
                 throw error;
             }
@@ -35,10 +36,9 @@ export default function ForgotPasswordPage() {
             // Successfully sent reset email
             setSuccess(true);
         } catch (err: unknown) {
-            console.error('Password reset error:', err);
             // Type guard to ensure err has a message property
-            const errorMessage = err && typeof err === 'object' && 'message' in err 
-                ? (err.message as string) 
+            const errorMessage = err && typeof err === 'object' && 'message' in err
+                ? (err.message as string)
                 : 'An error occurred. Please try again.';
             setError(errorMessage);
         } finally {

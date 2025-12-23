@@ -3,11 +3,12 @@
 import { useEffect, useState, useRef } from 'react';
 import ProductCard from '@/components/products/ProductCard';
 import { Product } from '@/types';
-import { getProducts } from '@/lib/supabase/products/client/product.query';
+import { getProducts } from '@/services/supabase';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface ProductListProps {
   category?: string;
+  subcategory?: string;
   search?: string;
   sort?: string;
   page: number;
@@ -21,10 +22,10 @@ interface PaginationData {
   hasMore: boolean;
 }
 
-export default function ProductList({ 
-  category, 
-  search, 
-  sort = 'newest', 
+export default function ProductList({
+  category,
+  search,
+  sort = 'newest',
   page = 1,
   initialData = []
 }: ProductListProps) {
@@ -46,45 +47,39 @@ export default function ProductList({
       if (initialData.length === 0 || !initialRender.current) {
         setLoading(true);
       }
-      
+
       // After first render, set initialRender to false
       initialRender.current = false;
 
       try {
         // Fetch products from Supabase
-        const { data, error, count, page: currentPage, totalPages, hasMore } = await getProducts({
-          category,
+        const { data, error, count, totalPages } = await getProducts({
+          categoryId: category,
           search,
-          sort,
+          sort: sort as string,
           page,
-          limit: itemsPerPage // Use dynamic itemsPerPage instead of fixed 9
+          limit: itemsPerPage
         });
 
         if (error) {
-          console.error('Error fetching products:', error);
           setError('Failed to load products. Please try again.');
           setProducts([]);
         } else if (data && data.length > 0) {
           // Data successfully fetched
-          setProducts(data.map(item => ({
-            ...item,
-            product_id: item.id,
-            stock_quantity: item.stock
-          })));
+          setProducts(data as Product[]);
           setError(null);
           setPagination({
             count: count || 0,
-            page: currentPage || page,
+            page: page || 1,
             totalPages: totalPages || 1,
-            hasMore: hasMore || false
+            hasMore: page < (totalPages || 1)
           });
         } else {
           // No products found
           setProducts([]);
           setError(null);
         }
-      } catch (err) {
-        console.error('Error in products fetch:', err);
+      } catch {
         setError('An unexpected error occurred. Please try again later.');
         setProducts([]);
       } finally {
@@ -105,7 +100,7 @@ export default function ProductList({
   const handleItemsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newItemsPerPage = parseInt(e.target.value);
     setItemsPerPage(newItemsPerPage);
-    
+
     // Reset to page 1 when changing items per page
     if (pagination.page !== 1) {
       const url = new URL(window.location.href);
@@ -138,9 +133,9 @@ export default function ProductList({
       <div className="text-center py-12">
         <h2 className="text-xl font-medium mb-2">No products found</h2>
         <p className="text-gray-500">
-          {category ? `No products found in ${category}` : 
-           search ? `No results for "${search}"` : 
-           'Try changing your filters or search term'}
+          {category ? `No products found in ${category}` :
+            search ? `No results for "${search}"` :
+              'Try changing your filters or search term'}
         </p>
       </div>
     );
@@ -150,12 +145,12 @@ export default function ProductList({
     <div>
       <div className="flex justify-between items-center mb-4">
         <p className="text-gray-500">
-          Showing {products.length} of {pagination.count} products 
+          Showing {products.length} of {pagination.count} products
           {category ? ` in ${category}` : ''}
           {search ? ` matching "${search}"` : ''}
           {pagination.totalPages > 1 ? ` (Page ${pagination.page} of ${pagination.totalPages})` : ''}
         </p>
-        
+
         <div className="flex items-center space-x-2">
           <label htmlFor="itemsPerPage" className="text-sm text-gray-500">Items per page:</label>
           <select
@@ -174,7 +169,7 @@ export default function ProductList({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.map(product => (
-          <ProductCard key={product.id} product={product} />
+          <ProductCard key={product.product_id} product={product} />
         ))}
       </div>
 
@@ -182,14 +177,14 @@ export default function ProductList({
       {pagination.totalPages > 1 && (
         <div className="mt-8 flex justify-center">
           <div className="flex space-x-1">
-            <button 
+            <button
               className={`px-3 py-1 border rounded-md ${pagination.page === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
               onClick={() => handlePageChange(pagination.page - 1)}
               disabled={pagination.page === 1}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            
+
             {Array.from({ length: Math.min(pagination.totalPages, 5) }, (_, i) => {
               // Show current page and adjacent pages
               let pageNum = pagination.page;
@@ -202,9 +197,9 @@ export default function ProductList({
               } else {
                 pageNum = pagination.page - 2 + i;
               }
-              
+
               return (
-                <button 
+                <button
                   key={pageNum}
                   className={`px-3 py-1 border rounded-md ${pagination.page === pageNum ? 'bg-amber-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                   onClick={() => handlePageChange(pageNum)}
@@ -213,8 +208,8 @@ export default function ProductList({
                 </button>
               );
             })}
-            
-            <button 
+
+            <button
               className={`px-3 py-1 border rounded-md ${pagination.page === pagination.totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
               onClick={() => handlePageChange(pagination.page + 1)}
               disabled={pagination.page === pagination.totalPages}

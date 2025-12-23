@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Star, User } from 'lucide-react';
-import { getReviewsByProductId, getProductRatingSummary } from '@/lib/supabase/reviews/reviews.model';
+import { getReviewsByProductId, getProductRatingSummary } from '@/services/supabase/reviews/review.service';
 
 interface ProductReviewsProps {
   productId: number;
@@ -62,31 +62,31 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
     async function loadReviews() {
       try {
         setIsLoading(true);
-        
+
         // Ensure we have a valid number for productId
         const productIdNumber = typeof productId === 'string' ? parseInt(productId, 10) : productId;
-        
+
         if (isNaN(productIdNumber)) {
           console.error('Invalid product ID');
           setError('Invalid product ID');
           setIsLoading(false);
           return;
         }
-        
+
         // Lấy dữ liệu đánh giá
         const { data: reviewsData, error: reviewsError } = await getReviewsByProductId(productIdNumber);
-        
+
         // Lấy tổng quan đánh giá
-        const { 
-          averageRating, 
-          totalReviews, 
-          ratingDistribution, 
-          error: summaryError 
+        const {
+          averageRating,
+          totalReviews,
+          ratingDistribution,
+          error: summaryError
         } = await getProductRatingSummary(productIdNumber);
-        
+
         if (reviewsError) throw new Error(reviewsError.message);
         if (summaryError) throw new Error(summaryError.message);
-        
+
         // Chuyển đổi kiểu dữ liệu từ API sang đúng định dạng Review[]
         const formattedReviews: Review[] = reviewsData ? reviewsData.map((review: ApiReview) => ({
           review_id: review.review_id,
@@ -97,7 +97,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
           is_verified_purchase: review.is_verified_purchase,
           users: review.users[0] // Get the first user from the array
         })) : [];
-        
+
         setReviews(formattedReviews);
         setRatingSummary({
           averageRating,
@@ -111,16 +111,16 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
         setIsLoading(false);
       }
     }
-    
+
     loadReviews();
   }, [productId]);
 
   // Render stars based on rating
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }).map((_, i) => (
-      <Star 
-        key={i} 
-        className={`h-4 w-4 ${i < rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`} 
+      <Star
+        key={i}
+        className={`h-4 w-4 ${i < rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}`}
       />
     ));
   };
@@ -134,10 +134,10 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
   // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString('vi-VN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
   };
 
@@ -189,7 +189,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
                 </div>
                 <div className="text-sm text-gray-500">{ratingSummary.totalReviews} đánh giá</div>
               </div>
-              
+
               {/* Rating distribution */}
               <div className="space-y-2 mt-6">
                 {[5, 4, 3, 2, 1].map(star => (
@@ -198,8 +198,8 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
                     <Star className="h-4 w-4 text-amber-400 mx-1" />
                     <div className="flex-1 ml-2">
                       <div className="h-2 bg-gray-200 rounded-full">
-                        <div 
-                          className="h-2 bg-amber-400 rounded-full" 
+                        <div
+                          className="h-2 bg-amber-400 rounded-full"
                           style={{ width: `${getRatingPercentage(star)}%` }}
                         ></div>
                       </div>
@@ -212,7 +212,7 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
               </div>
             </div>
           </div>
-          
+
           {/* Right column - Review List */}
           <div className="md:col-span-2">
             <div className="space-y-6">
@@ -239,15 +239,15 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
                       <div className="text-xs text-gray-500">{formatDate(review.review_date)}</div>
                     </div>
                   </div>
-                  
+
                   <div className="flex mb-2">
                     {renderStars(review.rating)}
                   </div>
-                  
+
                   <p className="text-gray-700">{review.comment}</p>
                 </div>
               ))}
-              
+
               {reviews.length === 0 && (
                 <div className="text-center py-8">
                   <p className="text-gray-500">Chưa có đánh giá nào.</p>

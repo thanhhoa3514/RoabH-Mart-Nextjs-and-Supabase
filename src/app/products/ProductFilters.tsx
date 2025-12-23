@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { getCategories } from '@/lib/supabase/categories/categories.model';
+import { getCategories } from '@/services/supabase';
 import { Category } from '@/types';
 
 interface ProductFiltersProps {
@@ -25,13 +25,13 @@ export default function ProductFilters({ selectedCategory, selectedSort = 'newes
           console.error('Error fetching categories:', error);
           return;
         }
-        
+
         if (data) {
           // Filter to only active categories and sort by display order
-          const activeCategories = data
+          const activeCategories = (data as Category[])
             .filter(cat => cat.is_active)
             .sort((a, b) => a.display_order - b.display_order);
-          
+
           setCategories(activeCategories);
         }
       } catch (err) {
@@ -40,7 +40,7 @@ export default function ProductFilters({ selectedCategory, selectedSort = 'newes
         setLoading(false);
       }
     };
-    
+
     fetchCategories();
   }, []);
 
@@ -53,13 +53,13 @@ export default function ProductFilters({ selectedCategory, selectedSort = 'newes
   const createQueryString = useCallback(
     (name: string, value: string | null) => {
       const params = new URLSearchParams(window.location.search);
-      
+
       if (value === null || value === 'all') {
         params.delete(name);
       } else {
         params.set(name, value);
       }
-      
+
       return params.toString();
     },
     []
@@ -84,17 +84,16 @@ export default function ProductFilters({ selectedCategory, selectedSort = 'newes
           {/* Always show "All Products" option */}
           <div className="flex items-center">
             <button
-              className={`text-left w-full py-2 px-3 rounded-md transition-colors ${
-                !selectedCategory
-                  ? 'bg-primary text-white'
-                  : 'hover:bg-secondary'
-              }`}
+              className={`text-left w-full py-2 px-3 rounded-md transition-colors ${!selectedCategory
+                ? 'bg-primary text-white'
+                : 'hover:bg-secondary'
+                }`}
               onClick={() => handleCategoryChange('all')}
             >
               All Products
             </button>
           </div>
-          
+
           {loading ? (
             // Show loading state for categories
             <div className="animate-pulse space-y-2">
@@ -107,11 +106,10 @@ export default function ProductFilters({ selectedCategory, selectedSort = 'newes
             categories.map((category) => (
               <div key={category.category_id} className="flex items-center">
                 <button
-                  className={`text-left w-full py-2 px-3 rounded-md transition-colors ${
-                    category.name.toLowerCase() === selectedCategory
-                      ? 'bg-primary text-white'
-                      : 'hover:bg-secondary'
-                  }`}
+                  className={`text-left w-full py-2 px-3 rounded-md transition-colors ${category.name.toLowerCase() === selectedCategory
+                    ? 'bg-primary text-white'
+                    : 'hover:bg-secondary'
+                    }`}
                   onClick={() => handleCategoryChange(category.name.toLowerCase())}
                 >
                   {category.name}
@@ -129,11 +127,10 @@ export default function ProductFilters({ selectedCategory, selectedSort = 'newes
           {sortOptions.map((option) => (
             <div key={option.id} className="flex items-center">
               <button
-                className={`text-left w-full py-2 px-3 rounded-md transition-colors ${
-                  option.id === selectedSort
-                    ? 'bg-primary text-white'
-                    : 'hover:bg-secondary'
-                }`}
+                className={`text-left w-full py-2 px-3 rounded-md transition-colors ${option.id === selectedSort
+                  ? 'bg-primary text-white'
+                  : 'hover:bg-secondary'
+                  }`}
                 onClick={() => handleSortChange(option.id)}
               >
                 {option.name}

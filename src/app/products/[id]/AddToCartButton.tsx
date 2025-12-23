@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ShoppingCart } from 'lucide-react';
 import { Product } from '@/types';
-import { useAlert } from '@/lib/context/alert-context';
+import { useAlert } from '@/providers/alert-provider';
 import { useRouter } from 'next/navigation';
 
 interface AddToCartButtonProps {
@@ -13,11 +13,11 @@ interface AddToCartButtonProps {
     onAddToCart?: () => void;
 }
 
-export default function AddToCartButton({ 
-    product, 
-    quantity, 
-    className = '', 
-    onAddToCart 
+export default function AddToCartButton({
+    product,
+    quantity,
+    className = '',
+    onAddToCart
 }: AddToCartButtonProps) {
     const [isAdding, setIsAdding] = useState(false);
     const { showAlert } = useAlert();
@@ -25,14 +25,14 @@ export default function AddToCartButton({
 
     const handleAddToCart = async () => {
         setIsAdding(true);
-        
+
         try {
             // Check if the product is in stock
             if (product.stock_quantity < quantity) {
                 showAlert('error', 'Not enough items in stock', 3000);
                 return;
             }
-            
+
             // Call API to add item to cart
             const response = await fetch('/api/cart', {
                 method: 'POST',
@@ -44,34 +44,34 @@ export default function AddToCartButton({
                     quantity: quantity
                 }),
             });
-            
+
             if (!response.ok) {
                 const errorText = await response.text();
                 let errorData;
-                
+
                 try {
                     // Try to parse the error response
                     errorData = JSON.parse(errorText);
-                } catch (e) {
+                } catch {
                     console.error('Failed to parse error response:', errorText);
                     throw new Error('Failed to add to cart');
                 }
-                
+
                 throw new Error(errorData?.message || errorData?.error || 'Failed to add to cart');
             }
-            
+
             // Show success message
             showAlert('success', `${quantity} ${product.name} added to your cart`, 2000);
-            
+
             // Call the callback if provided
             if (onAddToCart) {
                 onAddToCart();
             }
-            
+
             // Optionally refresh the page data to update stock counts
             router.refresh();
-        } catch (error) {
-            console.error('Error adding to cart:', error);
+        } catch {
+            console.error('Error adding to cart');
             showAlert('error', 'Failed to add to cart. Please try again.', 3000);
         } finally {
             setIsAdding(false);

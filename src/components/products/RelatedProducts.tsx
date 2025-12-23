@@ -17,16 +17,16 @@ export default function RelatedProducts({ category, currentProductId }: RelatedP
     async function fetchRelatedProducts() {
       try {
         setLoading(true);
-        
+
         // Fetch related products by category, excluding current product
         const response = await fetch(`/api/products?category=${encodeURIComponent(category || '')}&exclude=${currentProductId}&limit=4`);
-        
+
         if (!response.ok) {
           console.error('Error response from API:', response.status);
           setProducts([]);
           return;
         }
-        
+
         // Get text content first to check if it's valid
         const text = await response.text();
         if (!text) {
@@ -34,13 +34,13 @@ export default function RelatedProducts({ category, currentProductId }: RelatedP
           setProducts([]);
           return;
         }
-        
+
         // Parse JSON safely
         try {
           const data = JSON.parse(text);
           if (data.data) {
             // Make sure products have the product_id property for consistency
-            const productsWithConsistentIds = data.data.map((p: any) => ({
+            const productsWithConsistentIds = data.data.map((p: Product) => ({
               ...p,
               product_id: p.id
             }));

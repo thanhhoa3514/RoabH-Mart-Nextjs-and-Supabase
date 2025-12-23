@@ -1,17 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-
-// Define interface for database product
-interface DbProduct {
-  product_id: number;
-  name: string;
-  description?: string;
-  price: string | number;
-  discount_percentage?: number;
-  stock_quantity?: number;
-  product_images?: ProductImage[];
-  is_active?: boolean;
-}
+import { Product } from '@/types';
 
 // Define interface for product image
 interface ProductImage {
@@ -23,7 +12,7 @@ interface ProductImage {
 }
 
 interface ProductGridProps {
-  products: DbProduct[];
+  products: Product[];
 }
 
 export default function ProductGrid({ products }: ProductGridProps) {
@@ -31,13 +20,13 @@ export default function ProductGrid({ products }: ProductGridProps) {
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {products.map((product) => {
         // Find primary image or first image
-        const primaryImage = product.product_images?.find((img: ProductImage) => img.is_primary)?.image_url;
-        const firstImage = product.product_images?.[0]?.image_url;
+        const primaryImage = product.images?.find((img: ProductImage) => img.is_primary)?.image_url;
+        const firstImage = product.images?.[0]?.image_url;
         const imageUrl = primaryImage || firstImage || "https://placekitten.com/300/300";
-        
+
         return (
-          <Link 
-            key={product.product_id} 
+          <Link
+            key={product.id}
             href={`/products/${product.product_id}`}
             className="group"
           >

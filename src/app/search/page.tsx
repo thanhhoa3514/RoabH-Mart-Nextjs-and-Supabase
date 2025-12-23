@@ -1,30 +1,30 @@
-import { getProducts } from '@/lib/supabase/products/products.model';
+import { getProducts } from '@/services/supabase/products/product.service';
 import SearchInput from '@/components/search/SearchInput';
 import ProductGrid from '@/components/products/ProductGrid';
 import { Suspense } from 'react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 interface SearchPageProps {
-  searchParams: {
+  searchParams: Promise<{
     q?: string;
-  };
+  }>;
 }
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
-  const query = searchParams.q || '';
-  
+  const { q: query = '' } = await searchParams;
+
   // Fetch products based on search query
-  const { data: products, error } = await getProducts(undefined, query);
-  
+  const { data: products, error } = await getProducts({ search: query });
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Search Products</h1>
-      
+
       {/* Search input */}
       <div className="mb-8">
         <SearchInput initialQuery={query} />
       </div>
-      
+
       {/* Search results */}
       <div>
         {query ? (
@@ -35,7 +35,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         ) : (
           <h2 className="text-xl mb-4">Browse all products</h2>
         )}
-        
+
         <Suspense fallback={<LoadingSpinner />}>
           {error ? (
             <div className="text-red-500">Error loading products: {error.message}</div>
@@ -51,4 +51,4 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       </div>
     </div>
   );
-} 
+}

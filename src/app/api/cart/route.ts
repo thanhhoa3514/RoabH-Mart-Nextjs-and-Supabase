@@ -1,29 +1,10 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
+import { getSupabaseClient } from '@/services/supabase';
 
 export async function POST(request: Request) {
     try {
-        const cookieStore = await cookies();
-        const supabase = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            {
-                cookies: {
-                    get(name) {
-                        const cookie = cookieStore.get(name);
-                        return cookie?.value;
-                    },
-                    set(name, value, options) {
-                        cookieStore.set(name, value, options);
-                    },
-                    remove(name, options) {
-                        cookieStore.set(name, '', { ...options, maxAge: 0 });
-                    }
-                }
-            }
-        );
-        
+        const supabase = await getSupabaseClient();
+
         const { product_id, quantity } = await request.json();
 
         // Validate request body
@@ -33,14 +14,14 @@ export async function POST(request: Request) {
                 { status: 400 }
             );
         }
-        
+
         console.log('Adding product to cart:', {
-            product_id, 
-            quantity, 
+            product_id,
+            quantity,
             productIdType: typeof product_id,
             isNumeric: !isNaN(Number(product_id))
         });
-        
+
         // Ensure product_id is a number
         const numericProductId = Number(product_id);
         if (isNaN(numericProductId)) {
@@ -66,100 +47,65 @@ export async function POST(request: Request) {
             if (existingCart) {
                 cart_id = existingCart.cart_id;
             } else {
-                // Create a new cart for the user - using rpc to avoid UUID generation
-                try {
-                    // Call a raw SQL query to insert a row and get the serial id back
-                    const { data: newCart, error: cartError } = await supabase
-                        .rpc('create_user_cart', { 
-                            user_id_param: session.user.id 
-                        });
+                // Create a new cart for the user
+                const { data: insertResult, error: insertError } = await supabase
+                    .from('carts')
+                    .insert({
+                        user_id: session.user.id
+                    })
+                    .select('cart_id')
+                    .single();
 
-                    if (cartError) {
-                        // If the function doesn't exist, we'll get a specific error
-                        if (cartError.message && cartError.message.includes('function') && cartError.message.includes('does not exist')) {
-                            // Function doesn't exist, throw specific error to catch block
-                            throw new Error('Function not found');
-                        }
-                        
-                        console.error('Error creating user cart via RPC:', cartError);
-                        throw new Error(cartError.message);
-                    }
-                    
-                    if (!newCart || !newCart.cart_id) {
-                        console.error('No cart data returned after user cart creation');
-                        throw new Error('Failed to create user cart');
-                    }
-                    
-                    // Get the auto-generated cart_id
-                    cart_id = newCart.cart_id;
-                    console.log('Created new user cart with ID:', cart_id);
-                } catch (e) {
-                    console.error('Failed to create cart using RPC, trying direct insert:', e);
-                    
-                    // Fallback to direct insert without specifying the cart_id
-                    const { data: insertResult, error: insertError } = await supabase
-                        .from('carts')
-                        .insert({ 
-                            user_id: session.user.id 
-                        })
-                        .select('cart_id')
-                        .single();
-                        
-                    if (insertError) {
-                        console.error('Error with direct cart insert:', insertError);
-                        throw new Error(insertError.message);
-                    }
-                    
-                    cart_id = insertResult?.cart_id;
-                    console.log('Created cart with direct insert, ID:', cart_id);
+                if (insertError) {
+                    console.error('Error creating user cart:', insertError);
+                    throw new Error(insertError.message);
                 }
+
+                cart_id = insertResult?.cart_id;
+                console.log('Created new user cart with ID:', cart_id);
             }
         } else {
-            // Guest user - use cookie-based cart
+            // Guest user - handle cart ID via service logic if possible or cookies
+            // For now, let's keep it simple and use a cookie if session is missing
+            // But ideally we'd use the service which handles this.
+            // Actually, the current route logic for guests is complex.
+            // Let's stick to using supabase client as desired.
+
+            // Note: If we use getSupabaseClient(), it already handles cookies internally.
+            // But the 'cart_id' cookie is custom for RoabH Mart guest carts.
+
+            // I'll keep the custom cookie logic but use the factory supabase.
+            const { cookies } = await import('next/headers');
+            const cookieStore = await cookies();
             const cartCookie = cookieStore.get('cart_id');
             cart_id = cartCookie?.value;
 
             if (!cart_id) {
-                // Use special guest user ID since user_id is NOT NULL in schema
-                const GUEST_USER_ID = 9999; // Use a dedicated ID for guest users
-                
-                try {
-                    // Direct insert without specifying the cart_id
-                    const { data: insertResult, error: insertError } = await supabase
-                        .from('carts')
-                        .insert({ 
-                            user_id: GUEST_USER_ID 
-                        })
-                        .select('cart_id')
-                        .single();
-                        
-                    if (insertError) {
-                        console.error('Error creating guest cart:', insertError);
-                        throw new Error(insertError.message);
-                    }
-                    
-                    if (!insertResult) {
-                        console.error('No cart data returned after guest cart creation');
-                        throw new Error('Failed to create guest cart');
-                    }
-                    
-                    cart_id = insertResult.cart_id;
-                    console.log('Created guest cart with ID:', cart_id);
-                    
-                    // Set cookie to track anonymous cart (convert to string for cookie)
-                    cookieStore.set('cart_id', cart_id.toString(), {
-                        maxAge: 60 * 60 * 24 * 30, // 30 days
-                        path: '/'
-                    });
-                } catch (e) {
-                    console.error('Failed to create guest cart:', e);
-                    throw new Error('Failed to create guest cart');
+                const GUEST_USER_ID = 9999;
+                const { data: insertResult, error: insertError } = await supabase
+                    .from('carts')
+                    .insert({
+                        user_id: GUEST_USER_ID
+                    })
+                    .select('cart_id')
+                    .single();
+
+                if (insertError) {
+                    console.error('Error creating guest cart:', insertError);
+                    throw new Error(insertError.message);
                 }
+
+                cart_id = insertResult.cart_id;
+
+
+                cookieStore.set('cart_id', cart_id.toString(), {
+                    maxAge: 60 * 60 * 24 * 30, // 30 days
+                    path: '/'
+                });
             }
         }
 
-        // Check if product exists and has enough stock
-        console.log('Looking up product:', numericProductId);
+
         const { data: product, error: productError } = await supabase
             .from('products')
             .select('product_id, stock_quantity')
@@ -167,7 +113,7 @@ export async function POST(request: Request) {
             .single();
 
         if (productError || !product) {
-            console.error('Product not found error:', productError);
+
             return NextResponse.json(
                 { error: 'Product not found' },
                 { status: 404 }
@@ -190,10 +136,7 @@ export async function POST(request: Request) {
             .single();
 
         if (existingItem) {
-            // Update quantity of existing item
             const newQuantity = existingItem.quantity + quantity;
-            console.log('Updating existing cart item quantity:', existingItem.cart_item_id, 'from', existingItem.quantity, 'to', newQuantity);
-
             const { error: updateError } = await supabase
                 .from('cart_items')
                 .update({ quantity: newQuantity })
@@ -201,8 +144,6 @@ export async function POST(request: Request) {
 
             if (updateError) throw new Error(updateError.message);
         } else {
-            // Add new item to cart
-            console.log('Adding new item to cart:', cart_id, numericProductId, quantity);
             const { error: insertError } = await supabase
                 .from('cart_items')
                 .insert({
@@ -225,7 +166,7 @@ export async function POST(request: Request) {
 
         if (countError) throw new Error(countError.message);
 
-        const totalItems = cartItems.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0);
+        const totalItems = (cartItems as { quantity: number }[]).reduce((sum, item) => sum + item.quantity, 0);
 
         return NextResponse.json({
             success: true,
@@ -234,8 +175,7 @@ export async function POST(request: Request) {
             total_items: totalItems
         });
 
-    } catch (error) {
-        console.error('Error adding to cart:', error);
+    } catch {
         return NextResponse.json(
             { error: 'Failed to add item to cart' },
             { status: 500 }
@@ -245,32 +185,15 @@ export async function POST(request: Request) {
 
 export async function GET() {
     try {
+        const supabase = await getSupabaseClient();
+        const { cookies } = await import('next/headers');
         const cookieStore = await cookies();
-        const supabase = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            {
-                cookies: {
-                    get(name) {
-                        const cookie = cookieStore.get(name);
-                        return cookie?.value;
-                    },
-                    set(name, value, options) {
-                        cookieStore.set(name, value, options);
-                    },
-                    remove(name, options) {
-                        cookieStore.set(name, '', { ...options, maxAge: 0 });
-                    }
-                }
-            }
-        );
 
         // Check if user is logged in
         const { data: { session } } = await supabase.auth.getSession();
         let cart_id;
 
         if (session?.user) {
-            // Get user's cart
             const { data: userCart } = await supabase
                 .from('carts')
                 .select('cart_id')
@@ -279,35 +202,21 @@ export async function GET() {
 
             cart_id = userCart?.cart_id;
         } else {
-            // Get guest cart from cookie
             const cartCookie = cookieStore.get('cart_id');
-            
             if (cartCookie?.value) {
                 try {
-                    // Parse cart_id as number since it's stored as SERIAL in the database
                     cart_id = parseInt(cartCookie.value, 10);
-                    
                     if (isNaN(cart_id)) {
-                        console.error('Invalid cart_id in cookie:', cartCookie.value);
                         cart_id = null;
                     } else {
-                        // Verify this cart exists in database
-                        const { data: guestCart, error: guestCartError } = await supabase
+                        const { data: guestCart } = await supabase
                             .from('carts')
                             .select('cart_id')
                             .eq('cart_id', cart_id)
                             .single();
-                        
-                        if (guestCartError) {
-                            console.error('Error finding guest cart:', guestCartError);
-                            cart_id = null; // Reset cart_id if not found
-                        } else {
-                            // Use the found cart_id
-                            cart_id = guestCart?.cart_id;
-                        }
+                        cart_id = guestCart?.cart_id;
                     }
-                } catch (e) {
-                    console.error('Error processing cart cookie:', e);
+                } catch {
                     cart_id = null;
                 }
             }
@@ -321,38 +230,45 @@ export async function GET() {
             });
         }
 
-        // Get cart items with product details
         const { data: cartItems, error } = await supabase
             .from('cart_items')
             .select(`
-        cart_item_id,
-        quantity,
-        products (
-          product_id,
-          name,
-          price,
-          stock_quantity,
-          product_images (
-            image_url,
-            is_primary
-          )
-        )
-      `)
+                cart_item_id,
+                quantity,
+                products (
+                  product_id,
+                  name,
+                  price,
+                  stock_quantity,
+                  product_images (
+                    image_url,
+                    is_primary
+                  )
+                )
+            `)
             .eq('cart_id', cart_id);
 
         if (error) throw new Error(error.message);
 
-        // Calculate totals
         let totalItems = 0;
         let totalPrice = 0;
 
-        const formattedItems = cartItems.map((item: any) => {
+        const formattedItems = (cartItems as unknown as {
+            cart_item_id: number;
+            quantity: number;
+            products: {
+                product_id: number;
+                name: string;
+                price: number;
+                stock_quantity: number;
+                product_images: { image_url: string, is_primary: boolean }[];
+            };
+        }[]).map((item) => {
             const product = item.products;
             totalItems += item.quantity;
             totalPrice += item.quantity * product.price;
 
-            // Find primary image or use first available
-            const primaryImage = product.product_images.find((img: any) => img.is_primary)?.image_url
+            const primaryImage = product.product_images.find((img) => img.is_primary)?.image_url
                 || product.product_images[0]?.image_url
                 || null;
 
@@ -374,8 +290,7 @@ export async function GET() {
             total_price: totalPrice
         });
 
-    } catch (error) {
-        console.error('Error fetching cart:', error);
+    } catch {
         return NextResponse.json(
             { error: 'Failed to fetch cart' },
             { status: 500 }
@@ -385,32 +300,14 @@ export async function GET() {
 
 export async function DELETE() {
     try {
+        const supabase = await getSupabaseClient();
+        const { cookies } = await import('next/headers');
         const cookieStore = await cookies();
-        const supabase = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            {
-                cookies: {
-                    get(name) {
-                        const cookie = cookieStore.get(name);
-                        return cookie?.value;
-                    },
-                    set(name, value, options) {
-                        cookieStore.set(name, value, options);
-                    },
-                    remove(name, options) {
-                        cookieStore.set(name, '', { ...options, maxAge: 0 });
-                    }
-                }
-            }
-        );
 
-        // Check if user is logged in
         const { data: { session } } = await supabase.auth.getSession();
         let cart_id;
 
         if (session?.user) {
-            // Get user's cart
             const { data: userCart } = await supabase
                 .from('carts')
                 .select('cart_id')
@@ -419,22 +316,9 @@ export async function DELETE() {
 
             cart_id = userCart?.cart_id;
         } else {
-            // Get guest cart from cookie
             const cartCookie = cookieStore.get('cart_id');
-            
             if (cartCookie?.value) {
-                try {
-                    // Parse cart_id as number since it's stored as SERIAL in the database
-                    cart_id = parseInt(cartCookie.value, 10);
-                    
-                    if (isNaN(cart_id)) {
-                        console.error('Invalid cart_id in cookie:', cartCookie.value);
-                        cart_id = null;
-                    }
-                } catch (e) {
-                    console.error('Error processing cart cookie:', e);
-                    cart_id = null;
-                }
+                cart_id = parseInt(cartCookie.value, 10);
             }
         }
 
@@ -445,14 +329,12 @@ export async function DELETE() {
             });
         }
 
-        // Delete all cart items for this cart
         const { error: deleteError } = await supabase
             .from('cart_items')
             .delete()
             .eq('cart_id', cart_id);
 
         if (deleteError) {
-            console.error('Error clearing cart:', deleteError);
             throw new Error(deleteError.message);
         }
 
@@ -461,11 +343,10 @@ export async function DELETE() {
             message: 'Cart cleared successfully'
         });
 
-    } catch (error) {
-        console.error('Error clearing cart:', error);
+    } catch {
         return NextResponse.json(
             { error: 'Failed to clear cart' },
             { status: 500 }
         );
     }
-} 
+}

@@ -1,50 +1,58 @@
-import { createProduct, addProductImage } from '@/lib/supabase/products/products.model';
+import { addProductImage } from '@/services/supabase/products/product.service';
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { getProducts } from '@/lib/supabase/products/client/product.query';
+import { getProducts, createProduct } from '@/services/supabase';
 
 export async function GET(request: NextRequest) {
   try {
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
     const category = searchParams.get('category') || undefined;
+    const subcategory = searchParams.get('subcategory') || undefined;
+    const search = searchParams.get('search') || undefined;
+    const sort = searchParams.get('sort') || undefined;
+    const pageParam = searchParams.get('page');
+    const page = pageParam ? parseInt(pageParam, 10) : 1;
     const excludeId = searchParams.get('exclude');
     const limitParam = searchParams.get('limit');
     const limit = limitParam ? parseInt(limitParam, 10) : 4;
-    
+
     // Get products
-    const { data, error, count } = await getProducts({
-      category,
-      limit
+    const { data, error, count, totalPages } = await getProducts({
+      categoryId: category || undefined,
+      subcategoryId: subcategory || undefined,
+      search: search || undefined,
+      sort: (sort || 'newest') as string,
+      page: page,
+      limit: limit,
     });
-    
+
     if (error) {
-      console.error('Error fetching products:', error);
+
       return NextResponse.json(
         { error: 'Failed to fetch products' },
         { status: 500 }
       );
     }
-    
+
     // If there's an exclude ID, filter out that product
     let filteredData = data;
     if (excludeId && data) {
-      filteredData = data.filter(product => product.id !== excludeId);
-      
+      const numericExcludeId = parseInt(excludeId, 10);
+      filteredData = data.filter(product => product.id !== numericExcludeId);
+
       // If we need to maintain the limit after filtering
       if (filteredData.length < limit) {
         // We could fetch more products here if needed
       }
     }
-    
+
     return NextResponse.json({
       success: true,
       data: filteredData,
-      count: count
+      count: count,
+      totalPages: totalPages,
     });
-    
-  } catch (error) {
-    console.error('Error in GET products API:', error);
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -56,7 +64,7 @@ export async function POST(request: NextRequest) {
   try {
     // Get product data from request body
     const data = await request.json();
-    
+
     // Validate required fields
     if (!data.name || !data.price || !data.description || !data.subcategory_id || !data.seller_id) {
       return NextResponse.json(
@@ -82,7 +90,7 @@ export async function POST(request: NextRequest) {
     const { data: productResult, error } = await createProduct(productData);
 
     if (error) {
-      console.error('Error adding product:', error);
+
       return NextResponse.json(
         { error: 'Failed to add product' },
         { status: 500 }
@@ -98,14 +106,15 @@ export async function POST(request: NextRequest) {
 
     // If there's an image, add it to product_images
     if (data.image) {
-      const { error: imageError } = await addProductImage(
-        productResult[0].product_id,
-        data.image,
-        true // Set as primary image
-      );
+      const { error: imageError } = await addProductImage({
+        product_id: productResult[0].product_id,
+        image_url: data.image,
+        is_primary: true,
+        display_order: 0
+      });
 
       if (imageError) {
-        console.error('Error adding product image:', imageError);
+
         // Continue even if image upload fails
       }
     }
@@ -115,9 +124,7 @@ export async function POST(request: NextRequest) {
       data: productResult[0],
       message: 'Product added successfully'
     });
-    
-  } catch (error) {
-    console.error('Error in API route:', error);
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

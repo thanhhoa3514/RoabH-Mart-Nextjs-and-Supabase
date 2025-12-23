@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { User, Package, CreditCard, Heart, LogOut } from 'lucide-react';
-import { useAuth } from '@/lib/auth/AuthContext';
-    
+import { useAuth } from '@/providers/auth-provider';
+
 export default function AccountPage() {
     const [activeTab, setActiveTab] = useState('profile');
     const { user, userData, signOut } = useAuth();
@@ -52,13 +52,12 @@ export default function AccountPage() {
     }
 
     // Format the user's name for display
-    const displayName = userData?.profile?.full_name || 
-                      user?.user_metadata?.full_name || 
-                      user?.email?.split('@')[0] || 
-                      'User';
+    const displayName = user?.user_metadata?.full_name ||
+        user?.email?.split('@')[0] ||
+        'User';
 
     // Get the profile image if available
-    const profileImage = userData?.profile?.profile_image || 'https://placekitten.com/100/100';
+    const profileImage = user?.user_metadata?.profile_image || 'https://placekitten.com/100/100';
 
     // Get the default address if available
     const defaultAddress = userData?.addresses?.find(addr => addr.is_default) || userData?.addresses?.[0];
@@ -91,44 +90,40 @@ export default function AccountPage() {
                         <nav className="space-y-1">
                             <button
                                 onClick={() => setActiveTab('profile')}
-                                className={`flex items-center w-full px-4 py-2 rounded-md transition ${
-                                    activeTab === 'profile'
-                                        ? 'bg-primary text-white'
-                                        : 'hover:bg-gray-100'
-                                }`}
+                                className={`flex items-center w-full px-4 py-2 rounded-md transition ${activeTab === 'profile'
+                                    ? 'bg-primary text-white'
+                                    : 'hover:bg-gray-100'
+                                    }`}
                             >
                                 <User className="mr-3 h-5 w-5" />
                                 <span>Profile</span>
                             </button>
                             <button
                                 onClick={() => setActiveTab('orders')}
-                                className={`flex items-center w-full px-4 py-2 rounded-md transition ${
-                                    activeTab === 'orders'
-                                        ? 'bg-primary text-white'
-                                        : 'hover:bg-gray-100'
-                                }`}
+                                className={`flex items-center w-full px-4 py-2 rounded-md transition ${activeTab === 'orders'
+                                    ? 'bg-primary text-white'
+                                    : 'hover:bg-gray-100'
+                                    }`}
                             >
                                 <Package className="mr-3 h-5 w-5" />
                                 <span>Orders</span>
                             </button>
                             <button
                                 onClick={() => setActiveTab('payment')}
-                                className={`flex items-center w-full px-4 py-2 rounded-md transition ${
-                                    activeTab === 'payment'
-                                        ? 'bg-primary text-white'
-                                        : 'hover:bg-gray-100'
-                                }`}
+                                className={`flex items-center w-full px-4 py-2 rounded-md transition ${activeTab === 'payment'
+                                    ? 'bg-primary text-white'
+                                    : 'hover:bg-gray-100'
+                                    }`}
                             >
                                 <CreditCard className="mr-3 h-5 w-5" />
                                 <span>Payment Methods</span>
                             </button>
                             <button
                                 onClick={() => setActiveTab('wishlist')}
-                                className={`flex items-center w-full px-4 py-2 rounded-md transition ${
-                                    activeTab === 'wishlist'
-                                        ? 'bg-primary text-white'
-                                        : 'hover:bg-gray-100'
-                                }`}
+                                className={`flex items-center w-full px-4 py-2 rounded-md transition ${activeTab === 'wishlist'
+                                    ? 'bg-primary text-white'
+                                    : 'hover:bg-gray-100'
+                                    }`}
                             >
                                 <Heart className="mr-3 h-5 w-5" />
                                 <span>Wishlist</span>
@@ -157,7 +152,7 @@ export default function AccountPage() {
                                             <label className="block text-sm font-medium mb-1">Full Name</label>
                                             <input
                                                 type="text"
-                                                defaultValue={userData?.profile?.full_name || ''}
+                                                defaultValue={user?.user_metadata?.full_name || ''}
                                                 className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                                             />
                                         </div>
@@ -174,7 +169,7 @@ export default function AccountPage() {
                                             <label className="block text-sm font-medium mb-1">Phone Number</label>
                                             <input
                                                 type="tel"
-                                                defaultValue={userData?.profile?.phone_number || ''}
+                                                defaultValue={user?.user_metadata?.phone_number || ''}
                                                 className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                                             />
                                         </div>
@@ -182,7 +177,7 @@ export default function AccountPage() {
                                             <label className="block text-sm font-medium mb-1">Date of Birth</label>
                                             <input
                                                 type="date"
-                                                defaultValue={userData?.profile?.date_of_birth ? new Date(userData.profile.date_of_birth).toISOString().split('T')[0] : ''}
+                                                defaultValue={user?.user_metadata?.date_of_birth ? new Date(user.user_metadata.date_of_birth).toISOString().split('T')[0] : ''}
                                                 className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                                             />
                                         </div>
@@ -191,8 +186,8 @@ export default function AccountPage() {
                                     <div>
                                         <label className="block text-sm font-medium mb-1">Default Address</label>
                                         <textarea
-                                            defaultValue={defaultAddress ? 
-                                                `${defaultAddress.street_address}, ${defaultAddress.city}, ${defaultAddress.province || ''} ${defaultAddress.postal_code}, ${defaultAddress.country}` : 
+                                            defaultValue={defaultAddress ?
+                                                `${defaultAddress.street_address}, ${defaultAddress.city}, ${defaultAddress.province || ''} ${defaultAddress.postal_code}, ${defaultAddress.country}` :
                                                 ''}
                                             rows={3}
                                             className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
@@ -251,11 +246,10 @@ export default function AccountPage() {
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <span
-                                                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                                                order.status === 'Delivered'
-                                                                    ? 'bg-green-100 text-green-800'
-                                                                    : 'bg-yellow-100 text-yellow-800'
-                                                            }`}
+                                                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${order.status === 'Delivered'
+                                                                ? 'bg-green-100 text-green-800'
+                                                                : 'bg-yellow-100 text-yellow-800'
+                                                                }`}
                                                         >
                                                             {order.status}
                                                         </span>

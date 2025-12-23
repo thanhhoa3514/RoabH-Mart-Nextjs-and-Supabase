@@ -3,16 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { 
-    ArrowLeft, 
-    Mail, 
-    Phone, 
-    MapPin, 
-    Calendar, 
-    ShoppingBag, 
-    CreditCard, 
-    Edit, 
-    Trash2, 
+import {
+    ArrowLeft,
+    Mail,
+    Phone,
+    MapPin,
+    Calendar,
+    ShoppingBag,
+    CreditCard,
+    Edit,
+    Trash2,
     Home,
     MessageSquare,
     Send,
@@ -21,8 +21,8 @@ import {
     Eye
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAlert } from '@/lib/context/alert-context';
-import { getCustomerById, getCustomerStats, getCustomerOrders, getCustomerAddresses } from '@/lib/supabase/customers/customers.model';
+import { useAlert } from '@/providers/alert-provider';
+import { getCustomerById, getCustomerStats, getCustomerOrders, getCustomerAddresses } from '@/services/supabase/customers/customer.service';
 import { DbCustomer } from '@/types/user/customer.model';
 
 // Define interfaces for the data types
@@ -74,11 +74,10 @@ const Tab = ({ label, active, onClick }: { label: string; active: boolean; onCli
     return (
         <button
             onClick={onClick}
-            className={`px-4 py-2 font-medium text-sm ${
-                active 
-                    ? 'border-b-2 border-amber-500 text-amber-600' 
-                    : 'text-gray-500 hover:text-amber-500'
-            }`}
+            className={`px-4 py-2 font-medium text-sm ${active
+                ? 'border-b-2 border-amber-500 text-amber-600'
+                : 'text-gray-500 hover:text-amber-500'
+                }`}
         >
             {label}
         </button>
@@ -106,13 +105,12 @@ const OrderItem = ({ order }: { order: Order }) => {
                 ${order.total_amount}
             </td>
             <td className="py-4 px-3">
-                <div className={`px-3 py-1 rounded-full text-xs font-medium inline-block ${
-                    order.status === 'Delivered' 
-                        ? 'bg-green-100 text-green-800' 
-                        : order.status === 'Processing'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-amber-100 text-amber-800'
-                }`}>
+                <div className={`px-3 py-1 rounded-full text-xs font-medium inline-block ${order.status === 'Delivered'
+                    ? 'bg-green-100 text-green-800'
+                    : order.status === 'Processing'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}>
                     {order.status}
                 </div>
             </td>
@@ -145,13 +143,13 @@ const OrderItem = ({ order }: { order: Order }) => {
 //                     </span>
 //                 )}
 //             </div>
-            
+
 //             <div className="text-sm text-gray-600 space-y-1">
 //                 <p>{address.street_address}</p>
 //                 <p>{address.city}, {address.state} {address.postal_code}</p>
 //                 <p>{address.country}</p>
 //             </div>
-            
+
 //             <div className="mt-3 flex justify-end space-x-2">
 //                 <button className="text-gray-500 hover:text-amber-500">
 //                     <Edit className="h-4 w-4" />
@@ -179,12 +177,12 @@ const OrderItem = ({ order }: { order: Order }) => {
 //                     </span>
 //                 )}
 //             </div>
-            
+
 //             <div className="text-sm text-gray-600 space-y-1">
 //                 <p>•••• •••• •••• {paymentMethod.last4}</p>
 //                 <p>Expires {paymentMethod.expiryDate}</p>
 //             </div>
-            
+
 //             <div className="mt-3 flex justify-end space-x-2">
 //                 <button className="text-gray-500 hover:text-amber-500">
 //                     <Edit className="h-4 w-4" />
@@ -224,10 +222,10 @@ export default function CustomerDetailPage() {
     const { showAlert } = useAlert();
     const [activeTab, setActiveTab] = useState('overview');
     const [newNote, setNewNote] = useState('');
-    
+
     // Get customer ID from URL params
     const customerId = typeof params.id === 'string' ? parseInt(params.id, 10) : 0;
-    
+
     // State for customer data
     const [customer, setCustomer] = useState<DbCustomer | null>(null);
     const [customerStats, setCustomerStats] = useState<{
@@ -239,44 +237,44 @@ export default function CustomerDetailPage() {
     const [addresses, setAddresses] = useState<Address[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    
+
     // Fetch customer data
     useEffect(() => {
         async function fetchCustomerData() {
             setLoading(true);
             setError(null);
-            
+
             try {
                 // Fetch customer details
                 const { data: customerData, error: customerError } = await getCustomerById(customerId);
-                
+
                 if (customerError) throw new Error(customerError.message);
                 if (!customerData) throw new Error('Customer not found');
-                
+
                 setCustomer(customerData);
-                
+
                 // Fetch customer stats
                 const { data: statsData, error: statsError } = await getCustomerStats(customerId);
-                
+
                 if (statsError) throw new Error(statsError.message);
                 setCustomerStats(statsData);
-                
+
                 // Fetch customer orders
                 const { data: ordersData, error: ordersError } = await getCustomerOrders(customerId);
-                
+
                 if (ordersError) throw new Error(ordersError.message);
                 setOrders(ordersData || []);
-                
+
                 // Fetch customer addresses
                 const { data: addressesData, error: addressesError } = await getCustomerAddresses(customerId);
-                
+
                 if (addressesError) {
                     console.error('Error fetching addresses:', addressesError);
                 } else {
                     setAddresses(addressesData || []);
                     console.log('Fetched addresses:', addressesData);
                 }
-                
+
             } catch (err) {
                 setError(err instanceof Error ? err.message : 'Failed to fetch customer data');
                 showAlert('error', 'Failed to fetch customer data', 3000);
@@ -284,20 +282,20 @@ export default function CustomerDetailPage() {
                 setLoading(false);
             }
         }
-        
+
         if (customerId) {
             fetchCustomerData();
         }
     }, [customerId, showAlert]);
-    
+
     const handleEdit = () => {
         showAlert('info', 'Edit customer functionality would be implemented here', 2000);
     };
-    
+
     const handleDelete = () => {
         showAlert('warning', 'Delete customer functionality would be implemented here', 2000);
     };
-    
+
     const handleAddNote = () => {
         if (newNote.trim()) {
             showAlert('success', 'Note added successfully', 2000);
@@ -321,18 +319,18 @@ export default function CustomerDetailPage() {
     if (error || !customer) {
         return (
             <div className="p-6">
-                <button 
+                <button
                     onClick={() => router.back()}
                     className="flex items-center text-gray-600 hover:text-amber-500 mb-4"
                 >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Customers
                 </button>
-                
+
                 <div className="bg-red-50 text-red-600 p-6 rounded-lg shadow-md">
                     <h2 className="text-xl font-bold mb-2">Error Loading Customer</h2>
                     <p>{error || 'Customer not found'}</p>
-                    <button 
+                    <button
                         className="mt-4 px-4 py-2 bg-red-100 rounded-md hover:bg-red-200 text-red-700"
                         onClick={() => window.location.reload()}
                     >
@@ -344,13 +342,13 @@ export default function CustomerDetailPage() {
     }
 
     // Format name for initials
-    const initials = customer.first_name && customer.last_name 
-        ? `${customer.first_name[0]}${customer.last_name[0]}` 
+    const initials = customer.first_name && customer.last_name
+        ? `${customer.first_name[0]}${customer.last_name[0]}`
         : customer.username.substring(0, 2).toUpperCase();
-    
+
     // Format display name
-    const displayName = customer.first_name && customer.last_name 
-        ? `${customer.first_name} ${customer.last_name}` 
+    const displayName = customer.first_name && customer.last_name
+        ? `${customer.first_name} ${customer.last_name}`
         : customer.username;
 
     // Format address for display from customer object
@@ -361,10 +359,10 @@ export default function CustomerDetailPage() {
         customer.postal_code,
         customer.country
     ].filter(Boolean).join(', ');
-    
+
     // Check if we have addresses from the addresses table
     const hasAddressesFromTable = addresses && addresses.length > 0;
-    
+
     // Debug address information
     console.log('Customer address data:', {
         customerObj: {
@@ -382,14 +380,14 @@ export default function CustomerDetailPage() {
         <div className="p-6">
             {/* Back button and header */}
             <div className="mb-6">
-                <button 
+                <button
                     onClick={() => router.back()}
                     className="flex items-center text-gray-600 hover:text-amber-500 mb-4"
                 >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Customers
                 </button>
-                
+
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                     <div className="mb-4 md:mb-0">
                         <h1 className="text-2xl font-bold flex items-center">
@@ -400,7 +398,7 @@ export default function CustomerDetailPage() {
                         </h1>
                         <p className="text-gray-500 text-sm">Customer ID: {customer.user_id}</p>
                     </div>
-                    
+
                     <div className="flex space-x-3">
                         <motion.button
                             whileHover={{ scale: 1.05 }}
@@ -411,7 +409,7 @@ export default function CustomerDetailPage() {
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                         </motion.button>
-                        
+
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
@@ -424,20 +422,19 @@ export default function CustomerDetailPage() {
                     </div>
                 </div>
             </div>
-            
+
             {/* Customer status card */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="flex flex-col">
                         <span className="text-sm text-gray-500 mb-1">Status</span>
                         <div className="flex items-center">
-                            <div className={`h-2 w-2 rounded-full mr-2 ${
-                                customer.is_active ? 'bg-green-500' : 'bg-gray-400'
-                            }`}></div>
+                            <div className={`h-2 w-2 rounded-full mr-2 ${customer.is_active ? 'bg-green-500' : 'bg-gray-400'
+                                }`}></div>
                             <span className="font-medium">{customer.is_active ? 'Active' : 'Inactive'}</span>
                         </div>
                     </div>
-                    
+
                     <div className="flex flex-col">
                         <span className="text-sm text-gray-500 mb-1">Member Since</span>
                         <div className="flex items-center">
@@ -445,7 +442,7 @@ export default function CustomerDetailPage() {
                             <span className="font-medium">{new Date(customer.created_at).toLocaleDateString()}</span>
                         </div>
                     </div>
-                    
+
                     <div className="flex flex-col">
                         <span className="text-sm text-gray-500 mb-1">Total Orders</span>
                         <div className="flex items-center">
@@ -453,7 +450,7 @@ export default function CustomerDetailPage() {
                             <span className="font-medium">{customerStats?.totalOrders || 0}</span>
                         </div>
                     </div>
-                    
+
                     <div className="flex flex-col">
                         <span className="text-sm text-gray-500 mb-1">Total Spent</span>
                         <div className="flex items-center">
@@ -462,7 +459,7 @@ export default function CustomerDetailPage() {
                         </div>
                     </div>
                 </div>
-                
+
                 <div className="mt-6 pt-6 border-t">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="flex flex-col">
@@ -474,21 +471,21 @@ export default function CustomerDetailPage() {
                                 </a>
                             </div>
                         </div>
-                        
+
                         <div className="flex flex-col">
                             <span className="text-sm text-gray-500 mb-1">Phone</span>
                             <div className="flex items-center">
                                 <Phone className="h-4 w-4 text-gray-400 mr-2" />
                                 {customer.phone ? (
-                                <a href={`tel:${customer.phone}`} className="text-amber-600 hover:underline">
-                                    {customer.phone}
-                                </a>
+                                    <a href={`tel:${customer.phone}`} className="text-amber-600 hover:underline">
+                                        {customer.phone}
+                                    </a>
                                 ) : (
                                     <span className="text-gray-500">Not provided</span>
                                 )}
                             </div>
                         </div>
-                        
+
                         <div className="flex flex-col">
                             <span className="text-sm text-gray-500 mb-1">Location</span>
                             <div className="flex items-center">
@@ -511,34 +508,34 @@ export default function CustomerDetailPage() {
                     </div>
                 </div>
             </div>
-            
+
             {/* Tabs */}
             <div className="bg-white rounded-lg shadow-md mb-6">
                 <div className="border-b">
                     <div className="flex overflow-x-auto">
-                        <Tab 
-                            label="Overview" 
-                            active={activeTab === 'overview'} 
-                            onClick={() => setActiveTab('overview')} 
+                        <Tab
+                            label="Overview"
+                            active={activeTab === 'overview'}
+                            onClick={() => setActiveTab('overview')}
                         />
-                        <Tab 
-                            label="Orders" 
-                            active={activeTab === 'orders'} 
-                            onClick={() => setActiveTab('orders')} 
+                        <Tab
+                            label="Orders"
+                            active={activeTab === 'orders'}
+                            onClick={() => setActiveTab('orders')}
                         />
-                        <Tab 
-                            label="Address" 
-                            active={activeTab === 'address'} 
-                            onClick={() => setActiveTab('address')} 
+                        <Tab
+                            label="Address"
+                            active={activeTab === 'address'}
+                            onClick={() => setActiveTab('address')}
                         />
-                        <Tab 
-                            label="Notes" 
-                            active={activeTab === 'notes'} 
-                            onClick={() => setActiveTab('notes')} 
+                        <Tab
+                            label="Notes"
+                            active={activeTab === 'notes'}
+                            onClick={() => setActiveTab('notes')}
                         />
                     </div>
                 </div>
-                
+
                 <div className="p-6">
                     {/* Overview Tab */}
                     {activeTab === 'overview' && (
@@ -557,21 +554,21 @@ export default function CustomerDetailPage() {
                                         </div>
                                         <div>
                                             <label className="block text-sm text-gray-500 mb-1">Full Name</label>
-                                            <p>{customer.first_name && customer.last_name 
-                                                ? `${customer.first_name} ${customer.last_name}` 
+                                            <p>{customer.first_name && customer.last_name
+                                                ? `${customer.first_name} ${customer.last_name}`
                                                 : 'Not provided'}</p>
-                                            </div>
+                                        </div>
                                         <div>
                                             <label className="block text-sm text-gray-500 mb-1">Email</label>
                                             <p>{customer.email}</p>
-                                            </div>
+                                        </div>
                                         <div>
                                             <label className="block text-sm text-gray-500 mb-1">Phone</label>
                                             <p>{customer.phone || 'Not provided'}</p>
                                         </div>
-                                                </div>
-                                            </div>
-                                
+                                    </div>
+                                </div>
+
                                 <div>
                                     <h3 className="text-lg font-medium mb-4">Address</h3>
                                     {customerAddress ? (
@@ -579,7 +576,7 @@ export default function CustomerDetailPage() {
                                             <p>{customer.address}</p>
                                             <p>{customer.city}, {customer.state} {customer.postal_code}</p>
                                             <p>{customer.country}</p>
-                                            </div>
+                                        </div>
                                     ) : hasAddressesFromTable && addresses[0] ? (
                                         <div className="border rounded-lg p-4">
                                             <p>{addresses[0].street_address}</p>
@@ -589,9 +586,9 @@ export default function CustomerDetailPage() {
                                     ) : (
                                         <p className="text-gray-500">No address information provided</p>
                                     )}
-                                                </div>
-                                            </div>
-                            
+                                </div>
+                            </div>
+
                             <div className="mt-8">
                                 <h3 className="text-lg font-medium mb-4">Recent Orders</h3>
                                 {orders.length > 0 ? (
@@ -635,7 +632,7 @@ export default function CustomerDetailPage() {
                             </div>
                         </motion.div>
                     )}
-                    
+
                     {/* Orders Tab */}
                     {activeTab === 'orders' && (
                         <motion.div
@@ -689,13 +686,12 @@ export default function CustomerDetailPage() {
                                                         ${order.total_amount.toFixed(2)}
                                                     </td>
                                                     <td className="py-4 px-3">
-                                                        <div className={`px-3 py-1 rounded-full text-xs font-medium inline-block ${
-                                                            order.status === 'Delivered' 
-                                                                ? 'bg-green-100 text-green-800' 
-                                                                : order.status === 'Processing'
-                                                                    ? 'bg-blue-100 text-blue-800'
-                                                                    : 'bg-amber-100 text-amber-800'
-                                                        }`}>
+                                                        <div className={`px-3 py-1 rounded-full text-xs font-medium inline-block ${order.status === 'Delivered'
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : order.status === 'Processing'
+                                                                ? 'bg-blue-100 text-blue-800'
+                                                                : 'bg-amber-100 text-amber-800'
+                                                            }`}>
                                                             {order.status}
                                                         </div>
                                                     </td>
@@ -720,7 +716,7 @@ export default function CustomerDetailPage() {
                             )}
                         </motion.div>
                     )}
-                    
+
                     {/* Address Tab */}
                     {activeTab === 'address' && (
                         <motion.div
@@ -740,16 +736,16 @@ export default function CustomerDetailPage() {
                                     Add Address
                                 </motion.button>
                             </div>
-                            
+
                             {hasAddressesFromTable ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {addresses.map((address) => (
                                         <div key={address.address_id} className="border rounded-lg p-6 relative">
                                             <div className="absolute top-4 right-4 flex space-x-2">
                                                 <button className="text-gray-400 hover:text-amber-500">
                                                     <Edit className="h-4 w-4" />
                                                 </button>
-                            </div>
+                                            </div>
                                             <div className="flex items-start mb-4">
                                                 <Home className="h-5 w-5 text-gray-400 mr-3 mt-1" />
                                                 <div>
@@ -764,9 +760,9 @@ export default function CustomerDetailPage() {
                                                 <p>{address.city}, {address.state} {address.postal_code}</p>
                                                 <p>{address.country}</p>
                                             </div>
-                            </div>
-                                ))}
-                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             ) : customerAddress ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="border rounded-lg p-6 relative">
@@ -794,7 +790,7 @@ export default function CustomerDetailPage() {
                                     <MapPin className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                                     <h3 className="text-lg font-medium text-gray-700">No address found</h3>
                                     <p className="text-gray-500 mt-1">This customer hasn&apos;t added any addresses yet</p>
-                                    <button 
+                                    <button
                                         className="mt-4 px-4 py-2 bg-amber-100 rounded-md text-amber-600 hover:bg-amber-200"
                                         onClick={() => showAlert('info', 'Add address functionality would be implemented here', 2000)}
                                     >
@@ -804,7 +800,7 @@ export default function CustomerDetailPage() {
                             )}
                         </motion.div>
                     )}
-                    
+
                     {/* Notes Tab */}
                     {activeTab === 'notes' && (
                         <motion.div
@@ -813,7 +809,7 @@ export default function CustomerDetailPage() {
                             animate="visible"
                         >
                             <h3 className="text-lg font-medium mb-4">Customer Notes</h3>
-                            
+
                             <div className="mb-6">
                                 <div className="flex">
                                     <textarea
@@ -831,12 +827,12 @@ export default function CustomerDetailPage() {
                                     </button>
                                 </div>
                             </div>
-                            
+
                             <div className="text-center py-12">
                                 <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                                 <h3 className="text-lg font-medium text-gray-700">No notes yet</h3>
                                 <p className="text-gray-500 mt-1">Add your first note about this customer</p>
-                                </div>
+                            </div>
                         </motion.div>
                     )}
                 </div>

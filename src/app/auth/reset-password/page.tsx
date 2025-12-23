@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Lock } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/services/supabase';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -18,10 +18,11 @@ export default function ResetPasswordPage() {
   // Check if the user is authenticated with a recovery token
   useEffect(() => {
     const checkSession = async () => {
+      const supabase = await getSupabaseClient();
       // Supabase handles the token through cookies, we just need to check
       // if we're in a recovery flow
       const { data } = await supabase.auth.getSession();
-      
+
       // Check if we have a valid recovery session
       if (data.session) {
         setIsValidReset(true);
@@ -30,7 +31,7 @@ export default function ResetPasswordPage() {
         router.push('/auth/login');
       }
     };
-    
+
     checkSession();
   }, [router]);
 
@@ -47,10 +48,11 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({ 
-        password 
+      const supabase = await getSupabaseClient();
+      const { error } = await supabase.auth.updateUser({
+        password
       });
-      
+
       if (error) {
         throw error;
       }
@@ -78,8 +80,8 @@ export default function ResetPasswordPage() {
               This password reset link is invalid or has expired.
             </p>
             <div className="flex justify-center">
-              <Link 
-                href="/auth/forgot-password" 
+              <Link
+                href="/auth/forgot-password"
                 className="bg-primary text-white px-6 py-3 rounded-md hover:bg-opacity-90 transition-colors"
               >
                 Request New Reset Link
@@ -101,8 +103,8 @@ export default function ResetPasswordPage() {
               Your password has been successfully reset. You can now log in with your new password.
             </p>
             <div className="flex justify-center">
-              <Link 
-                href="/auth/login" 
+              <Link
+                href="/auth/login"
                 className="bg-primary text-white px-6 py-3 rounded-md hover:bg-opacity-90 transition-colors"
               >
                 Go to Login
@@ -122,13 +124,13 @@ export default function ResetPasswordPage() {
           <p className="text-center text-gray-600 mb-6">
             Please enter your new password below.
           </p>
-          
+
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-md mb-6">
               {error}
             </div>
           )}
-          
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="password" className="block text-sm font-medium mb-2">
@@ -153,7 +155,7 @@ export default function ResetPasswordPage() {
                 Password must be at least 8 characters long
               </p>
             </div>
-            
+
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2">
                 Confirm New Password
@@ -173,18 +175,17 @@ export default function ResetPasswordPage() {
                 />
               </div>
             </div>
-            
+
             <button
               type="submit"
               disabled={loading}
-              className={`w-full bg-primary text-white py-3 rounded-md transition-colors ${
-                loading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-opacity-90'
-              }`}
+              className={`w-full bg-primary text-white py-3 rounded-md transition-colors ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-opacity-90'
+                }`}
             >
               {loading ? 'Resetting...' : 'Reset Password'}
             </button>
           </form>
-          
+
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Remember your password?{' '}

@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Search, Bell, Users, ThumbsUp, ShoppingCart, Package, HelpCircle, Loader2 } from 'lucide-react';
-import { useAlert } from '@/lib/context/alert-context';
-import { getDashboardStats, getTopProducts, getReviewStats, getQuarterlySales } from '@/lib/supabase';
+import { useAlert } from '@/providers/alert-provider';
+import { getDashboardStats, getTopProducts, getReviewStats, getQuarterlySales } from '@/services/supabase';
 import React from 'react';
 
 // Define interfaces for the dashboard data
@@ -86,70 +86,70 @@ export default function AdminDashboard() {
         async function fetchDashboardData() {
             setLoading(true);
             setError(null);
-            
+
             try {
                 // Fetch dashboard statistics
                 const { data: statsData, error: statsError } = await getDashboardStats();
-                
+
                 if (statsError) throw statsError;
-                
+
                 if (statsData) {
                     // Format stats for display
                     const formattedStats = [
-                        { 
-                            id: 1, 
-                            icon: <Users className="h-6 w-6 text-white" />, 
-                            count: statsData.activeUsers.toString(), 
-                            label: 'Users Active', 
-                            change: statsData.userGrowthRate, 
-                            bgColor: 'bg-amber-400' 
+                        {
+                            id: 1,
+                            icon: <Users className="h-6 w-6 text-white" />,
+                            count: statsData.activeUsers.toString(),
+                            label: 'Users Active',
+                            change: statsData.userGrowthRate,
+                            bgColor: 'bg-amber-400'
                         },
-                        { 
-                            id: 2, 
-                            icon: <ShoppingCart className="h-6 w-6 text-white" />, 
-                            count: statsData.totalOrders.toString(), 
-                            label: 'Orders', 
-                            change: statsData.orderGrowth, 
-                            bgColor: 'bg-gray-800' 
+                        {
+                            id: 2,
+                            icon: <ShoppingCart className="h-6 w-6 text-white" />,
+                            count: statsData.totalOrders.toString(),
+                            label: 'Orders',
+                            change: statsData.orderGrowth,
+                            bgColor: 'bg-gray-800'
                         },
-                        { 
-                            id: 3, 
-                            icon: <Package className="h-6 w-6 text-white" />, 
-                            count: statsData.totalProducts.toString(), 
-                            label: 'Products', 
-                            change: statsData.productGrowth, 
-                            bgColor: 'bg-gray-800' 
+                        {
+                            id: 3,
+                            icon: <Package className="h-6 w-6 text-white" />,
+                            count: statsData.totalProducts.toString(),
+                            label: 'Products',
+                            change: statsData.productGrowth,
+                            bgColor: 'bg-gray-800'
                         },
-                        { 
-                            id: 4, 
-                            icon: <ThumbsUp className="h-6 w-6 text-white" />, 
-                            count: statsData.totalUsers.toString(), 
-                            label: 'Total Users', 
-                            change: statsData.userGrowthRate, 
-                            bgColor: 'bg-gray-800' 
+                        {
+                            id: 4,
+                            icon: <ThumbsUp className="h-6 w-6 text-white" />,
+                            count: statsData.totalUsers.toString(),
+                            label: 'Total Users',
+                            change: statsData.userGrowthRate,
+                            bgColor: 'bg-gray-800'
                         },
                     ];
                     setStats(formattedStats);
                 }
-                
+
                 // Fetch top products
                 const { data: productsData, error: productsError } = await getTopProducts();
-                
+
                 if (productsError) throw productsError;
                 setProducts(productsData || []);
-                
+
                 // Fetch review stats
                 const { data: reviewsData, error: reviewsError } = await getReviewStats();
-                
+
                 if (reviewsError) throw reviewsError;
                 setReviewData(reviewsData || { positive: 75, neutral: 20, negative: 5 });
-                
+
                 // Fetch quarterly sales data
                 const { data: salesData, error: salesError } = await getQuarterlySales();
-                
+
                 if (salesError) throw salesError;
                 setQuarterlyData(salesData || []);
-                
+
             } catch (err) {
                 console.error('Dashboard data fetch error:', err);
                 setError('Failed to load dashboard data');
@@ -158,7 +158,7 @@ export default function AdminDashboard() {
                 setLoading(false);
             }
         }
-        
+
         fetchDashboardData();
     }, [showAlert]);
 
@@ -231,7 +231,7 @@ export default function AdminDashboard() {
                 <div className="bg-red-50 text-red-600 p-4 rounded-md mb-6">
                     <p className="font-medium">Error</p>
                     <p className="text-sm">{error}</p>
-                    <button 
+                    <button
                         className="mt-2 text-sm bg-red-100 px-3 py-1 rounded-md hover:bg-red-200"
                         onClick={() => window.location.reload()}
                     >
@@ -279,49 +279,49 @@ export default function AdminDashboard() {
                             No products found.
                         </div>
                     ) : (
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full">
-                            <thead>
-                                <tr className="border-b">
-                                    <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">#</th>
-                                    <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">NAME</th>
-                                    <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">CATEGORY</th>
-                                    <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">PRICE</th>
-                                    <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">STATUS</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {products.map((product, index) => (
-                                    <motion.tr
-                                        key={product.id}
-                                        custom={index}
-                                        initial="hidden"
-                                        animate="visible"
-                                        variants={tableRowVariants}
-                                        className="border-b"
-                                    >
-                                        <td className="py-3 px-4 text-sm">{String(product.id).padStart(2, '0')}</td>
-                                        <td className="py-3 px-4 text-sm">{product.name}</td>
-                                        <td className="py-3 px-4 text-sm">{product.category}</td>
-                                        <td className="py-3 px-4 text-sm">{product.price}</td>
-                                        <td className="py-3 px-4">
-                                            {product.status === 'active' ? (
-                                                <div className="flex items-center">
-                                                    <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center">
-                                                        <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                        </svg>
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full">
+                                <thead>
+                                    <tr className="border-b">
+                                        <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">#</th>
+                                        <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">NAME</th>
+                                        <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">CATEGORY</th>
+                                        <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">PRICE</th>
+                                        <th className="py-2 px-4 text-left text-sm font-medium text-gray-500">STATUS</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {products.map((product, index) => (
+                                        <motion.tr
+                                            key={product.id}
+                                            custom={index}
+                                            initial="hidden"
+                                            animate="visible"
+                                            variants={tableRowVariants}
+                                            className="border-b"
+                                        >
+                                            <td className="py-3 px-4 text-sm">{String(product.id).padStart(2, '0')}</td>
+                                            <td className="py-3 px-4 text-sm">{product.name}</td>
+                                            <td className="py-3 px-4 text-sm">{product.category}</td>
+                                            <td className="py-3 px-4 text-sm">{product.price}</td>
+                                            <td className="py-3 px-4">
+                                                {product.status === 'active' ? (
+                                                    <div className="flex items-center">
+                                                        <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center">
+                                                            <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ) : (
-                                                <div className="h-5 w-5 rounded-full bg-red-500"></div>
-                                            )}
-                                        </td>
-                                    </motion.tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                                ) : (
+                                                    <div className="h-5 w-5 rounded-full bg-red-500"></div>
+                                                )}
+                                            </td>
+                                        </motion.tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
                 </motion.div>
 
@@ -408,27 +408,27 @@ export default function AdminDashboard() {
                         No quarterly data available.
                     </div>
                 ) : (
-                <div className="flex justify-between h-64">
-                    {quarterlyData.map((data, index) => (
-                        <div key={index} className="flex flex-col items-center justify-end h-full w-1/4">
-                            <div className="flex space-x-4 h-5/6">
-                                <motion.div
-                                    className="w-8 bg-red-400 rounded-t-md"
-                                    initial={{ height: 0 }}
-                                    animate={{ height: `${data.target}%` }}
-                                    transition={{ duration: 1, delay: 0.1 * index }}
-                                ></motion.div>
-                                <motion.div
-                                    className="w-8 bg-amber-400 rounded-t-md"
-                                    initial={{ height: 0 }}
-                                    animate={{ height: `${data.reality}%` }}
-                                    transition={{ duration: 1, delay: 0.1 * index + 0.2 }}
-                                ></motion.div>
+                    <div className="flex justify-between h-64">
+                        {quarterlyData.map((data, index) => (
+                            <div key={index} className="flex flex-col items-center justify-end h-full w-1/4">
+                                <div className="flex space-x-4 h-5/6">
+                                    <motion.div
+                                        className="w-8 bg-red-400 rounded-t-md"
+                                        initial={{ height: 0 }}
+                                        animate={{ height: `${data.target}%` }}
+                                        transition={{ duration: 1, delay: 0.1 * index }}
+                                    ></motion.div>
+                                    <motion.div
+                                        className="w-8 bg-amber-400 rounded-t-md"
+                                        initial={{ height: 0 }}
+                                        animate={{ height: `${data.reality}%` }}
+                                        transition={{ duration: 1, delay: 0.1 * index + 0.2 }}
+                                    ></motion.div>
+                                </div>
+                                <p className="mt-2 text-sm">{data.quarter}</p>
                             </div>
-                            <p className="mt-2 text-sm">{data.quarter}</p>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
                 )}
 
                 <div className="mt-6 flex justify-around">

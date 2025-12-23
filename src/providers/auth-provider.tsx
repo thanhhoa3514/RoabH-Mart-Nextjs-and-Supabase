@@ -2,22 +2,12 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase, getUserIdByEmail, getUserFullData, updateLastLogin, registerUser } from '@/lib/supabase';
-import { User, AuthError } from '@supabase/supabase-js';
+import { getSupabaseClient, getUserIdByEmail, getUserFullData, updateLastLogin, registerUser } from '@/services/supabase';
+import { User, AuthError, AuthChangeEvent, Session } from '@supabase/supabase-js';
+import { CompleteUserData } from '@/types/user/user.model';
+import toast from 'react-hot-toast';
 
-// Define the type for the complete user data from our database
-interface CompleteUserData {
-    user_id: string;
-    email: string;
-    username: string;
-    role: string;
-    created_at: string;
-    last_login?: string;
-    user_profiles: {
-        full_name?: string;
-        avatar_url?: string;
-    } | null;
-}
+
 
 interface AuthContextType {
     user: User | null;
@@ -27,8 +17,8 @@ interface AuthContextType {
     signUp: (email: string, password: string) => Promise<{ data: { user?: User | null } | null; error: AuthError | null }>;
     signOut: () => Promise<void>;
     refreshUserData: () => Promise<void>;
-    forgotPassword: (email: string) => Promise<any>;
-    changePassword: (password: string) => Promise<any>;
+    forgotPassword: (email: string) => Promise<{ data: object | null; error: AuthError | null }>;
+    changePassword: (password: string) => Promise<{ data: { user: User | null } | null; error: AuthError | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,7 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                     setUserData(data as unknown as CompleteUserData);
                     return;
-                } catch (createError) {
+                } catch {
                     return;
                 }
             }
@@ -96,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
 
             setUserData(data as unknown as CompleteUserData);
-        } catch (error) {
+        } catch {
             // Error handling
         }
     };
@@ -112,6 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Check active session
         const checkSession = async () => {
             try {
+                const supabase = await getSupabaseClient();
                 const { data } = await supabase.auth.getSession();
                 const sessionUser = data.session?.user ?? null;
                 setUser(sessionUser);
@@ -121,61 +112,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
 
                 setLoading(false);
-            } catch (error) {
+            } catch {
                 setLoading(false);
             }
         };
 
         checkSession();
 
+        let authListener: { subscription: { unsubscribe: () => void } } | null = null;
+
         // Listen for auth changes
-        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-            const authUser = session?.user ?? null;
-            setUser(authUser);
+        const setupAuthListener = async () => {
+            const supabase = await getSupabaseClient();
+            const { data } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
+                const authUser = session?.user ?? null;
+                setUser(authUser);
 
-            if (authUser) {
-                // Check if this is a verified user (email confirmed)
-                if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
-                    // Check if user exists in our database
-                    try {
-                        const { userId, error: idError } = await getUserIdByEmail(authUser.email || '');
+                if (authUser) {
+                    // Check if this is a verified user (email confirmed)
+                    if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+                        // Check if user exists in our database
+                        try {
+                            const { userId, error: idError } = await getUserIdByEmail(authUser.email || '');
 
-                        if (!userId && !idError) {
-                            try {
-                                // Create user record and profile
-                                await registerUser({
-                                    email: authUser.email || '',
-                                    username: authUser.email?.split('@')[0] || `user_${Date.now()}`
-                                });
-                            } catch (error) {
-                                // Error handling
+                            if (!userId && !idError) {
+                                try {
+                                    // Create user record and profile
+                                    await registerUser({
+                                        email: authUser.email || '',
+                                        username: authUser.email?.split('@')[0] || `user_${Date.now()}`
+                                    });
+                                } catch {
+                                    // Error handling
+                                }
                             }
+                        } catch {
+                            // Error handling
                         }
-                    } catch (error) {
-                        // Error handling
+
+                        // Fetch user data regardless of whether it's a new or existing user
+                        await fetchUserData(authUser);
                     }
-
-                    // Fetch user data regardless of whether it's a new or existing user
-                    await fetchUserData(authUser);
+                } else {
+                    setUserData(null);
                 }
-            } else {
-                setUserData(null);
-            }
 
-            setLoading(false);
+                setLoading(false);
 
-            // Update the page
-            router.refresh();
-        });
+                // Update the page
+                router.refresh();
+            });
+            authListener = data;
+        };
+
+        setupAuthListener();
 
         return () => {
-            authListener.subscription.unsubscribe();
+            if (authListener) {
+                authListener.subscription.unsubscribe();
+            }
         };
     }, [router]);
 
     // Sign in with email and password
     const signIn = async (email: string, password: string) => {
         try {
+            const supabase = await getSupabaseClient();
             const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
             if (error) {
@@ -199,6 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const redirectUrl = `${redirectBase}/auth/callback`;
 
         try {
+            const supabase = await getSupabaseClient();
             const { data, error } = await supabase.auth.signUp({
                 email,
                 password,
@@ -209,28 +212,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             return { data, error };
         } catch (err) {
-            console.error('Unexpected error during sign up:', err);
+            toast.error('Unexpected error during sign up');
             return { data: null, error: err as AuthError };
         }
     };
 
     // Sign out
     const signOut = async () => {
+        const supabase = await getSupabaseClient();
         await supabase.auth.signOut();
         setUserData(null);
         router.push('/');
+        toast.success('You have been signed out successfully');
     };
 
     // Forgot password
     const forgotPassword = async (email: string) => {
         const origin = typeof window !== 'undefined' ? window.location.origin : '';
+        const supabase = await getSupabaseClient();
         return supabase.auth.resetPasswordForEmail(email, {
             redirectTo: `${origin}/auth/reset-password`,
         });
+        toast.success('Check your email for the reset password link');
     };
 
     // Change password
     const changePassword = async (password: string) => {
+        const supabase = await getSupabaseClient();
         return supabase.auth.updateUser({ password });
     };
 

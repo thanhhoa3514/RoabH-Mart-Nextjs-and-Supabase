@@ -21,12 +21,12 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
-import { useAlert } from '@/lib/context/alert-context';
-import { getOrderById, updateOrderStatus } from '@/lib/supabase';
+import { useAlert } from '@/providers/alert-provider';
+import { getOrderById, updateOrderStatus } from '@/services/supabase';
 
 // Define interfaces for order data
 interface OrderItem {
-    id: number;
+    id: string;
     name: string;
     sku: string;
     price: string;
@@ -64,7 +64,7 @@ interface PaymentDetails {
 }
 
 interface OrderData {
-    id: number;
+    id: string;
     orderNumber: string;
     customer: CustomerInfo;
     date: string;
@@ -112,7 +112,7 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 export default function OrderDetailPage() {
     const params = useParams();
-    const orderId = typeof params.id === 'string' ? parseInt(params.id, 10) : 0;
+    const orderId = typeof params.id === 'string' ? params.id : '';
     const router = useRouter();
     const { showAlert } = useAlert();
     const [isLoading, setIsLoading] = useState(true);
@@ -130,19 +130,19 @@ export default function OrderDetailPage() {
             try {
                 setIsLoading(true);
                 const { data, error } = await getOrderById(orderId);
-                
+
                 if (error) {
                     throw new Error(error.message);
                 }
-                
+
                 if (data) {
                     // Format the order data for display
                     const orderDate = new Date(data.order.order_date);
                     const formattedDate = orderDate.toISOString().split('T')[0];
                     const formattedTime = orderDate.toTimeString().split(' ')[0].substring(0, 5);
-                    
+
                     // Transform order items
-                    const items = data.orderItems ? data.orderItems.map((item: { order_item_id: number; product_id: number; products?: { name: string; image: string }; unit_price: number; quantity: number; subtotal: number; }) => ({
+                    const items = data.orderItems ? data.orderItems.map((item: { order_item_id: string; product_id: string; products?: { name: string; image: string }; unit_price: number; quantity: number; subtotal: number; }) => ({
                         id: item.order_item_id,
                         name: item.products?.name || `Product #${item.product_id}`,
                         sku: `SKU-${item.product_id}`,
@@ -151,7 +151,7 @@ export default function OrderDetailPage() {
                         total: `$${item.subtotal.toFixed(2)}`,
                         image: item.products?.image || '/placeholder.jpg'
                     })) : [];
-                    
+
                     // Create formatted order object
                     const formattedOrder: OrderData = {
                         id: data.order.order_id,
@@ -187,15 +187,15 @@ export default function OrderDetailPage() {
                         total: `$${data.order.total_amount.toFixed(2)}`,
                         notes: '',
                         history: [
-                            { 
-                                date: formattedDate, 
-                                time: formattedTime, 
-                                status: 'Order Placed', 
-                                description: 'Order was placed by customer' 
+                            {
+                                date: formattedDate,
+                                time: formattedTime,
+                                status: 'Order Placed',
+                                description: 'Order was placed by customer'
                             }
                         ]
                     };
-                    
+
                     setOrderData(formattedOrder);
                 }
             } catch (err) {
@@ -205,27 +205,27 @@ export default function OrderDetailPage() {
                 setIsLoading(false);
             }
         };
-        
+
         fetchOrder();
     }, [orderId, showAlert]);
 
     const handleStatusChange = async (newStatus: string) => {
         try {
             setIsStatusDropdownOpen(false);
-            
+
             // Update status in Supabase
             const { error } = await updateOrderStatus(orderId, newStatus.toLowerCase());
-            
+
             if (error) {
                 throw new Error(error.message);
             }
-            
+
             // Update local state
             if (orderData) {
                 const now = new Date();
                 const date = now.toISOString().split('T')[0];
                 const time = now.toTimeString().split(' ')[0].substring(0, 5);
-                
+
                 // Add to history
                 const updatedHistory = [
                     ...orderData.history,
@@ -236,13 +236,13 @@ export default function OrderDetailPage() {
                         description: `Order status changed to ${newStatus}`
                     }
                 ];
-                
+
                 setOrderData({
                     ...orderData,
                     status: newStatus,
                     history: updatedHistory
                 });
-                
+
                 showAlert('success', `Order status updated to ${newStatus}`, 2000);
             }
         } catch (err) {
@@ -267,7 +267,7 @@ export default function OrderDetailPage() {
                 ...orderData,
                 notes: orderNote
             });
-            
+
             showAlert('success', 'Note added to order', 2000);
             setOrderNote('');
             setIsNoteExpanded(false);
@@ -291,11 +291,11 @@ export default function OrderDetailPage() {
                         Back to Orders
                     </Link>
                 </div>
-                
+
                 <div className="bg-white rounded-lg shadow-md p-8 text-center">
                     <h2 className="text-xl font-medium text-gray-900 mb-2">Order not found</h2>
                     <p className="text-gray-500 mb-6">The order you&apos;re looking for doesn&apos;t exist or has been removed.</p>
-                    <button 
+                    <button
                         onClick={() => router.push('/admin/orders')}
                         className="px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600"
                     >

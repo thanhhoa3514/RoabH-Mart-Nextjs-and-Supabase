@@ -3,19 +3,19 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { 
-    ArrowLeft, 
-    CreditCard, 
-    MapPin, 
-    Package, 
-    Truck, 
+import {
+    ArrowLeft,
+    CreditCard,
+    MapPin,
+    Package,
+    Truck,
     ShoppingBag,
     Check,
     Loader2
 } from 'lucide-react';
-import { useAlert } from '@/lib/context/alert-context';
-import { useAuth } from '@/lib/auth/AuthContext';
-import { createOrder } from '@/lib/supabase';
+import { useAlert } from '@/providers/alert-provider';
+import { useAuth } from '@/providers/auth-provider';
+import { createOrder } from '@/services/supabase';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -39,7 +39,7 @@ export default function CheckoutPage() {
     const router = useRouter();
     const { showAlert } = useAlert();
     const { userData } = useAuth();
-    
+
     // Mock cart data - would normally be fetched from the server or state management
     const [cart] = useState({
         items: [
@@ -63,7 +63,7 @@ export default function CheckoutPage() {
         shipping: 15.00,
         total: 1664.97
     });
-    
+
     // Form state
     const [formData, setFormData] = useState({
         // Shipping details
@@ -74,28 +74,28 @@ export default function CheckoutPage() {
         city: '',
         province: '',
         postalCode: '',
-        
+
         // Payment method
         paymentMethod: 'credit-card',
-        
+
         // Credit card details
         cardNumber: '',
         cardName: '',
         expiryDate: '',
         cvv: ''
     });
-    
-    const [errors, setErrors] = useState<{[key: string]: string}>({});
+
+    const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const [isProcessing, setIsProcessing] = useState(false);
     const [currentStep, setCurrentStep] = useState(1); // 1: Shipping, 2: Payment, 3: Confirmation
-    
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData({
             ...formData,
             [name]: value
         });
-        
+
         // Clear errors when field is edited
         if (errors[name]) {
             setErrors({
@@ -104,10 +104,10 @@ export default function CheckoutPage() {
             });
         }
     };
-    
+
     const validateStep1 = () => {
-        const newErrors: {[key: string]: string} = {};
-        
+        const newErrors: { [key: string]: string } = {};
+
         if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
         if (!formData.email.trim()) newErrors.email = 'Email is required';
         if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = 'Invalid email format';
@@ -116,25 +116,25 @@ export default function CheckoutPage() {
         if (!formData.city.trim()) newErrors.city = 'City is required';
         if (!formData.province.trim()) newErrors.province = 'Province is required';
         if (!formData.postalCode.trim()) newErrors.postalCode = 'Postal code is required';
-        
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
-    
+
     const validateStep2 = () => {
-        const newErrors: {[key: string]: string} = {};
-        
+        const newErrors: { [key: string]: string } = {};
+
         if (formData.paymentMethod === 'credit-card') {
             if (!formData.cardNumber.trim()) newErrors.cardNumber = 'Card number is required';
             if (!formData.cardName.trim()) newErrors.cardName = 'Name on card is required';
             if (!formData.expiryDate.trim()) newErrors.expiryDate = 'Expiry date is required';
             if (!formData.cvv.trim()) newErrors.cvv = 'CVV is required';
         }
-        
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
-    
+
     const handleNextStep = () => {
         if (currentStep === 1 && validateStep1()) {
             setCurrentStep(2);
@@ -142,77 +142,76 @@ export default function CheckoutPage() {
             setCurrentStep(3);
         }
     };
-    
+
     const handlePreviousStep = () => {
         if (currentStep > 1) {
             setCurrentStep(currentStep - 1);
         }
     };
-    
+
     const handlePlaceOrder = async () => {
         setIsProcessing(true);
         console.log('Bắt đầu đặt hàng');
-        
+
         try {
             // Lấy user_id từ context auth thay vì hardcode
             let userId;
-            
-            if (userData?.user?.user_id) {
-                userId = userData.user.user_id;
-                console.log('User ID từ auth:', userId);
+
+            if (userData?.user_id) {
+                userId = userData.user_id;
+
             } else {
                 // Fallback nếu không có người dùng đăng nhập
                 userId = 1; // User ID mặc định cho demo
-                console.log('Không tìm thấy user ID từ auth, sử dụng ID mặc định:', userId);
+
             }
-            
+
             // Prepare order data for Supabase
             const orderData = {
                 user_id: userId,
                 total_amount: cart.total,
                 items: cart.items.map(item => ({
-                    product_id: item.id,
+                    product_id: String(item.id),
                     quantity: item.quantity,
-                    unit_price: item.price
+                    unit_price: item.price,
+                    subtotal: item.price * item.quantity
                 })),
-                shipping_info: {
+                shipping: {
                     shipping_method: 'Standard Shipping',
                     shipping_cost: cart.shipping
                 },
-                payment_info: {
-                    payment_method: formData.paymentMethod === 'credit-card' 
+                payment: {
+                    payment_method: formData.paymentMethod === 'credit-card'
                         ? 'Credit Card'
                         : 'Cash on Delivery',
-                    amount: cart.total
+                    amount: cart.total,
+                    status: 'pending'
                 }
             };
-            console.log('Order data:', orderData);
-            
+
+
             // Create order in Supabase
-            console.log('Gọi API createOrder...');
-            const { data, error } = await createOrder(orderData);
-            console.log('Kết quả API:', { data, error });
-            
-            if (error) {
-                throw new Error(error.message || 'Failed to create order');
+            const result = await createOrder(orderData);
+
+            if (result.error) {
+                throw new Error(result.error.message || 'Failed to create order');
             }
-            
+
             // Get the order number to pass to the confirmation page
-            const orderNumber = data?.order?.order_number || '123456';
-            
+            const orderNumber = result.data?.order?.order_number || '123456';
+
             showAlert('success', 'Order placed successfully!', 3000);
-            
+
             // Redirect to order confirmation page with the actual order number
             router.push(`/order-confirmation?id=${orderNumber}`);
-            
-        } catch (error) {
-            console.error('Order placement error:', error);
-            showAlert('error', error instanceof Error ? error.message : 'Failed to process order. Please try again.', 5000);
+
+        } catch {
+            showAlert('error', 'Failed to process order. Please try again.', 5000);
         } finally {
             setIsProcessing(false);
         }
     };
-    
+
     return (
         <div className="bg-gray-50 min-h-screen">
             <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -221,10 +220,10 @@ export default function CheckoutPage() {
                         <ArrowLeft className="h-4 w-4 mr-2" />
                         Back to Cart
                     </Link>
-                    
+
                     <h1 className="text-2xl font-bold mt-4">Checkout</h1>
                 </div>
-                
+
                 {/* Checkout Steps */}
                 <div className="mb-8">
                     <div className="flex items-center justify-center">
@@ -254,7 +253,7 @@ export default function CheckoutPage() {
                         </div>
                     </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                     {/* Main Content */}
                     <div className="md:col-span-2">
@@ -270,7 +269,7 @@ export default function CheckoutPage() {
                                         <MapPin className="h-5 w-5 mr-2 text-amber-500" />
                                         Shipping Information
                                     </h2>
-                                    
+
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <motion.div variants={itemVariants}>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -287,7 +286,7 @@ export default function CheckoutPage() {
                                                 <p className="mt-1 text-sm text-red-500">{errors.fullName}</p>
                                             )}
                                         </motion.div>
-                                        
+
                                         <motion.div variants={itemVariants}>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                                 Email <span className="text-red-500">*</span>
@@ -303,7 +302,7 @@ export default function CheckoutPage() {
                                                 <p className="mt-1 text-sm text-red-500">{errors.email}</p>
                                             )}
                                         </motion.div>
-                                        
+
                                         <motion.div variants={itemVariants}>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                                 Phone <span className="text-red-500">*</span>
@@ -319,7 +318,7 @@ export default function CheckoutPage() {
                                                 <p className="mt-1 text-sm text-red-500">{errors.phone}</p>
                                             )}
                                         </motion.div>
-                                        
+
                                         <motion.div variants={itemVariants} className="md:col-span-2">
                                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                                 Address <span className="text-red-500">*</span>
@@ -335,7 +334,7 @@ export default function CheckoutPage() {
                                                 <p className="mt-1 text-sm text-red-500">{errors.address}</p>
                                             )}
                                         </motion.div>
-                                        
+
                                         <motion.div variants={itemVariants}>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                                 City <span className="text-red-500">*</span>
@@ -351,7 +350,7 @@ export default function CheckoutPage() {
                                                 <p className="mt-1 text-sm text-red-500">{errors.city}</p>
                                             )}
                                         </motion.div>
-                                        
+
                                         <motion.div variants={itemVariants}>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                                 Province <span className="text-red-500">*</span>
@@ -367,7 +366,7 @@ export default function CheckoutPage() {
                                                 <p className="mt-1 text-sm text-red-500">{errors.province}</p>
                                             )}
                                         </motion.div>
-                                        
+
                                         <motion.div variants={itemVariants}>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                                 Postal Code <span className="text-red-500">*</span>
@@ -384,7 +383,7 @@ export default function CheckoutPage() {
                                             )}
                                         </motion.div>
                                     </div>
-                                    
+
                                     <div className="mt-8 flex justify-end">
                                         <motion.button
                                             onClick={handleNextStep}
@@ -397,7 +396,7 @@ export default function CheckoutPage() {
                                     </div>
                                 </motion.div>
                             )}
-                            
+
                             {/* Step 2: Payment Method */}
                             {currentStep === 2 && (
                                 <motion.div
@@ -409,7 +408,7 @@ export default function CheckoutPage() {
                                         <CreditCard className="h-5 w-5 mr-2 text-amber-500" />
                                         Payment Method
                                     </h2>
-                                    
+
                                     <div className="space-y-4">
                                         <motion.div variants={itemVariants}>
                                             <div className="flex items-center mb-4">
@@ -426,7 +425,7 @@ export default function CheckoutPage() {
                                                     Credit Card
                                                 </label>
                                             </div>
-                                            
+
                                             <div className="flex items-center mb-4">
                                                 <input
                                                     id="cash-on-delivery"
@@ -442,7 +441,7 @@ export default function CheckoutPage() {
                                                 </label>
                                             </div>
                                         </motion.div>
-                                        
+
                                         {formData.paymentMethod === 'credit-card' && (
                                             <motion.div
                                                 variants={containerVariants}
@@ -465,7 +464,7 @@ export default function CheckoutPage() {
                                                             <p className="mt-1 text-sm text-red-500">{errors.cardNumber}</p>
                                                         )}
                                                     </motion.div>
-                                                    
+
                                                     <motion.div variants={itemVariants} className="md:col-span-2">
                                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                                             Name on Card <span className="text-red-500">*</span>
@@ -481,7 +480,7 @@ export default function CheckoutPage() {
                                                             <p className="mt-1 text-sm text-red-500">{errors.cardName}</p>
                                                         )}
                                                     </motion.div>
-                                                    
+
                                                     <motion.div variants={itemVariants}>
                                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                                             Expiry Date <span className="text-red-500">*</span>
@@ -498,7 +497,7 @@ export default function CheckoutPage() {
                                                             <p className="mt-1 text-sm text-red-500">{errors.expiryDate}</p>
                                                         )}
                                                     </motion.div>
-                                                    
+
                                                     <motion.div variants={itemVariants}>
                                                         <label className="block text-sm font-medium text-gray-700 mb-1">
                                                             CVV <span className="text-red-500">*</span>
@@ -519,7 +518,7 @@ export default function CheckoutPage() {
                                             </motion.div>
                                         )}
                                     </div>
-                                    
+
                                     <div className="mt-8 flex justify-between">
                                         <motion.button
                                             onClick={handlePreviousStep}
@@ -529,7 +528,7 @@ export default function CheckoutPage() {
                                         >
                                             Back to Shipping
                                         </motion.button>
-                                        
+
                                         <motion.button
                                             onClick={handleNextStep}
                                             whileHover={{ scale: 1.05 }}
@@ -541,7 +540,7 @@ export default function CheckoutPage() {
                                     </div>
                                 </motion.div>
                             )}
-                            
+
                             {/* Step 3: Order Confirmation */}
                             {currentStep === 3 && (
                                 <motion.div
@@ -553,7 +552,7 @@ export default function CheckoutPage() {
                                         <Check className="h-5 w-5 mr-2 text-amber-500" />
                                         Review Your Order
                                     </h2>
-                                    
+
                                     {/* Shipping Information Summary */}
                                     <motion.div variants={itemVariants} className="mb-6">
                                         <h3 className="text-md font-medium mb-2 flex items-center">
@@ -568,7 +567,7 @@ export default function CheckoutPage() {
                                             <p className="text-sm">{formData.city}, {formData.province} {formData.postalCode}</p>
                                         </div>
                                     </motion.div>
-                                    
+
                                     {/* Payment Method Summary */}
                                     <motion.div variants={itemVariants} className="mb-6">
                                         <h3 className="text-md font-medium mb-2 flex items-center">
@@ -587,14 +586,14 @@ export default function CheckoutPage() {
                                             )}
                                         </div>
                                     </motion.div>
-                                    
+
                                     {/* Order Items Summary */}
                                     <motion.div variants={itemVariants} className="mb-6">
                                         <h3 className="text-md font-medium mb-2 flex items-center">
                                             <Package className="h-4 w-4 mr-2 text-gray-500" />
                                             Order Items
                                         </h3>
-                                        
+
                                         <div className="space-y-4">
                                             {cart.items.map(item => (
                                                 <div key={item.id} className="flex items-center border-b pb-4">
@@ -617,7 +616,7 @@ export default function CheckoutPage() {
                                             ))}
                                         </div>
                                     </motion.div>
-                                    
+
                                     <div className="mt-8 flex justify-between">
                                         <motion.button
                                             onClick={handlePreviousStep}
@@ -627,7 +626,7 @@ export default function CheckoutPage() {
                                         >
                                             Back to Payment
                                         </motion.button>
-                                        
+
                                         <motion.button
                                             onClick={handlePlaceOrder}
                                             disabled={isProcessing}
@@ -651,7 +650,7 @@ export default function CheckoutPage() {
                             )}
                         </div>
                     </div>
-                    
+
                     {/* Order Summary */}
                     <div>
                         <div className="bg-white rounded-lg shadow-md p-6 sticky top-6">
@@ -659,7 +658,7 @@ export default function CheckoutPage() {
                                 <ShoppingBag className="h-5 w-5 mr-2 text-amber-500" />
                                 Order Summary
                             </h2>
-                            
+
                             {/* Order Items */}
                             <div className="space-y-3 mb-6">
                                 {cart.items.map(item => (
@@ -672,7 +671,7 @@ export default function CheckoutPage() {
                                     </div>
                                 ))}
                             </div>
-                            
+
                             {/* Order Totals */}
                             <div className="border-t pt-4 space-y-2">
                                 <div className="flex justify-between">
@@ -692,7 +691,7 @@ export default function CheckoutPage() {
                                     <span>${cart.total.toFixed(2)}</span>
                                 </div>
                             </div>
-                            
+
                             {/* Shipping Information */}
                             <div className="mt-6 bg-amber-50 p-4 rounded-md">
                                 <div className="flex items-start">

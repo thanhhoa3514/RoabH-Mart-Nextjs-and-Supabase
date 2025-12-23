@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateOrderStatus, getOrderById } from '@/lib/supabase/orders/orders.model';
+import { updateOrderStatus, getOrderById } from '@/services/supabase';
 
 type Context = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 // Lấy thông tin đơn hàng
@@ -13,8 +13,9 @@ export async function GET(
   context: Context
 ): Promise<NextResponse> {
   try {
-    const orderId = parseInt(context.params.id);
-    
+    const { id } = await context.params;
+    const orderId = parseInt(id);
+
     if (isNaN(orderId)) {
       return NextResponse.json(
         { error: 'Invalid order ID' },
@@ -54,8 +55,9 @@ export async function PATCH(
   context: Context
 ): Promise<NextResponse> {
   try {
-    const orderId = parseInt(context.params.id);
-    
+    const { id } = await context.params;
+    const orderId = parseInt(id);
+
     if (isNaN(orderId)) {
       return NextResponse.json(
         { error: 'Invalid order ID' },
@@ -65,7 +67,7 @@ export async function PATCH(
 
     // Lấy dữ liệu từ request body
     const requestBody = await request.json();
-    
+
     if (!requestBody.status) {
       return NextResponse.json(
         { error: 'Status is required' },

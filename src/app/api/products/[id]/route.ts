@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client/client.model';
-import { updateProduct, getProductById, removeAllProductImages } from '@/lib/supabase/products/products.model';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient, updateProduct, getProductById } from '@/services/supabase';
+import { ProductImage } from '@/types';
 
 type Context = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 export async function DELETE(
@@ -14,8 +13,9 @@ export async function DELETE(
   context: Context
 ): Promise<NextResponse> {
   try {
-    const productId = context.params.id;
-    
+    const { id: productId } = await context.params;
+    const supabase = await getSupabaseClient();
+
     if (!productId) {
       return NextResponse.json(
         { error: 'Product ID is required' },
@@ -25,14 +25,14 @@ export async function DELETE(
 
     // Check if product exists
     const { data: product, error: productError } = await getProductById(productId);
-    
+
     if (productError) {
       return NextResponse.json(
-        { error: `Error checking product: ${productError.message}` },
+        { error: `Error checking product: ${productError.message} ` },
         { status: 500 }
       );
     }
-    
+
     if (!product) {
       return NextResponse.json(
         { error: 'Product not found' },
@@ -45,55 +45,55 @@ export async function DELETE(
       .from('cart_items')
       .delete()
       .eq('product_id', productId);
-      
+
     if (cartItemsError) {
       console.error('Error deleting cart items:', cartItemsError);
       return NextResponse.json(
-        { error: `Failed to delete product from carts: ${cartItemsError.message}` },
+        { error: `Failed to delete product from carts: ${cartItemsError.message} ` },
         { status: 500 }
       );
     }
-    
+
     // Delete related reviews
     const { error: reviewsError } = await supabase
       .from('reviews')
       .delete()
       .eq('product_id', productId);
-      
+
     if (reviewsError) {
       console.error('Error deleting reviews:', reviewsError);
       return NextResponse.json(
-        { error: `Failed to delete product reviews: ${reviewsError.message}` },
+        { error: `Failed to delete product reviews: ${reviewsError.message} ` },
         { status: 500 }
       );
     }
-    
+
     // Check if product is in any orders
     const { data: orderItems, error: orderItemsCheckError } = await supabase
       .from('order_items')
       .select('order_item_id')
       .eq('product_id', productId)
       .limit(1);
-      
+
     if (orderItemsCheckError) {
       console.error('Error checking order items:', orderItemsCheckError);
       return NextResponse.json(
-        { error: `Failed to check if product is in orders: ${orderItemsCheckError.message}` },
+        { error: `Failed to check if product is in orders: ${orderItemsCheckError.message} ` },
         { status: 500 }
       );
     }
-    
+
     // If product is in orders, don't delete it but mark as inactive instead
     if (orderItems && orderItems.length > 0) {
       const { error: updateError } = await updateProduct(productId, { is_active: false });
-      
+
       if (updateError) {
         return NextResponse.json(
-          { error: `Failed to mark product as inactive: ${updateError.message}` },
+          { error: `Failed to mark product as inactive: ${updateError.message} ` },
           { status: 500 }
         );
       }
-      
+
       return NextResponse.json({
         success: true,
         message: 'Product has been marked inactive as it exists in orders',
@@ -102,12 +102,15 @@ export async function DELETE(
     }
 
     // Delete product images
-    const { error: imagesError } = await removeAllProductImages(productId);
+    const { error: imagesError } = await supabase
+      .from('product_images')
+      .delete()
+      .eq('product_id', productId);
 
     if (imagesError) {
       console.error('Error deleting product images:', imagesError);
       return NextResponse.json(
-        { error: `Failed to delete product images: ${imagesError.message}` },
+        { error: `Failed to delete product images: ${imagesError.message} ` },
         { status: 500 }
       );
     }
@@ -120,7 +123,7 @@ export async function DELETE(
 
     if (error) {
       return NextResponse.json(
-        { error: `Failed to delete product: ${error.message}` },
+        { error: `Failed to delete product: ${error.message} ` },
         { status: 500 }
       );
     }
@@ -143,8 +146,8 @@ export async function PUT(
   context: Context
 ): Promise<NextResponse> {
   try {
-    const productId = context.params.id;
-    
+    const { id: productId } = await context.params;
+
     if (!productId) {
       return NextResponse.json(
         { error: 'Product ID is required' },
@@ -194,7 +197,7 @@ export async function PUT(
 
     if (error) {
       return NextResponse.json(
-        { error: `Failed to update product: ${error.message}` },
+        { error: `Failed to update product: ${error.message} ` },
         { status: 500 }
       );
     }
@@ -215,11 +218,12 @@ export async function PUT(
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const productId = params.id;
-    
+    const { id: productId } = await params;
+    const supabase = await getSupabaseClient();
+
     if (!productId) {
       return NextResponse.json(
         { error: 'Product ID is required' },
@@ -227,19 +231,14 @@ export async function GET(
       );
     }
 
-    // Create Supabase client
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
 
     // Get product details
     const { data: product, error: productError } = await supabase
       .from('products')
       .select(`
-        *,
-        product_images (*)
-      `)
+  *,
+  product_images(*)
+    `)
       .eq('product_id', productId)
       .single();
 
@@ -259,7 +258,7 @@ export async function GET(
     }
 
     // Format product for frontend
-    const formattedProduct: any = {
+    const formattedProduct = {
       id: product.product_id,
       product_id: product.product_id,
       name: product.name,
@@ -268,10 +267,12 @@ export async function GET(
       stock: product.stock_quantity,
       stock_quantity: product.stock_quantity,
       discount_percentage: product.discount_percentage || 0,
-      images: product.product_images?.map((img: any) => img.image_url) || [],
+      images: (product.product_images as ProductImage[])?.map((img) => img.image_url) || [],
       category: product.subcategory_id?.toString(),
       createdAt: new Date(product.created_at || Date.now()).toISOString(),
-      updatedAt: new Date(product.updated_at || Date.now()).toISOString()
+      updatedAt: new Date(product.updated_at || Date.now()).toISOString(),
+      rating: 0 as number | undefined,
+      reviews_count: 0 as number | undefined
     };
 
     // Get reviews count and average rating
@@ -281,18 +282,18 @@ export async function GET(
       .eq('product_id', productId);
 
     if (!ratingError && ratingData && ratingData.length > 0) {
-      const ratings = ratingData.map((r: any) => r.rating);
+      const ratings = (ratingData as { rating: number }[]).map((r) => r.rating);
       const averageRating = ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length;
-      
+
       formattedProduct.rating = parseFloat(averageRating.toFixed(1));
       formattedProduct.reviews_count = ratings.length;
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       data: formattedProduct,
       success: true
     });
-    
+
   } catch (error) {
     console.error('Error in product API:', error);
     return NextResponse.json(

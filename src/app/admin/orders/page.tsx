@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Filter, Eye, FileText, Download, Calendar, Clock, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useAlert } from '@/lib/context/alert-context';
-import { getOrders } from '@/lib/supabase';
+import { useAlert } from '@/providers/alert-provider';
+import { getOrders } from '@/services/supabase';
 
 // Define interfaces for order data
 interface Order {
@@ -20,17 +20,6 @@ interface Order {
     items: number;
     paymentMethod: string;
 }
-
-// Animation variants
-const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.05
-        }
-    }
-};
 
 const itemVariants = {
     hidden: { opacity: 0, y: 10 },
@@ -88,7 +77,7 @@ const StatusBadge = ({ status, orderId, onStatusUpdate, isUpdating }: { status: 
 
     return (
         <div className="relative">
-            <span 
+            <span
                 className={`px-3 py-1 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 ${getStatusStyles()} ${isUpdating ? 'opacity-50' : ''}`}
                 onClick={() => !isUpdating && setIsMenuOpen(!isMenuOpen)}
                 title={isUpdating ? "Updating status..." : "Click to change status"}
@@ -102,9 +91,9 @@ const StatusBadge = ({ status, orderId, onStatusUpdate, isUpdating }: { status: 
                     status
                 )}
             </span>
-            
+
             {isMenuOpen && !isUpdating && (
-                <div 
+                <div
                     ref={menuRef}
                     className="absolute left-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10"
                 >
@@ -113,11 +102,10 @@ const StatusBadge = ({ status, orderId, onStatusUpdate, isUpdating }: { status: 
                             <button
                                 key={option.value}
                                 onClick={() => handleStatusChange(option.value)}
-                                className={`block w-full text-left px-4 py-2 text-sm ${
-                                    status.toLowerCase() === option.value 
-                                    ? 'font-bold ' + option.style 
+                                className={`block w-full text-left px-4 py-2 text-sm ${status.toLowerCase() === option.value
+                                    ? 'font-bold ' + option.style
                                     : 'text-gray-700 hover:bg-gray-100'
-                                }`}
+                                    }`}
                                 disabled={isUpdating}
                             >
                                 {option.label}
@@ -150,16 +138,16 @@ export default function OrdersPage() {
     useEffect(() => {
         fetchOrders();
     }, [currentPage]); // eslint-disable-line react-hooks/exhaustive-deps
-    
+
     const fetchOrders = async () => {
         try {
             setLoading(true);
             const { data, error, count } = await getOrders(currentPage, pageSize);
-            
+
             if (error) {
                 throw new Error(error.message);
             }
-            
+
             if (data) {
                 // Transform data to match our UI format
                 const formattedOrders = data.map(order => {
@@ -167,7 +155,7 @@ export default function OrdersPage() {
                     const orderDate = new Date(order.order_date);
                     const formattedDate = orderDate.toISOString().split('T')[0];
                     const formattedTime = orderDate.toTimeString().split(' ')[0].substring(0, 5);
-                    
+
                     return {
                         id: order.order_number,
                         orderId: order.order_id,
@@ -181,7 +169,7 @@ export default function OrdersPage() {
                         paymentMethod: "Credit Card" // This would be populated from payment info in a real app
                     };
                 });
-                
+
                 setOrders(formattedOrders);
                 setTotalOrders(count || 0);
             }
@@ -197,7 +185,7 @@ export default function OrdersPage() {
     const handleUpdateOrderStatus = async (orderId: number, newStatus: string) => {
         try {
             setUpdatingStatus(orderId);
-            
+
             // Gọi API để cập nhật trạng thái đơn hàng
             const response = await fetch(`/api/orders/${orderId}`, {
                 method: 'PATCH',
@@ -206,22 +194,22 @@ export default function OrdersPage() {
                 },
                 body: JSON.stringify({ status: newStatus }),
             });
-            
+
             const result = await response.json();
-            
+
             if (!response.ok) {
                 throw new Error(result.error || 'Failed to update order status');
             }
-            
+
             // Cập nhật trạng thái trong state
-            setOrders(prevOrders => 
-                prevOrders.map(order => 
-                    order.orderId === orderId 
+            setOrders(prevOrders =>
+                prevOrders.map(order =>
+                    order.orderId === orderId
                         ? { ...order, status: newStatus.charAt(0).toUpperCase() + newStatus.slice(1) }
                         : order
                 )
             );
-            
+
             showAlert('success', `Order status updated to ${newStatus}`, 2000);
         } catch (error) {
             console.error('Error updating order status:', error);
@@ -234,12 +222,12 @@ export default function OrdersPage() {
     const handleExportOrders = () => {
         // Simulate processing time
         showAlert('info', 'Preparing orders for export...', 2000);
-        
+
         setTimeout(() => {
             // Create a CSV string with order data
             const headers = ['Order ID', 'Date', 'Customer', 'Total', 'Status'];
             let csvContent = headers.join(',') + '\n';
-            
+
             filteredOrders.forEach(order => {
                 const row = [
                     order.id,
@@ -250,21 +238,21 @@ export default function OrdersPage() {
                 ];
                 csvContent += row.join(',') + '\n';
             });
-            
+
             // Create a Blob and download link
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             const timestamp = new Date().toISOString().split('T')[0];
-            
+
             link.setAttribute('href', url);
             link.setAttribute('download', `orders-export-${timestamp}.csv`);
             link.style.visibility = 'hidden';
-            
+
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             showAlert('success', 'Orders exported successfully as CSV', 2000);
         }, 1000);
     };
@@ -272,19 +260,19 @@ export default function OrdersPage() {
     const handleInvoiceDownload = (orderId: string) => {
         // Simulate processing time
         showAlert('info', `Generating invoice for order ${orderId}...`, 1500);
-        
+
         setTimeout(() => {
             // In a real application, this would generate a PDF invoice
             // Here we'll simulate the process
-            
+
             // Find the order data
             const order = orders.find(o => o.id === orderId);
-            
+
             if (!order) {
                 showAlert('error', `Order ${orderId} not found`, 2000);
                 return;
             }
-            
+
             // Create a simple text representation of an invoice
             const invoiceText = `
 INVOICE
@@ -311,20 +299,20 @@ Shipping Status: ${order.status}
 Thank you for your business!
 ==============================
             `;
-            
+
             // Create a Blob and download link
             const blob = new Blob([invoiceText], { type: 'text/plain;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
-            
+
             link.setAttribute('href', url);
             link.setAttribute('download', `invoice-${orderId}.txt`);
             link.style.visibility = 'hidden';
-            
+
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             showAlert('success', `Invoice for order ${orderId} downloaded`, 2000);
         }, 1000);
     };
@@ -351,12 +339,12 @@ Thank you for your business!
         // Date range filter - simplified for demo
         // In a real app, you would implement proper date filtering
         let matchesDateRange = true;
-        
+
         if (selectedDateRange !== 'All Time') {
             const orderDate = new Date(order.date);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            
+
             if (selectedDateRange === 'Today') {
                 matchesDateRange = orderDate >= today;
             } else if (selectedDateRange === 'Last 7 Days') {
@@ -534,7 +522,7 @@ Thank you for your business!
                 ) : error ? (
                     <div className="text-center py-12">
                         <p className="text-red-500">{error}</p>
-                        <button 
+                        <button
                             onClick={() => window.location.reload()}
                             className="mt-4 text-amber-500 underline"
                         >
@@ -543,110 +531,110 @@ Thank you for your business!
                     </div>
                 ) : (
                     <>
-                {/* Orders Table */}
-                <div className="overflow-x-auto">
-                    <table className="min-w-full">
-                        <thead>
-                            <tr className="bg-gray-50 border-b">
-                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
-                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
-                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sortedOrders.length > 0 ? (
-                                <>
-                                    {sortedOrders.map((order) => (
-                                        <motion.tr
-                                            key={order.id}
-                                            variants={itemVariants}
-                                            initial="hidden"
-                                            animate="visible"
-                                            className="border-b hover:bg-gray-50"
-                                        >
-                                            <td className="py-4 px-4 whitespace-nowrap">
-                                                <div className="font-medium text-gray-900">{order.id}</div>
-                                                <div className="text-xs text-gray-500">{order.items || 'N/A'} items</div>
-                                            </td>
-                                            <td className="py-4 px-4 whitespace-nowrap">
-                                                <div className="font-medium text-gray-900">{order.customer}</div>
-                                                <div className="text-xs text-gray-500">{order.email || 'N/A'}</div>
-                                            </td>
-                                            <td className="py-4 px-4 whitespace-nowrap">
-                                                <div className="flex items-center">
-                                                    <Calendar className="h-4 w-4 text-gray-400 mr-1" />
-                                                    <span className="text-sm text-gray-900">{order.date}</span>
-                                                </div>
-                                                <div className="flex items-center text-xs text-gray-500 mt-1">
-                                                    <Clock className="h-3 w-3 text-gray-400 mr-1" />
-                                                    <span>{order.time}</span>
-                                                </div>
-                                            </td>
-                                            <td className="py-4 px-4 whitespace-nowrap">
-                                                <StatusBadge status={order.status} orderId={order.orderId} onStatusUpdate={(id, newStatus) => {
-                                                    handleUpdateOrderStatus(id, newStatus);
-                                                }} isUpdating={updatingStatus === order.orderId} />
-                                            </td>
-                                            <td className="py-4 px-4 whitespace-nowrap">
-                                                <div className="font-medium text-gray-900">{order.total}</div>
-                                                <div className="text-xs text-gray-500">{order.paymentMethod || 'N/A'}</div>
-                                            </td>
-                                            <td className="py-4 px-4 whitespace-nowrap">
-                                                <div className="flex space-x-2">
-                                                    <Link href={`/admin/orders/${order.orderId}`}>
-                                                        <motion.button
-                                                            whileHover={{ scale: 1.1 }}
-                                                            whileTap={{ scale: 0.9 }}
-                                                            className="p-1 bg-amber-100 rounded text-amber-600"
-                                                            title="View Order"
-                                                        >
-                                                            <Eye className="h-4 w-4" />
-                                                        </motion.button>
-                                                    </Link>
+                        {/* Orders Table */}
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full">
+                                <thead>
+                                    <tr className="bg-gray-50 border-b">
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {sortedOrders.length > 0 ? (
+                                        <>
+                                            {sortedOrders.map((order) => (
+                                                <motion.tr
+                                                    key={order.id}
+                                                    variants={itemVariants}
+                                                    initial="hidden"
+                                                    animate="visible"
+                                                    className="border-b hover:bg-gray-50"
+                                                >
+                                                    <td className="py-4 px-4 whitespace-nowrap">
+                                                        <div className="font-medium text-gray-900">{order.id}</div>
+                                                        <div className="text-xs text-gray-500">{order.items || 'N/A'} items</div>
+                                                    </td>
+                                                    <td className="py-4 px-4 whitespace-nowrap">
+                                                        <div className="font-medium text-gray-900">{order.customer}</div>
+                                                        <div className="text-xs text-gray-500">{order.email || 'N/A'}</div>
+                                                    </td>
+                                                    <td className="py-4 px-4 whitespace-nowrap">
+                                                        <div className="flex items-center">
+                                                            <Calendar className="h-4 w-4 text-gray-400 mr-1" />
+                                                            <span className="text-sm text-gray-900">{order.date}</span>
+                                                        </div>
+                                                        <div className="flex items-center text-xs text-gray-500 mt-1">
+                                                            <Clock className="h-3 w-3 text-gray-400 mr-1" />
+                                                            <span>{order.time}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-4 px-4 whitespace-nowrap">
+                                                        <StatusBadge status={order.status} orderId={order.orderId} onStatusUpdate={(id, newStatus) => {
+                                                            handleUpdateOrderStatus(id, newStatus);
+                                                        }} isUpdating={updatingStatus === order.orderId} />
+                                                    </td>
+                                                    <td className="py-4 px-4 whitespace-nowrap">
+                                                        <div className="font-medium text-gray-900">{order.total}</div>
+                                                        <div className="text-xs text-gray-500">{order.paymentMethod || 'N/A'}</div>
+                                                    </td>
+                                                    <td className="py-4 px-4 whitespace-nowrap">
+                                                        <div className="flex space-x-2">
+                                                            <Link href={`/admin/orders/${order.orderId}`}>
+                                                                <motion.button
+                                                                    whileHover={{ scale: 1.1 }}
+                                                                    whileTap={{ scale: 0.9 }}
+                                                                    className="p-1 bg-amber-100 rounded text-amber-600"
+                                                                    title="View Order"
+                                                                >
+                                                                    <Eye className="h-4 w-4" />
+                                                                </motion.button>
+                                                            </Link>
 
-                                                    <motion.button
-                                                        whileHover={{ scale: 1.1 }}
-                                                        whileTap={{ scale: 0.9 }}
-                                                        className="p-1 bg-gray-100 rounded text-gray-600"
-                                                        title="Download Invoice"
-                                                        onClick={() => handleInvoiceDownload(order.id)}
-                                                    >
-                                                        <FileText className="h-4 w-4" />
-                                                    </motion.button>
-                                                </div>
+                                                            <motion.button
+                                                                whileHover={{ scale: 1.1 }}
+                                                                whileTap={{ scale: 0.9 }}
+                                                                className="p-1 bg-gray-100 rounded text-gray-600"
+                                                                title="Download Invoice"
+                                                                onClick={() => handleInvoiceDownload(order.id)}
+                                                            >
+                                                                <FileText className="h-4 w-4" />
+                                                            </motion.button>
+                                                        </div>
+                                                    </td>
+                                                </motion.tr>
+                                            ))}
+                                        </>
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={6} className="py-8 text-center text-gray-500">
+                                                No orders found matching your criteria
                                             </td>
-                                        </motion.tr>
-                                    ))}
-                                </>
-                            ) : (
-                                <tr>
-                                    <td colSpan={6} className="py-8 text-center text-gray-500">
-                                        No orders found matching your criteria
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
 
                         {/* Pagination */}
-                <div className="mt-6 flex justify-between items-center">
-                    <div className="text-sm text-gray-500">
+                        <div className="mt-6 flex justify-between items-center">
+                            <div className="text-sm text-gray-500">
                                 Showing <span className="font-medium">{sortedOrders.length}</span> of <span className="font-medium">{totalOrders}</span> orders
-                    </div>
+                            </div>
 
-                    <div className="flex space-x-1">
-                                <button 
+                            <div className="flex space-x-1">
+                                <button
                                     className={`px-3 py-1 border rounded-md ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                                     onClick={() => handlePageChange(currentPage - 1)}
                                     disabled={currentPage === 1}
                                 >
-                            Previous
-                        </button>
-                                
+                                    Previous
+                                </button>
+
                                 {Array.from({ length: Math.min(totalPages, 3) }, (_, i) => {
                                     // Show current page and adjacent pages
                                     let pageNum = currentPage;
@@ -659,27 +647,27 @@ Thank you for your business!
                                     } else {
                                         pageNum = currentPage - 1 + i;
                                     }
-                                    
+
                                     return (
-                                        <button 
+                                        <button
                                             key={pageNum}
                                             className={`px-3 py-1 border rounded-md ${currentPage === pageNum ? 'bg-amber-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                                             onClick={() => handlePageChange(pageNum)}
                                         >
                                             {pageNum}
-                        </button>
+                                        </button>
                                     );
                                 })}
-                                
-                                <button 
+
+                                <button
                                     className={`px-3 py-1 border rounded-md ${currentPage === totalPages ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                                     onClick={() => handlePageChange(currentPage + 1)}
                                     disabled={currentPage === totalPages}
                                 >
-                            Next
-                        </button>
-                    </div>
-                </div>
+                                    Next
+                                </button>
+                            </div>
+                        </div>
                     </>
                 )}
             </div>

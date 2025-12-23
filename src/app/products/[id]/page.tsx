@@ -7,52 +7,61 @@ import { Star, Truck, Package, ArrowLeft, Plus, Minus, ShoppingCart } from 'luci
 import ProductReviews from '@/components/products/ProductReviews';
 import RelatedProducts from '@/components/products/RelatedProducts';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
-import AddToCartButton from './AddToCartButton';
-import { useAlert } from '@/lib/context/alert-context';
-import { useCart } from '@/lib/context/cart-context';
+import { useCart } from '@/providers/cart-provider';
+import { useAlert } from '@/providers/alert-provider';
+import { Product } from '@/types/supabase';
+
+interface ExtendedProduct extends Omit<Product, 'images'> {
+  images: string[];
+  category?: string;
+  rating?: number;
+  reviews_count?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export default function ProductPage() {
   const params = useParams();
   const productId = Number(params.id);
   const { showAlert } = useAlert();
   const { addToCart } = useCart();
-  
-  const [product, setProduct] = useState<any>(null);
+
+  const [product, setProduct] = useState<ExtendedProduct | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
-  
+
   useEffect(() => {
     const fetchProduct = async () => {
       try {
         setLoading(true);
         const res = await fetch(`/api/products/${productId}`);
-        
+
         // Check if response is OK
         if (!res.ok) {
           throw new Error(`API returned status ${res.status}`);
         }
-        
+
         // Get response text first to check if it's valid
         const text = await res.text();
-        
+
         // Parse JSON safely
         let data;
         try {
           data = text ? JSON.parse(text) : {};
-        } catch (parseError) {
+        } catch {
           console.error('Invalid JSON response:', text);
           throw new Error('Invalid response format from server');
         }
-        
+
         if (data.error) {
           throw new Error(data.error);
         }
-        
+
         if (!data.data) {
           throw new Error('Product data not found in response');
         }
-        
+
         setProduct(data.data);
         // Set the first image as selected by default
         if (data.data.images && data.data.images.length > 0) {
@@ -65,34 +74,35 @@ export default function ProductPage() {
         setLoading(false);
       }
     };
-    
+
     if (productId) {
       fetchProduct();
     }
   }, [productId, showAlert]);
-  
+
   const handleDecrement = () => {
     if (quantity > 1) {
       setQuantity(quantity - 1);
     }
   };
-  
+
   const handleIncrement = () => {
     if (product && quantity < product.stock_quantity) {
       setQuantity(quantity + 1);
     }
   };
-  
+
   const handleAddToCart = async () => {
+    if (!product) return;
     try {
       await addToCart(product.product_id, quantity);
       showAlert('success', `${quantity} ${product.name} added to your cart`, 2000);
-    } catch (error) {
-      console.error('Error adding to cart:', error);
+    } catch {
+      console.error('Error adding to cart');
       // Alert is already shown by the cart context
     }
   };
-  
+
   if (loading) {
     return (
       <div className="container mx-auto py-8 px-4">
@@ -115,13 +125,13 @@ export default function ProductPage() {
       </div>
     );
   }
-  
+
   if (!product) {
     return (
       <div className="container mx-auto py-8 px-4">
         <div className="text-center py-12">
           <h1 className="text-2xl font-bold mb-4">Product Not Found</h1>
-          <p className="text-gray-600">The product you're looking for doesn't exist or has been removed.</p>
+          <p className="text-gray-600">The product you&apos;re looking for doesn&apos;t exist or has been removed.</p>
           <button
             onClick={() => window.history.back()}
             className="mt-6 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-amber-500 hover:bg-amber-600"
@@ -133,9 +143,11 @@ export default function ProductPage() {
       </div>
     );
   }
-  
+
+  if (!product) return null;
+
   const isOutOfStock = product.stock_quantity <= 0;
-  
+
   return (
     <div className="container mx-auto py-8 px-4">
       <Breadcrumb
@@ -145,7 +157,7 @@ export default function ProductPage() {
           { label: product.name, href: `/products/${product.id}` },
         ]}
       />
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
         {/* Product Images */}
         <div>
@@ -159,7 +171,7 @@ export default function ProductPage() {
               />
             )}
           </div>
-          
+
           {/* Thumbnail Images */}
           <div className="grid grid-cols-5 gap-2">
             {product.images.map((image: string, index: number) => (
@@ -179,11 +191,11 @@ export default function ProductPage() {
             ))}
           </div>
         </div>
-        
+
         {/* Product Details */}
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">{product.name}</h1>
-          
+
           <div className="flex items-center mt-2">
             <div className="flex">
               {[1, 2, 3, 4, 5].map((star) => (
@@ -197,13 +209,13 @@ export default function ProductPage() {
               {product.rating ? `${product.rating.toFixed(1)} (${product.reviews_count || 0} reviews)` : 'No ratings yet'}
             </span>
           </div>
-          
+
           <div className="mt-4">
             <span className="text-2xl font-bold">${product.price.toFixed(2)}</span>
-            {product.discount_percentage > 0 && (
+            {(product.discount_percentage ?? 0) > 0 && (
               <div className="mt-1">
                 <span className="text-gray-500 line-through mr-2">
-                  ${(product.price / (1 - product.discount_percentage / 100)).toFixed(2)}
+                  ${(product.price / (1 - (product.discount_percentage || 0) / 100)).toFixed(2)}
                 </span>
                 <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded-full text-xs font-medium">
                   {product.discount_percentage}% OFF
@@ -211,11 +223,11 @@ export default function ProductPage() {
               </div>
             )}
           </div>
-          
+
           <div className="mt-6">
             <p className="text-gray-600">{product.description}</p>
           </div>
-          
+
           <div className="mt-6 space-y-4">
             <div className="flex items-center text-sm">
               <Truck className="h-5 w-5 text-gray-400 mr-2" />
@@ -226,7 +238,7 @@ export default function ProductPage() {
               <span>Available for immediate shipping</span>
             </div>
           </div>
-          
+
           {isOutOfStock ? (
             <div className="mt-6">
               <div className="bg-red-50 border border-red-200 rounded-md p-4">
@@ -259,7 +271,7 @@ export default function ProductPage() {
                   {product.stock_quantity} available
                 </span>
               </div>
-              
+
               <button
                 onClick={handleAddToCart}
                 className="w-full bg-amber-500 hover:bg-amber-600 text-white py-3 rounded-md flex items-center justify-center transition-colors"
@@ -271,12 +283,12 @@ export default function ProductPage() {
           )}
         </div>
       </div>
-      
+
       {/* Product Reviews */}
       <ProductReviews productId={product.product_id} />
-      
+
       {/* Related Products */}
-      <RelatedProducts 
+      <RelatedProducts
         category={product.category}
         currentProductId={product.product_id}
       />

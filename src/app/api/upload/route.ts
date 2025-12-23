@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client/client.model';
+import { getSupabaseClient } from '@/services/supabase';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {
     try {
+        const supabase = await getSupabaseClient();
         // Chỉ chấp nhận form data
         const formData = await request.formData();
         const file = formData.get('file') as File;
@@ -78,4 +79,4 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
-} 
+}
