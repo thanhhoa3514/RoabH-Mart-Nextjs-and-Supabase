@@ -16,7 +16,7 @@ import {
     X
 } from 'lucide-react';
 import { useAlert } from '@/providers/alert-provider';
-import { getCategoryById, deleteCategory, getSubcategories } from '@/lib/supabase/categories/category.service';
+import { getCategoryById, deleteCategory, getSubcategories } from '@/services/supabase/categories/category.service';
 import { Category, Subcategory } from '@/types';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -51,7 +51,7 @@ export default function CategoryDetailPage() {
     const [error, setError] = useState<string | null>(null);
 
     // Get category ID from URL params
-    const categoryId = typeof params.id === 'string' ? params.id : '';
+    const categoryId = typeof params.id === 'number' ? params.id : 0;
 
     // State for category data
     const [categoryData, setCategoryData] = useState<Category | null>(null);
@@ -110,7 +110,7 @@ export default function CategoryDetailPage() {
     }, [categoryId, showAlert]);
 
     // Fetch subcategories for the category
-    const fetchSubcategories = async (catId: string) => {
+    const fetchSubcategories = async (catId: number) => {
         try {
             setLoadingSubcategories(true);
             const { data, error } = await getSubcategories(catId);

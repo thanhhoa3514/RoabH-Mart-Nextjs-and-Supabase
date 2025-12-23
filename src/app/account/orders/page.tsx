@@ -6,10 +6,9 @@ import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { ShoppingBag, ChevronRight, Package, Clock, Ban } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
-import { getOrdersByUser } from '@/lib/supabase/orders/order.service';
+import { getOrdersByUser } from '@/services/supabase/orders/order.service';
 import { useAlert } from '@/providers/alert-provider';
-import { getUserId } from '@/lib/helpers/user-helpers';
-import { getSupabaseClient } from '@/lib/supabase';
+import { getSupabaseClient } from '@/services/supabase';
 
 // Interface cho dữ liệu đơn hàng
 interface Order {

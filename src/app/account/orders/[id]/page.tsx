@@ -7,9 +7,9 @@ import { useRouter, useParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { ArrowLeft, Package, Truck, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
-import { getOrderById } from '@/lib/supabase';
+import { getOrderById } from '@/services/supabase';
 import { useAlert } from '@/providers/alert-provider';
-import { getUserId } from '@/lib/helpers/user-helpers';
+
 
 // Định nghĩa interface cho dữ liệu đơn hàng
 interface OrderItem {
@@ -74,30 +74,30 @@ interface OrderData {
 
 // Định dạng trạng thái đơn hàng thành tiếng Việt
 const orderStatusMap: Record<string, { text: string; color: string; icon: React.ReactNode }> = {
-  'pending': { 
-    text: 'Chờ xác nhận', 
-    color: 'text-yellow-600 border-yellow-600', 
-    icon: <Package className="w-6 h-6" /> 
+  'pending': {
+    text: 'Chờ xác nhận',
+    color: 'text-yellow-600 border-yellow-600',
+    icon: <Package className="w-6 h-6" />
   },
-  'processing': { 
-    text: 'Đang xử lý', 
-    color: 'text-blue-600 border-blue-600', 
-    icon: <Package className="w-6 h-6" /> 
+  'processing': {
+    text: 'Đang xử lý',
+    color: 'text-blue-600 border-blue-600',
+    icon: <Package className="w-6 h-6" />
   },
-  'shipped': { 
-    text: 'Đang giao hàng', 
-    color: 'text-purple-600 border-purple-600', 
-    icon: <Truck className="w-6 h-6" /> 
+  'shipped': {
+    text: 'Đang giao hàng',
+    color: 'text-purple-600 border-purple-600',
+    icon: <Truck className="w-6 h-6" />
   },
-  'delivered': { 
-    text: 'Đã giao hàng', 
-    color: 'text-green-600 border-green-600', 
-    icon: <CheckCircle2 className="w-6 h-6" /> 
+  'delivered': {
+    text: 'Đã giao hàng',
+    color: 'text-green-600 border-green-600',
+    icon: <CheckCircle2 className="w-6 h-6" />
   },
-  'cancelled': { 
-    text: 'Đã hủy', 
-    color: 'text-red-600 border-red-600', 
-    icon: <Package className="w-6 h-6" /> 
+  'cancelled': {
+    text: 'Đã hủy',
+    color: 'text-red-600 border-red-600',
+    icon: <Package className="w-6 h-6" />
   }
 };
 
@@ -106,7 +106,7 @@ export default function OrderDetailPage() {
   const params = useParams();
   const { showAlert } = useAlert();
   const { user, userData, loading: authLoading } = useAuth();
-  
+
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const orderId = params?.id ? parseInt(params.id as string, 10) : NaN;
@@ -123,7 +123,7 @@ export default function OrderDetailPage() {
   useEffect(() => {
     async function loadOrderDetails() {
       if (authLoading) return;
-      
+
       if (!user || !userData) {
         // Nếu không có người dùng đăng nhập, chuyển hướng về trang đăng nhập
         showAlert('error', 'Vui lòng đăng nhập để xem đơn hàng', 3000);
@@ -133,7 +133,7 @@ export default function OrderDetailPage() {
 
       try {
         setLoading(true);
-        
+
         // Kiểm tra order ID có hợp lệ không
         if (isNaN(orderId)) {
           showAlert('error', 'Mã đơn hàng không hợp lệ', 3000);
@@ -142,28 +142,28 @@ export default function OrderDetailPage() {
         }
 
         const { data, error } = await getOrderById(orderId);
-        
+
         if (error) {
           console.error('Error fetching order details:', error);
           showAlert('error', 'Không thể tải thông tin đơn hàng: ' + error.message, 3000);
           router.push('/account/orders');
           return;
         }
-        
+
         if (!data || !data.order) {
           showAlert('error', 'Không tìm thấy thông tin đơn hàng', 3000);
           router.push('/account/orders');
           return;
         }
-        
+
         // Kiểm tra xem đơn hàng có thuộc về người dùng hiện tại không
-        const userId = getUserId(userData);
-        if (data.order && data.order.user_id !== userId) {
+        const currentUserId = userData.user_id;
+        if (data.order && data.order.user_id !== currentUserId) {
           showAlert('error', 'Bạn không có quyền xem đơn hàng này', 3000);
           router.push('/account/orders');
           return;
         }
-        
+
         // Ép kiểu dữ liệu từ API về đúng kiểu OrderData
         const typedData: OrderData = {
           order: data.order,
@@ -172,7 +172,7 @@ export default function OrderDetailPage() {
           shipping: data.shipping || null,
           user: data.user || null
         };
-        
+
         setOrderData(typedData);
       } catch (error) {
         console.error('Unexpected error:', error);
@@ -248,7 +248,7 @@ export default function OrderDetailPage() {
         </Link>
         <h1 className="text-2xl font-bold">Chi tiết đơn hàng #{order.order_number}</h1>
       </div>
-      
+
       {/* Trạng thái đơn hàng */}
       <div className="bg-white p-6 rounded-lg shadow mb-6">
         <div className="flex items-center justify-between">
@@ -267,7 +267,7 @@ export default function OrderDetailPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Thông tin đơn hàng */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         {/* Cột 1: Thông tin thanh toán */}
@@ -302,7 +302,7 @@ export default function OrderDetailPage() {
             )}
           </div>
         </div>
-        
+
         {/* Cột 2: Thông tin vận chuyển */}
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-4 pb-2 border-b">Thông tin vận chuyển</h2>
@@ -315,9 +315,9 @@ export default function OrderDetailPage() {
               <div>
                 <p className="text-sm text-gray-500">Trạng thái vận chuyển</p>
                 <p className="font-medium">
-                  {shipping.status === 'delivered' ? 'Đã giao hàng' : 
-                   shipping.status === 'shipped' ? 'Đang vận chuyển' : 
-                   shipping.status === 'processing' ? 'Đang xử lý' : 'Chờ xử lý'}
+                  {shipping.status === 'delivered' ? 'Đã giao hàng' :
+                    shipping.status === 'shipped' ? 'Đang vận chuyển' :
+                      shipping.status === 'processing' ? 'Đang xử lý' : 'Chờ xử lý'}
                 </p>
               </div>
               <div>
@@ -335,31 +335,31 @@ export default function OrderDetailPage() {
             <p className="text-gray-500">Không có thông tin vận chuyển</p>
           )}
         </div>
-        
+
         {/* Cột 3: Thông tin khách hàng */}
         <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-4 pb-2 border-b">Thông tin khách hàng</h2>
           <div className="space-y-2">
             <div>
               <p className="text-sm text-gray-500">Họ tên</p>
-              <p className="font-medium">{orderUser?.username || userData?.user?.username || 'Không có thông tin'}</p>
+              <p className="font-medium">{orderUser?.username || userData?.username || 'Không có thông tin'}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Email</p>
-              <p className="font-medium">{orderUser?.email || userData?.user?.email || 'Không có thông tin'}</p>
+              <p className="font-medium">{orderUser?.email || userData?.email || 'Không có thông tin'}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">Số điện thoại</p>
-              <p className="font-medium">{orderUser?.phone || userData?.profile?.phone_number || 'Không có thông tin'}</p>
+              <p className="font-medium">{orderUser?.phone || userData?.user_profiles?.phone_number || 'Không có thông tin'}</p>
             </div>
           </div>
         </div>
       </div>
-      
+
       {/* Danh sách sản phẩm */}
       <div className="bg-white rounded-lg shadow overflow-hidden mb-6">
         <h2 className="text-lg font-semibold p-6 border-b">Sản phẩm đã mua</h2>
-        
+
         {orderItems.length === 0 ? (
           <div className="p-6 text-center">
             <p className="text-gray-500">Không có sản phẩm nào trong đơn hàng này</p>
@@ -406,7 +406,7 @@ export default function OrderDetailPage() {
           </ul>
         )}
       </div>
-      
+
       {/* Nút điều hướng */}
       <div className="flex justify-between">
         <Link
@@ -416,7 +416,7 @@ export default function OrderDetailPage() {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Quay lại danh sách đơn hàng
         </Link>
-        
+
         {order.status === 'pending' && (
           <button
             onClick={() => {
