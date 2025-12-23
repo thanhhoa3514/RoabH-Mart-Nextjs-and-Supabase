@@ -8,16 +8,17 @@ import { Product } from '@/types/supabase';
 export function useCart() {
   const {
     items,
-    addItem,
-    removeItem,
-    updateQuantity,
-    clearCart,
+    addToCart: addToCartContext,
+    removeFromCart: removeFromCartContext,
+    updateQuantity: updateQuantityContext,
+    clearCart: clearCartContext,
     isLoading,
-    subtotal,
+    totalPrice,
+    totalItems,
   } = useCartContext();
 
   const addToCart = useCallback(
-    (product: Product, quantity = 1) => {
+    async (product: Product, quantity = 1) => {
       // Check if product is in stock
       if (product.stock_quantity < quantity) {
         toast.error(`Sorry, only ${product.stock_quantity} items available.`);
@@ -31,42 +32,39 @@ export function useCart() {
         return;
       }
 
-      addItem(product, quantity);
+      await addToCartContext(product.product_id, quantity);
       toast.success(`${product.name} added to cart.`);
     },
-    [items, addItem]
+    [items, addToCartContext]
   );
 
   const removeFromCart = useCallback(
-    (productId: string, productName?: string) => {
-      removeItem(productId);
+    async (cartItemId: number, productName?: string) => {
+      await removeFromCartContext(cartItemId);
       if (productName) {
         toast.success(`${productName} removed from cart.`);
       }
     },
-    [removeItem]
+    [removeFromCartContext]
   );
 
   const updateItemQuantity = useCallback(
-    (productId: string, quantity: number, product?: Product) => {
+    async (cartItemId: number, quantity: number, product?: Product) => {
       // Check stock
       if (product && quantity > product.stock_quantity) {
         toast.error(`Sorry, only ${product.stock_quantity} items available.`);
         return;
       }
 
-      updateQuantity(productId, quantity);
+      await updateQuantityContext(cartItemId, quantity);
     },
-    [updateQuantity]
+    [updateQuantityContext]
   );
 
-  const emptyCart = useCallback(() => {
-    clearCart();
+  const emptyCart = useCallback(async () => {
+    await clearCartContext();
     toast.success('Cart cleared.');
-  }, [clearCart]);
-
-  // Calculate total items in cart
-  const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
+  }, [clearCartContext]);
 
   return {
     items,
@@ -75,7 +73,7 @@ export function useCart() {
     updateItemQuantity,
     emptyCart,
     isLoading,
-    subtotal,
+    subtotal: totalPrice,
     totalItems,
   };
 }

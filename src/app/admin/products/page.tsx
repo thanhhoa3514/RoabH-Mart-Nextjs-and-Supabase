@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Search, Trash2, Eye, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAlert } from '@/providers/alert-provider';
@@ -64,7 +64,7 @@ export default function ProductsPage() {
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
     // Fetch products
-    const fetchProducts = async () => {
+    const fetchProducts = useCallback(async () => {
         setIsLoading(true);
         setError(null);
         try {
@@ -75,11 +75,11 @@ export default function ProductsPage() {
             }
 
             if (data) {
-                setProducts(data);
+                setProducts(data as unknown as Product[]);
 
                 // Extract unique categories
                 const uniqueCategories = Array.from(
-                    new Set(data.map(product =>
+                    new Set((data as unknown as Product[]).map(product =>
                         product.subcategories?.categories?.name || 'Uncategorized'
                     ))
                 );
@@ -91,12 +91,12 @@ export default function ProductsPage() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [showAlert]);
 
     // Load products on component mount
     useEffect(() => {
         fetchProducts();
-    }, []);
+    }, [fetchProducts]);
 
     // Reset to first page when filters change
     useEffect(() => {
@@ -486,8 +486,8 @@ export default function ProductsPage() {
                                 onClick={prevPage}
                                 disabled={currentPage === 1}
                                 className={`mx-1 p-2 rounded-md ${currentPage === 1
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-700 hover:bg-amber-100'
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-700 hover:bg-amber-100'
                                     }`}
                             >
                                 <ChevronLeft className="h-5 w-5" />
@@ -516,8 +516,8 @@ export default function ProductsPage() {
                                             key={idx}
                                             onClick={() => paginate(pageNumber)}
                                             className={`mx-1 w-8 h-8 rounded-md ${currentPage === pageNumber
-                                                    ? 'bg-amber-500 text-white'
-                                                    : 'bg-gray-100 text-gray-700 hover:bg-amber-100'
+                                                ? 'bg-amber-500 text-white'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-amber-100'
                                                 }`}
                                         >
                                             {pageNumber}
@@ -542,8 +542,8 @@ export default function ProductsPage() {
                                 onClick={nextPage}
                                 disabled={currentPage === totalPages}
                                 className={`mx-1 p-2 rounded-md ${currentPage === totalPages
-                                        ? 'text-gray-400 cursor-not-allowed'
-                                        : 'text-gray-700 hover:bg-amber-100'
+                                    ? 'text-gray-400 cursor-not-allowed'
+                                    : 'text-gray-700 hover:bg-amber-100'
                                     }`}
                             >
                                 <ChevronRight className="h-5 w-5" />

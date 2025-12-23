@@ -109,8 +109,7 @@ export default function ReviewForm({ productId, onReviewSubmitted }: ReviewFormP
       // Thông báo cho component cha là đã có review mới
       onReviewSubmitted();
 
-    } catch (err) {
-
+    } catch {
       showAlert('error', 'Có lỗi xảy ra khi gửi đánh giá', 3000);
     } finally {
       setIsSubmitting(false);

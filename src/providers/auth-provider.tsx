@@ -17,8 +17,8 @@ interface AuthContextType {
     signUp: (email: string, password: string) => Promise<{ data: { user?: User | null } | null; error: AuthError | null }>;
     signOut: () => Promise<void>;
     refreshUserData: () => Promise<void>;
-    forgotPassword: (email: string) => Promise<any>;
-    changePassword: (password: string) => Promise<any>;
+    forgotPassword: (email: string) => Promise<{ data: object | null; error: AuthError | null }>;
+    changePassword: (password: string) => Promise<{ data: { user: User | null } | null; error: AuthError | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -70,7 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                     setUserData(data as unknown as CompleteUserData);
                     return;
-                } catch (createError) {
+                } catch {
                     return;
                 }
             }
@@ -86,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
 
             setUserData(data as unknown as CompleteUserData);
-        } catch (error) {
+        } catch {
             // Error handling
         }
     };
@@ -112,14 +112,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
 
                 setLoading(false);
-            } catch (error) {
+            } catch {
                 setLoading(false);
             }
         };
 
         checkSession();
 
-        let authListener: any = null;
+        let authListener: { subscription: { unsubscribe: () => void } } | null = null;
 
         // Listen for auth changes
         const setupAuthListener = async () => {
@@ -142,11 +142,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                         email: authUser.email || '',
                                         username: authUser.email?.split('@')[0] || `user_${Date.now()}`
                                     });
-                                } catch (error) {
+                                } catch {
                                     // Error handling
                                 }
                             }
-                        } catch (error) {
+                        } catch {
                             // Error handling
                         }
 

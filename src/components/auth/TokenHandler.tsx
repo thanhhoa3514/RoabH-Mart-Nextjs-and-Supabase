@@ -71,7 +71,7 @@ export default function TokenHandler() {
           } else {
             showAlert('error', 'Phiên không được thiết lập. Vui lòng thử đăng nhập lại.', 5000);
           }
-        } catch (err) {
+        } catch {
           showAlert('error', 'Đã xảy ra lỗi khi xử lý token xác thực.', 5000);
         }
       }
@@ -104,7 +104,7 @@ export default function TokenHandler() {
             // Tải lại trang để áp dụng phiên mới
             router.refresh();
           }
-        } catch (err) {
+        } catch {
           showAlert('error', 'Đã xảy ra lỗi khi xử lý token xác thực.', 5000);
         }
       }
@@ -118,7 +118,7 @@ export default function TokenHandler() {
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
     };
-  }, [router]);
+  }, [router, showAlert]);
 
   // This component doesn't render anything visible
   return null;

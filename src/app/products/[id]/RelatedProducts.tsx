@@ -19,60 +19,56 @@ export default function RelatedProducts({ category, currentProductId }: RelatedP
         setLoading(true);
 
         // Mock data
-        const mockProducts: Product[] = [
+        const mockProducts = [
             {
-                id: '3',
+                id: 3,
+                product_id: 3,
                 name: 'Smart Watch',
                 description: 'Feature-rich smart watch with health monitoring',
                 price: 199.99,
-                images: ['https://placekitten.com/302/300'],
-                category: 'electronics',
-                stock: 8,
-                createdAt: '2023-03-05',
-                updatedAt: '2023-03-05'
+                images: [],
+                stock_quantity: 8,
+                stock: 8
             },
             {
-                id: '7',
+                id: 7,
+                product_id: 7,
                 name: 'Wireless Headphones',
                 description: 'Over-ear wireless headphones with noise cancellation',
                 price: 149.99,
-                images: ['https://placekitten.com/306/300'],
-                category: 'electronics',
-                stock: 20,
-                createdAt: '2023-03-12',
-                updatedAt: '2023-03-12'
+                images: [],
+                stock_quantity: 20,
+                stock: 20
             },
             {
-                id: '8',
+                id: 8,
+                product_id: 8,
                 name: 'Bluetooth Speaker',
                 description: 'Portable Bluetooth speaker with 20-hour battery life',
                 price: 79.99,
-                images: ['https://placekitten.com/307/300'],
-                category: 'electronics',
-                stock: 25,
-                createdAt: '2023-03-15',
-                updatedAt: '2023-03-15'
+                images: [],
+                stock_quantity: 25,
+                stock: 25
             },
             {
-                id: '9',
+                id: 9,
+                product_id: 9,
                 name: 'Digital Camera',
                 description: 'High-resolution digital camera with 4K video recording',
                 price: 499.99,
-                images: ['https://placekitten.com/308/300'],
-                category: 'electronics',
-                stock: 5,
-                createdAt: '2023-03-18',
-                updatedAt: '2023-03-18'
+                images: [],
+                stock_quantity: 5,
+                stock: 5
             },
         ];
 
         // Filter by category and exclude current product
         const filteredProducts = mockProducts
-            .filter(product => product.category === category && product.id !== currentProductId)
+            .filter(product => product.id !== Number(currentProductId))
             .slice(0, 4); // Limit to 4 products
 
         setTimeout(() => {
-            setProducts(filteredProducts);
+            setProducts(filteredProducts as unknown as Product[]);
             setLoading(false);
         }, 500);
     }, [category, currentProductId]);

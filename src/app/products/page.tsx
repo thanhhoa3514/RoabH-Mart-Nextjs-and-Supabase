@@ -4,17 +4,17 @@ import ProductFilters from './ProductFilters';
 import { getProducts } from '@/services/supabase';
 
 interface ProductsPageProps {
-  searchParams: {
+  searchParams: Promise<{
     categoryId?: string;
     subcategoryId?: string;
     search?: string;
     sort?: string;
     page?: string;
-  };
+  }>;
 }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
-  const { categoryId, subcategoryId, search, sort = 'newest', page = '1' } = searchParams;
+  const { categoryId, subcategoryId, search, sort = 'newest', page = '1' } = await searchParams;
 
   // Prefetch initial data to hydrate page - this improves SEO and initial load time
   const productsResult = await getProducts({

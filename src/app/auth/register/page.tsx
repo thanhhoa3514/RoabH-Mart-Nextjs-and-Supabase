@@ -69,7 +69,7 @@ export default function RegisterPage() {
           const { error } = await registerUser({
             email: data.user.email || '',
             username: (data.user.email || '').split('@')[0],
-            fullName: fullName // Giữ lại fullName để tạo profile
+            full_name: fullName // Giữ lại fullName để tạo profile
           });
 
           if (error) {

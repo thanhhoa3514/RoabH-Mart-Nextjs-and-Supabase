@@ -7,9 +7,18 @@ import { Star, Truck, Package, ArrowLeft, Plus, Minus, ShoppingCart } from 'luci
 import ProductReviews from '@/components/products/ProductReviews';
 import RelatedProducts from '@/components/products/RelatedProducts';
 import { Breadcrumb } from '@/components/ui/breadcrumb';
-import AddToCartButton from './AddToCartButton';
 import { useCart } from '@/providers/cart-provider';
 import { useAlert } from '@/providers/alert-provider';
+import { Product } from '@/types/supabase';
+
+interface ExtendedProduct extends Omit<Product, 'images'> {
+  images: string[];
+  category?: string;
+  rating?: number;
+  reviews_count?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export default function ProductPage() {
   const params = useParams();
@@ -17,7 +26,7 @@ export default function ProductPage() {
   const { showAlert } = useAlert();
   const { addToCart } = useCart();
 
-  const [product, setProduct] = useState<any>(null);
+  const [product, setProduct] = useState<ExtendedProduct | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -40,7 +49,7 @@ export default function ProductPage() {
         let data;
         try {
           data = text ? JSON.parse(text) : {};
-        } catch (parseError) {
+        } catch {
           console.error('Invalid JSON response:', text);
           throw new Error('Invalid response format from server');
         }
@@ -84,11 +93,12 @@ export default function ProductPage() {
   };
 
   const handleAddToCart = async () => {
+    if (!product) return;
     try {
       await addToCart(product.product_id, quantity);
       showAlert('success', `${quantity} ${product.name} added to your cart`, 2000);
-    } catch (error) {
-      console.error('Error adding to cart:', error);
+    } catch {
+      console.error('Error adding to cart');
       // Alert is already shown by the cart context
     }
   };
@@ -121,7 +131,7 @@ export default function ProductPage() {
       <div className="container mx-auto py-8 px-4">
         <div className="text-center py-12">
           <h1 className="text-2xl font-bold mb-4">Product Not Found</h1>
-          <p className="text-gray-600">The product you're looking for doesn't exist or has been removed.</p>
+          <p className="text-gray-600">The product you&apos;re looking for doesn&apos;t exist or has been removed.</p>
           <button
             onClick={() => window.history.back()}
             className="mt-6 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-amber-500 hover:bg-amber-600"
@@ -133,6 +143,8 @@ export default function ProductPage() {
       </div>
     );
   }
+
+  if (!product) return null;
 
   const isOutOfStock = product.stock_quantity <= 0;
 
@@ -200,10 +212,10 @@ export default function ProductPage() {
 
           <div className="mt-4">
             <span className="text-2xl font-bold">${product.price.toFixed(2)}</span>
-            {product.discount_percentage > 0 && (
+            {(product.discount_percentage ?? 0) > 0 && (
               <div className="mt-1">
                 <span className="text-gray-500 line-through mr-2">
-                  ${(product.price / (1 - product.discount_percentage / 100)).toFixed(2)}
+                  ${(product.price / (1 - (product.discount_percentage || 0) / 100)).toFixed(2)}
                 </span>
                 <span className="bg-amber-100 text-amber-800 px-2 py-1 rounded-full text-xs font-medium">
                   {product.discount_percentage}% OFF

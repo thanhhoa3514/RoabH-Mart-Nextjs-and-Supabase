@@ -21,17 +21,6 @@ interface Order {
     paymentMethod: string;
 }
 
-// Animation variants
-const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.05
-        }
-    }
-};
-
 const itemVariants = {
     hidden: { opacity: 0, y: 10 },
     visible: { opacity: 1, y: 0 }
@@ -114,8 +103,8 @@ const StatusBadge = ({ status, orderId, onStatusUpdate, isUpdating }: { status: 
                                 key={option.value}
                                 onClick={() => handleStatusChange(option.value)}
                                 className={`block w-full text-left px-4 py-2 text-sm ${status.toLowerCase() === option.value
-                                        ? 'font-bold ' + option.style
-                                        : 'text-gray-700 hover:bg-gray-100'
+                                    ? 'font-bold ' + option.style
+                                    : 'text-gray-700 hover:bg-gray-100'
                                     }`}
                                 disabled={isUpdating}
                             >

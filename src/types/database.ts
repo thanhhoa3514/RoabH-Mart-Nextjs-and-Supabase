@@ -489,7 +489,7 @@ export type Database = {
         };
       };
     };
-    Functions: {};
-    Enums: {};
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
   };
 }; 

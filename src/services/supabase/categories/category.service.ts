@@ -1,4 +1,10 @@
 import { getSupabaseClient } from '../client.factory';
+import {
+    CreateCategoryDTO,
+    UpdateCategoryDTO,
+    CreateSubcategoryDTO,
+    UpdateSubcategoryDTO
+} from '@/types/category';
 
 export const getCategories = async () => {
     const supabase = await getSupabaseClient();
@@ -6,7 +12,17 @@ export const getCategories = async () => {
         .from('categories')
         .select('*')
         .eq('is_active', true)
-        .order('name');
+        .order('display_order', { ascending: true });
+};
+
+export const getCategoriesWithImages = async () => {
+    const supabase = await getSupabaseClient();
+    return supabase
+        .from('categories')
+        .select('*')
+        .eq('is_active', true)
+        .not('image', 'is', null)
+        .order('display_order', { ascending: true });
 };
 
 export const getCategoryById = async (id: number) => {
@@ -16,6 +32,23 @@ export const getCategoryById = async (id: number) => {
         .select('*')
         .eq('category_id', id)
         .single();
+};
+
+export const createCategory = async (categoryData: CreateCategoryDTO) => {
+    const supabase = await getSupabaseClient();
+    return supabase
+        .from('categories')
+        .insert([categoryData])
+        .select();
+};
+
+export const updateCategory = async (id: number, categoryData: UpdateCategoryDTO) => {
+    const supabase = await getSupabaseClient();
+    return supabase
+        .from('categories')
+        .update(categoryData)
+        .eq('category_id', id)
+        .select();
 };
 
 export const deleteCategory = async (id: number) => {
@@ -49,7 +82,7 @@ export const getSubcategoryById = async (id: number) => {
         .single();
 };
 
-export const createSubcategory = async (subcategoryData: any) => {
+export const createSubcategory = async (subcategoryData: CreateSubcategoryDTO) => {
     const supabase = await getSupabaseClient();
     return supabase
         .from('subcategories')
@@ -57,7 +90,7 @@ export const createSubcategory = async (subcategoryData: any) => {
         .select();
 };
 
-export const updateSubcategory = async (id: number, subcategoryData: any) => {
+export const updateSubcategory = async (id: number, subcategoryData: UpdateSubcategoryDTO) => {
     const supabase = await getSupabaseClient();
     return supabase
         .from('subcategories')

@@ -157,13 +157,13 @@ export default function CheckoutPage() {
             // Lấy user_id từ context auth thay vì hardcode
             let userId;
 
-            if (userData?.user?.user_id) {
-                userId = userData.user.user_id;
-                console.log('User ID từ auth:', userId);
+            if (userData?.user_id) {
+                userId = userData.user_id;
+
             } else {
                 // Fallback nếu không có người dùng đăng nhập
                 userId = 1; // User ID mặc định cho demo
-                console.log('Không tìm thấy user ID từ auth, sử dụng ID mặc định:', userId);
+
             }
 
             // Prepare order data for Supabase
@@ -171,43 +171,42 @@ export default function CheckoutPage() {
                 user_id: userId,
                 total_amount: cart.total,
                 items: cart.items.map(item => ({
-                    product_id: item.id,
+                    product_id: String(item.id),
                     quantity: item.quantity,
-                    unit_price: item.price
+                    unit_price: item.price,
+                    subtotal: item.price * item.quantity
                 })),
-                shipping_info: {
+                shipping: {
                     shipping_method: 'Standard Shipping',
                     shipping_cost: cart.shipping
                 },
-                payment_info: {
+                payment: {
                     payment_method: formData.paymentMethod === 'credit-card'
                         ? 'Credit Card'
                         : 'Cash on Delivery',
-                    amount: cart.total
+                    amount: cart.total,
+                    status: 'pending'
                 }
             };
-            console.log('Order data:', orderData);
+
 
             // Create order in Supabase
-            console.log('Gọi API createOrder...');
-            const { data, error } = await createOrder(orderData);
-            console.log('Kết quả API:', { data, error });
+            const result = await createOrder(orderData);
 
-            if (error) {
-                throw new Error(error.message || 'Failed to create order');
+            if (result.error) {
+                throw new Error(result.error.message || 'Failed to create order');
             }
 
             // Get the order number to pass to the confirmation page
-            const orderNumber = data?.order?.order_number || '123456';
+            const orderNumber = result.data?.order?.order_number || '123456';
 
             showAlert('success', 'Order placed successfully!', 3000);
 
             // Redirect to order confirmation page with the actual order number
             router.push(`/order-confirmation?id=${orderNumber}`);
 
-        } catch (error) {
-            console.error('Order placement error:', error);
-            showAlert('error', error instanceof Error ? error.message : 'Failed to process order. Please try again.', 5000);
+        } catch {
+            showAlert('error', 'Failed to process order. Please try again.', 5000);
         } finally {
             setIsProcessing(false);
         }

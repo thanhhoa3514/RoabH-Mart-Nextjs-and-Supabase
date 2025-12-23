@@ -53,7 +53,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
         try {
           errorData = JSON.parse(errorText);
-        } catch (e) {
+        } catch {
           console.error('Failed to parse error response:', errorText);
           throw new Error('Failed to fetch cart');
         }
@@ -66,7 +66,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       try {
         data = responseText ? JSON.parse(responseText) : {};
-      } catch (e) {
+      } catch {
         console.error('Failed to parse cart response:', responseText);
         throw new Error('Invalid cart data received');
       }
@@ -103,7 +103,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
         try {
           errorData = JSON.parse(errorText);
-        } catch (e) {
+        } catch {
           throw new Error(`Failed to add to cart: ${response.status} ${response.statusText}`);
         }
 
@@ -132,7 +132,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
         try {
           errorData = JSON.parse(errorText);
-        } catch (e) {
+        } catch {
           throw new Error('Failed to remove from cart');
         }
 
@@ -167,7 +167,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
         try {
           errorData = JSON.parse(errorText);
-        } catch (e) {
+        } catch {
           throw new Error('Failed to update quantity');
         }
 
@@ -196,7 +196,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
         try {
           errorData = JSON.parse(errorText);
-        } catch (e) {
+        } catch {
           throw new Error('Failed to clear cart');
         }
 

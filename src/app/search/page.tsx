@@ -5,16 +5,16 @@ import { Suspense } from 'react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 interface SearchPageProps {
-  searchParams: {
+  searchParams: Promise<{
     q?: string;
-  };
+  }>;
 }
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
-  const query = searchParams.q || '';
+  const { q: query = '' } = await searchParams;
 
   // Fetch products based on search query
-  const { data: products, error } = await getProducts(undefined, query);
+  const { data: products, error } = await getProducts({ search: query });
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -51,4 +51,4 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       </div>
     </div>
   );
-} 
+}
