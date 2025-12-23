@@ -34,6 +34,21 @@ export const createOrder = async (orderData: {
 };
 
 /**
+ * Get all orders with pagination (Admin)
+ */
+export const getOrders = async (page = 1, pageSize = 10) => {
+    const supabase = await getSupabaseClient();
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    return supabase
+        .from('orders')
+        .select('*', { count: 'exact' })
+        .order('order_date', { ascending: false })
+        .range(from, to);
+};
+
+/**
  * Get all orders for a user with related information
  */
 export const getOrdersByUser = async (userId: string | number) => {
@@ -55,16 +70,38 @@ export const getOrdersByUser = async (userId: string | number) => {
  */
 export const getOrderById = async (orderId: string | number) => {
     const supabase = await getSupabaseClient();
-    return supabase
+    const { data: order, error: orderError } = await supabase
         .from('orders')
         .select(`
-      *,
-      order_items(*, product:products(*)),
-      shipping_info(*),
-      payments(*)
-    `)
+            *,
+            order_items(*, products(*)),
+            shipping_info(*),
+            payments(*)
+        `)
         .eq('order_id', orderId)
         .single();
+
+    if (orderError || !order) {
+        return { data: null, error: orderError || { message: 'Order not found' } };
+    }
+
+    // Get user profile for the order
+    const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', order.user_id)
+        .single();
+
+    return {
+        data: {
+            order: order,
+            user: userProfile,
+            orderItems: order.order_items,
+            payment: order.payments?.[0] || null,
+            shipping: order.shipping_info?.[0] || null
+        },
+        error: null
+    };
 };
 
 /**
