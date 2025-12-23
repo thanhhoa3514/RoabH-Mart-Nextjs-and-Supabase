@@ -1,5 +1,11 @@
 import { getSupabaseClient } from '../client.factory';
-import { Product } from '@/types/supabase';
+import { Product, ProductImage } from '@/types/supabase';
+import {
+    CreateProductDTO,
+    UpdateProductDTO,
+    CreateProductImageDTO,
+    CreateProductReviewDTO
+} from '@/types/product/product.dto';
 
 // --- Query Functions ---
 
@@ -51,7 +57,7 @@ export const getProducts = async (options: {
     const { data, error, count } = await query;
 
     return {
-        data: (data as any[])?.map(p => ({
+        data: (data as (Product & { product_images: ProductImage[] })[])?.map(p => ({
             ...p,
             images: p.product_images || []
         })) || [],
@@ -82,7 +88,7 @@ export const getProductById = async (productId: string) => {
     return {
         data: {
             ...product,
-            images: (product.product_images as any[])?.sort((a, b) =>
+            images: (product.product_images as ProductImage[])?.sort((a, b) =>
                 (a.is_primary === b.is_primary ? 0 : a.is_primary ? -1 : 1) || a.display_order - b.display_order
             ) || []
         },
@@ -120,7 +126,7 @@ export const getProductBySlug = async (slug: string) => {
     return {
         data: {
             ...product,
-            images: (product.product_images as any[])?.sort((a, b) =>
+            images: (product.product_images as ProductImage[])?.sort((a, b) =>
                 (a.is_primary === b.is_primary ? 0 : a.is_primary ? -1 : 1) || a.display_order - b.display_order
             ) || []
         },
@@ -130,12 +136,12 @@ export const getProductBySlug = async (slug: string) => {
 
 // --- Mutation Functions ---
 
-export const createProduct = async (productData: any) => {
+export const createProduct = async (productData: CreateProductDTO) => {
     const supabase = await getSupabaseClient();
     return supabase.from('products').insert(productData).select().single();
 };
 
-export const updateProduct = async (productId: string, productData: any) => {
+export const updateProduct = async (productId: string, productData: UpdateProductDTO) => {
     const supabase = await getSupabaseClient();
     return supabase.from('products').update(productData).eq('product_id', productId).select().single();
 };
@@ -147,7 +153,7 @@ export const deleteProduct = async (productId: string) => {
 
 // --- Review Functions ---
 
-export const addProductImage = async (imageData: any) => {
+export const addProductImage = async (imageData: CreateProductImageDTO) => {
     const supabase = await getSupabaseClient();
     return supabase
         .from('product_images')
@@ -156,13 +162,25 @@ export const addProductImage = async (imageData: any) => {
         .single();
 };
 
-export const createProductReview = async (reviewData: {
-    product_id: string;
-    user_id: string;
-    rating: number;
-    comment?: string;
-    is_verified_purchase: boolean;
-}) => {
+export const setImageAsPrimary = async (productId: string | number, imageId: string | number) => {
+    const supabase = await getSupabaseClient();
+
+    // 1. Set all images for this product to not primary
+    await supabase
+        .from('product_images')
+        .update({ is_primary: false })
+        .eq('product_id', productId);
+
+    // 2. Set the specific image to primary
+    return supabase
+        .from('product_images')
+        .update({ is_primary: true })
+        .eq('image_id', imageId)
+        .select()
+        .single();
+};
+
+export const createProductReview = async (reviewData: CreateProductReviewDTO) => {
     const supabase = await getSupabaseClient();
     return supabase.from('reviews').insert({
         ...reviewData,

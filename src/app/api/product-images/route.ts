@@ -15,11 +15,11 @@ export async function POST(request: NextRequest) {
         }
 
         // Add image to product in database
-        const { error } = await addProductImage(
-            data.product_id,
-            data.image_url,
-            data.is_primary || false
-        );
+        const { error } = await addProductImage({
+            product_id: data.product_id,
+            image_url: data.image_url,
+            is_primary: data.is_primary || false
+        });
 
         if (error) {
             console.error('Error adding product image:', error);
