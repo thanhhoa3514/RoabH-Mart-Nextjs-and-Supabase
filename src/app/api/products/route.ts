@@ -1,6 +1,6 @@
-import { addProductImage } from '@/lib/supabase/products/product.service';
+import { addProductImage } from '@/services/supabase/products/product.service';
 import { NextRequest, NextResponse } from 'next/server';
-import { getProducts, createProduct } from '@/lib/supabase';
+import { getProducts, createProduct } from '@/services/supabase';
 
 export async function GET(request: NextRequest) {
   try {

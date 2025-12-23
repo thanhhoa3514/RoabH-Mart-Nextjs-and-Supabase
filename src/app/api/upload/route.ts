@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient } from '@/lib/supabase';
+import { getSupabaseClient } from '@/services/supabase';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {
