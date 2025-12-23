@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Upload, X, Check, Loader2 } from 'lucide-react';
 import { useAlert } from '@/providers/alert-provider';
-import { createCategory } from '@/lib/supabase';
+import { createCategory } from '@/services/supabase';
 
 import Image from 'next/image';
 
@@ -13,7 +13,7 @@ export default function AddCategoryPage() {
     const router = useRouter();
     const { showAlert } = useAlert();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    
+
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -21,20 +21,20 @@ export default function AddCategoryPage() {
         is_active: true,
         image: null as string | null
     });
-    
+
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
-    const [errors, setErrors] = useState<{[key: string]: string}>({});
+    const [errors, setErrors] = useState<{ [key: string]: string }>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData({
             ...formData,
             [name]: name === 'display_order' ? parseInt(value, 10) || 0 : value
         });
-        
+
         // Clear error when field is edited
         if (errors[name]) {
             setErrors({
@@ -43,7 +43,7 @@ export default function AddCategoryPage() {
             });
         }
     };
-    
+
     const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, checked } = e.target;
         setFormData({
@@ -51,11 +51,11 @@ export default function AddCategoryPage() {
             [name]: checked
         });
     };
-    
+
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        
+
         // Validate file type
         if (!file.type.match(/image\/(jpeg|jpg|png|webp)/i)) {
             setErrors({
@@ -64,7 +64,7 @@ export default function AddCategoryPage() {
             });
             return;
         }
-        
+
         // Validate file size (max 2MB)
         if (file.size > 2 * 1024 * 1024) {
             setErrors({
@@ -73,14 +73,14 @@ export default function AddCategoryPage() {
             });
             return;
         }
-        
+
         // Show image preview
         const reader = new FileReader();
         reader.onloadend = () => {
             setImagePreview(reader.result as string);
         };
         reader.readAsDataURL(file);
-        
+
         // Clear error if exists
         if (errors.image) {
             setErrors({
@@ -88,37 +88,37 @@ export default function AddCategoryPage() {
                 image: ''
             });
         }
-        
+
         // Upload image to Supabase
         try {
             setIsUploadingImage(true);
-            
+
             const formData = new FormData();
             formData.append('file', file);
             formData.append('folder', 'category-images');
-            
+
             const response = await fetch('/api/upload', {
                 method: 'POST',
                 body: formData,
             });
-            
+
             const result = await response.json();
-            
+
             if (!response.ok) {
                 throw new Error(result.error || 'Upload failed');
             }
-            
+
             console.log('Image upload result:', result);
-            
+
             // Save the uploaded image URL
             setUploadedImageUrl(result.url);
-            
+
             // Also update the form data with the image URL
             setFormData(prev => ({
                 ...prev,
                 image: result.url
             }));
-            
+
             showAlert('success', 'Image uploaded successfully', 2000);
         } catch (error) {
             console.error('Error uploading image:', error);
@@ -127,48 +127,48 @@ export default function AddCategoryPage() {
             setIsUploadingImage(false);
         }
     };
-    
+
     const removeImage = () => {
         setImagePreview(null);
         setUploadedImageUrl(null);
-        
+
         // Clear the file input
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
-        
+
         // Clear the image field in form data
         setFormData(prev => ({
             ...prev,
             image: null
         }));
-        
+
         console.log('Image removed. Form data after removal:', formData);
     };
-    
+
     const validateForm = () => {
-        const newErrors: {[key: string]: string} = {};
-        
+        const newErrors: { [key: string]: string } = {};
+
         if (!formData.name.trim()) {
             newErrors.name = 'Category name is required';
         }
-        
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
-    
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!validateForm()) {
             return;
         }
-        
+
         setIsSubmitting(true);
-        
+
         try {
             console.log('Submitting category with image URL:', uploadedImageUrl);
-            
+
             // Use the URL of the uploaded image
             const categoryData = {
                 name: formData.name.trim(),
@@ -177,18 +177,18 @@ export default function AddCategoryPage() {
                 is_active: formData.is_active,
                 display_order: formData.display_order
             };
-            
+
             // Ensure there's no category_id in the data
             const { category_id, ...dataToSubmit } = categoryData as any;
-            
+
             console.log('Creating category with data:', dataToSubmit);
             const { data, error } = await createCategory(dataToSubmit);
-            
+
             if (error) {
                 console.error('Error from createCategory:', JSON.stringify(error));
                 throw new Error(error.message || 'Failed to create category');
             }
-            
+
             console.log('Category created successfully:', data);
             showAlert('success', 'Category created successfully', 3000);
             router.push('/admin/categories');
@@ -199,22 +199,22 @@ export default function AddCategoryPage() {
             setIsSubmitting(false);
         }
     };
-    
+
     return (
         <div className="p-6">
             <div className="mb-6">
-                <button 
+                <button
                     onClick={() => router.back()}
                     className="flex items-center text-gray-600 hover:text-amber-500 mb-4"
                 >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Categories
                 </button>
-                
+
                 <h1 className="text-2xl font-bold">Add New Category</h1>
                 <p className="text-gray-500 text-sm">Create a new product category</p>
             </div>
-            
+
             <div className="bg-white rounded-lg shadow-md p-6">
                 <form onSubmit={handleSubmit}>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -236,7 +236,7 @@ export default function AddCategoryPage() {
                                     <p className="mt-1 text-sm text-red-500">{errors.name}</p>
                                 )}
                             </div>
-                            
+
                             {/* Category Description */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -251,7 +251,7 @@ export default function AddCategoryPage() {
                                     placeholder="Describe this category..."
                                 />
                             </div>
-                            
+
                             {/* Display Order */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -269,7 +269,7 @@ export default function AddCategoryPage() {
                                     Categories with lower numbers will be displayed first
                                 </p>
                             </div>
-                            
+
                             {/* Active Status */}
                             <div className="flex items-center">
                                 <input
@@ -285,13 +285,13 @@ export default function AddCategoryPage() {
                                 </label>
                             </div>
                         </div>
-                        
+
                         {/* Category Image Upload */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Category Image
                             </label>
-                            
+
                             {!imagePreview ? (
                                 <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
                                     <div className="space-y-1 text-center">
@@ -341,11 +341,11 @@ export default function AddCategoryPage() {
                                     </button>
                                 </div>
                             )}
-                            
+
                             {errors.image && (
                                 <p className="mt-1 text-sm text-red-500">{errors.image}</p>
                             )}
-                            
+
                             {uploadedImageUrl && (
                                 <p className="mt-2 text-xs text-green-600 flex items-center">
                                     <Check className="h-3 w-3 mr-1" /> Image uploaded successfully
@@ -353,7 +353,7 @@ export default function AddCategoryPage() {
                             )}
                         </div>
                     </div>
-                    
+
                     <div className="mt-8 flex justify-end space-x-3">
                         <button
                             type="button"
@@ -362,7 +362,7 @@ export default function AddCategoryPage() {
                         >
                             Cancel
                         </button>
-                        
+
                         <motion.button
                             type="submit"
                             disabled={isSubmitting || isUploadingImage}

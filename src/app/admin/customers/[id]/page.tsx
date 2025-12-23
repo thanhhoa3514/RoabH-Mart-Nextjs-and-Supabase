@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAlert } from '@/providers/alert-provider';
-import { getCustomerById, getCustomerStats, getCustomerOrders, getCustomerAddresses } from '@/lib/supabase/customers/customer.service';
+import { getCustomerById, getCustomerStats, getCustomerOrders, getCustomerAddresses } from '@/services/supabase/customers/customer.service';
 import { DbCustomer } from '@/types/user/customer.model';
 
 // Define interfaces for the data types

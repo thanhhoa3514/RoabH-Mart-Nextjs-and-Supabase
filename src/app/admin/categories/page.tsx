@@ -6,7 +6,7 @@ import { Plus, Search, Edit, Trash2, Eye } from 'lucide-react';
 import { useAlert } from '@/providers/alert-provider';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { getCategories, deleteCategory } from '@/lib/supabase';
+import { getCategories, deleteCategory } from '@/services/supabase';
 import { Category } from '@/types';
 
 // Animation variants
@@ -30,7 +30,7 @@ export default function CategoriesPage() {
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [categoryToDelete, setCategoryToDelete] = useState<{ id: string, name: string } | null>(null);
+    const [categoryToDelete, setCategoryToDelete] = useState<{ id: number, name: string } | null>(null);
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -54,7 +54,7 @@ export default function CategoriesPage() {
         fetchCategories();
     }, [showAlert]);
 
-    const handleDelete = (id: string, name: string) => {
+    const handleDelete = (id: number, name: string) => {
         setCategoryToDelete({ id, name });
         setIsDeleteModalOpen(true);
     };
@@ -66,7 +66,7 @@ export default function CategoriesPage() {
                 if (error) throw new Error(error.message);
 
                 showAlert('success', `Category &quot;${categoryToDelete.name}&quot; deleted successfully`, 3000);
-                setCategories(categories.filter(cat => cat.category_id !== categoryToDelete.id));
+                setCategories(categories.filter(cat => cat.category_id != categoryToDelete.id));
             } catch {
                 showAlert('error', 'Failed to delete category', 5000);
             } finally {
