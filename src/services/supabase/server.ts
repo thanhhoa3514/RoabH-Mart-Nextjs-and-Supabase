@@ -1,8 +1,8 @@
 import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { supabaseUrl, supabaseAnonKey } from './config';
 
 export const createClient = async () => {
+  const { cookies } = await import('next/headers');
   const cookieStore = await cookies();
 
   return createServerClient(
