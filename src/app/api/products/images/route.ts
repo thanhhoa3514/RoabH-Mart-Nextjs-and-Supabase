@@ -22,11 +22,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     // Add the image to the product
-    const { data, error } = await addProductImage(
-      requestBody.product_id,
-      requestBody.image_url,
-      requestBody.is_primary || false
-    );
+    const { data, error } = await addProductImage({
+      product_id: requestBody.product_id,
+      image_url: requestBody.image_url,
+      is_primary: requestBody.is_primary || false
+    });
 
     if (error) {
       return NextResponse.json(
