@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Mail } from 'lucide-react';
-import { getSupabaseClient } from '@/lib/supabase';
+import { getSupabaseClient } from '@/services/supabase';
 
 // interface AuthError {
 //     message: string;
@@ -36,7 +36,6 @@ export default function ForgotPasswordPage() {
             // Successfully sent reset email
             setSuccess(true);
         } catch (err: unknown) {
-            console.error('Password reset error:', err);
             // Type guard to ensure err has a message property
             const errorMessage = err && typeof err === 'object' && 'message' in err
                 ? (err.message as string)

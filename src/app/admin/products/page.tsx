@@ -6,7 +6,7 @@ import { Plus, Search, Trash2, Eye, RefreshCw, ChevronLeft, ChevronRight } from 
 import { useAlert } from '@/providers/alert-provider';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getProducts } from '@/lib/supabase/products/product.service';
+import { getProducts } from '@/services/supabase/products/product.service';
 
 // Animation variants
 const containerVariants = {
@@ -53,12 +53,12 @@ export default function ProductsPage() {
     const [selectedStatus, setSelectedStatus] = useState('All Status');
     const [selectedPriceRange, setSelectedPriceRange] = useState('All Prices');
     const [sortBy, setSortBy] = useState('Newest');
-    const [productToDelete, setProductToDelete] = useState<{id: number, name: string} | null>(null);
+    const [productToDelete, setProductToDelete] = useState<{ id: number, name: string } | null>(null);
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    
+
     // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -69,17 +69,17 @@ export default function ProductsPage() {
         setError(null);
         try {
             const { data, error } = await getProducts();
-            
+
             if (error) {
                 throw new Error(error.message);
             }
-            
+
             if (data) {
                 setProducts(data);
-                
+
                 // Extract unique categories
                 const uniqueCategories = Array.from(
-                    new Set(data.map(product => 
+                    new Set(data.map(product =>
                         product.subcategories?.categories?.name || 'Uncategorized'
                     ))
                 );
@@ -97,7 +97,7 @@ export default function ProductsPage() {
     useEffect(() => {
         fetchProducts();
     }, []);
-    
+
     // Reset to first page when filters change
     useEffect(() => {
         setCurrentPage(1);
@@ -106,18 +106,18 @@ export default function ProductsPage() {
     const handleDelete = async (id: number, name: string) => {
         // Show loading state
         showAlert('info', 'Deleting product...', 1000);
-        
+
         try {
             // Call API to delete product
             const response = await fetch(`/api/products/${id}`, {
                 method: 'DELETE',
             });
-            
+
             if (!response.ok) {
                 const error = await response.json();
                 throw new Error(error.message || 'Failed to delete product');
             }
-            
+
             showAlert('success', `Product "${name}" has been deleted`, 3000);
             // Refetch products to update the list
             fetchProducts();
@@ -162,34 +162,34 @@ export default function ProductsPage() {
     // Filter products based on search query and filters
     const filteredProducts = products.filter(product => {
         // Search filter
-        const matchesSearch = searchQuery === '' || 
+        const matchesSearch = searchQuery === '' ||
             product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
             product.subcategories?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             product.subcategories?.categories?.name?.toLowerCase().includes(searchQuery.toLowerCase());
-        
+
         // Category filter
         const matchesCategory = selectedCategory === 'All Categories' ||
             product.subcategories?.categories?.name === selectedCategory;
-            
+
         // Status filter
         const status = getProductStatus(product);
         const matchesStatus = selectedStatus === 'All Status' || status === selectedStatus;
-        
+
         // Price filter
         let matchesPrice = true;
         if (selectedPriceRange !== 'All Prices') {
             const price = product.price;
-            
+
             if (selectedPriceRange === 'Under $50' && price >= 50) matchesPrice = false;
             else if (selectedPriceRange === '$50 - $200' && (price < 50 || price > 200)) matchesPrice = false;
             else if (selectedPriceRange === '$200 - $500' && (price < 200 || price > 500)) matchesPrice = false;
             else if (selectedPriceRange === '$500+' && price < 500) matchesPrice = false;
         }
-        
+
         return matchesSearch && matchesCategory && matchesStatus && matchesPrice;
     });
-    
+
     // Sort products
     const sortedProducts = [...filteredProducts].sort((a, b) => {
         if (sortBy === 'Newest') {
@@ -205,13 +205,13 @@ export default function ProductsPage() {
         }
         return 0;
     });
-    
+
     // Pagination logic
     const indexOfLastItem = currentPage * itemsPerPage;
     const indexOfFirstItem = indexOfLastItem - itemsPerPage;
     const currentItems = sortedProducts.slice(indexOfFirstItem, indexOfLastItem);
     const totalPages = Math.ceil(sortedProducts.length / itemsPerPage);
-    
+
     // Change page
     const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
     const nextPage = () => {
@@ -244,7 +244,7 @@ export default function ProductsPage() {
                         <RefreshCw className={`h-5 w-5 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                         Refresh
                     </motion.button>
-                    
+
                     <Link href="/admin/products/add">
                         <motion.button
                             whileHover={{ scale: 1.05 }}
@@ -362,7 +362,7 @@ export default function ProductsPage() {
                 ) : error ? (
                     <div className="text-center py-12 text-red-500">
                         <p>Error loading products: {error}</p>
-                        <button 
+                        <button
                             className="mt-4 px-4 py-2 bg-amber-500 text-white rounded-md"
                             onClick={fetchProducts}
                         >
@@ -384,7 +384,7 @@ export default function ProductsPage() {
                             const status = getProductStatus(product);
                             const categoryName = product.subcategories?.categories?.name || 'Uncategorized';
                             const subcategoryName = product.subcategories?.name || '';
-                            
+
                             return (
                                 <motion.div
                                     key={product.product_id}
@@ -394,8 +394,8 @@ export default function ProductsPage() {
                                     <div className="p-4 relative">
                                         <div className="bg-gray-200 h-40 rounded-md flex items-center justify-center mb-3">
                                             {getProductImage(product) ? (
-                                                <Image 
-                                                    src={getProductImage(product)} 
+                                                <Image
+                                                    src={getProductImage(product)}
                                                     alt={product.name}
                                                     width={160}
                                                     height={160}
@@ -407,7 +407,7 @@ export default function ProductsPage() {
                                                 </svg>
                                             )}
                                         </div>
-                                        
+
                                         {status === 'In Stock' && (
                                             <span className="absolute top-6 right-6 bg-green-500 text-white text-xs px-2 py-1 rounded">
                                                 In Stock
@@ -423,7 +423,7 @@ export default function ProductsPage() {
                                                 Out of Stock
                                             </span>
                                         )}
-                                        
+
                                         <div className="text-xs text-amber-500 flex items-center mb-1">
                                             <span className="mr-1">{categoryName}</span>
                                             <span className="ml-1 text-gray-400">/ {subcategoryName}</span>
@@ -433,23 +433,23 @@ export default function ProductsPage() {
                                                 )}
                                             </div>
                                         </div>
-                                        
+
                                         <h3 className="font-medium text-gray-900 mb-1 truncate">{product.name}</h3>
                                         <p className="text-xs text-gray-500 mb-2 line-clamp-2">{product.description}</p>
-                                        
+
                                         <div className="flex items-center justify-between">
                                             <span className="font-bold">{formatPrice(product.price)}</span>
                                             <span className="text-xs text-gray-500">Stock: {product.stock_quantity}</span>
                                         </div>
-                                        
+
                                         <div className="flex justify-between mt-4">
-                                            <button 
+                                            <button
                                                 className="bg-amber-100 text-amber-600 px-4 py-1 rounded text-sm"
                                                 onClick={() => handleEdit(product.product_id)}
                                             >
                                                 Edit
                                             </button>
-                                            
+
                                             <div className="flex space-x-2">
                                                 <Link href={`/admin/products/${product.product_id}`}>
                                                     <motion.button
@@ -460,7 +460,7 @@ export default function ProductsPage() {
                                                         <Eye className="h-4 w-4 text-gray-600" />
                                                     </motion.button>
                                                 </Link>
-                                                
+
                                                 <motion.button
                                                     whileHover={{ scale: 1.1 }}
                                                     whileTap={{ scale: 0.9 }}
@@ -477,7 +477,7 @@ export default function ProductsPage() {
                         })}
                     </motion.div>
                 )}
-                
+
                 {/* Pagination */}
                 {!isLoading && !error && sortedProducts.length > 0 && (
                     <div className="flex justify-center mt-8">
@@ -485,15 +485,14 @@ export default function ProductsPage() {
                             <button
                                 onClick={prevPage}
                                 disabled={currentPage === 1}
-                                className={`mx-1 p-2 rounded-md ${
-                                    currentPage === 1 
-                                        ? 'text-gray-400 cursor-not-allowed' 
+                                className={`mx-1 p-2 rounded-md ${currentPage === 1
+                                        ? 'text-gray-400 cursor-not-allowed'
                                         : 'text-gray-700 hover:bg-amber-100'
-                                }`}
+                                    }`}
                             >
                                 <ChevronLeft className="h-5 w-5" />
                             </button>
-                            
+
                             <div className="flex mx-2">
                                 {Array.from({ length: Math.min(5, totalPages) }).map((_, idx) => {
                                     // Calculate what page numbers to show
@@ -511,22 +510,21 @@ export default function ProductsPage() {
                                         // In the middle
                                         pageNumber = currentPage - 2 + idx;
                                     }
-                                    
+
                                     return (
                                         <button
                                             key={idx}
                                             onClick={() => paginate(pageNumber)}
-                                            className={`mx-1 w-8 h-8 rounded-md ${
-                                                currentPage === pageNumber
+                                            className={`mx-1 w-8 h-8 rounded-md ${currentPage === pageNumber
                                                     ? 'bg-amber-500 text-white'
                                                     : 'bg-gray-100 text-gray-700 hover:bg-amber-100'
-                                            }`}
+                                                }`}
                                         >
                                             {pageNumber}
                                         </button>
                                     );
                                 })}
-                                
+
                                 {totalPages > 5 && currentPage < totalPages - 2 && (
                                     <>
                                         <span className="mx-1 text-gray-500">...</span>
@@ -539,15 +537,14 @@ export default function ProductsPage() {
                                     </>
                                 )}
                             </div>
-                            
+
                             <button
                                 onClick={nextPage}
                                 disabled={currentPage === totalPages}
-                                className={`mx-1 p-2 rounded-md ${
-                                    currentPage === totalPages 
-                                        ? 'text-gray-400 cursor-not-allowed' 
+                                className={`mx-1 p-2 rounded-md ${currentPage === totalPages
+                                        ? 'text-gray-400 cursor-not-allowed'
                                         : 'text-gray-700 hover:bg-amber-100'
-                                }`}
+                                    }`}
                             >
                                 <ChevronRight className="h-5 w-5" />
                             </button>
@@ -555,11 +552,11 @@ export default function ProductsPage() {
                     </div>
                 )}
             </div>
-            
+
             {/* Delete Confirmation Modal */}
             {productToDelete && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <motion.div 
+                    <motion.div
                         className="bg-white rounded-lg p-6 w-full max-w-md"
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
@@ -567,10 +564,10 @@ export default function ProductsPage() {
                     >
                         <h2 className="text-xl font-bold mb-4">Delete Product</h2>
                         <p className="text-gray-600 mb-6">
-                            Are you sure you want to delete <span className="font-semibold">{productToDelete.name}</span>? 
+                            Are you sure you want to delete <span className="font-semibold">{productToDelete.name}</span>?
                             This action cannot be undone.
                         </p>
-                        
+
                         <div className="flex justify-end space-x-3">
                             <button
                                 className="px-4 py-2 border border-gray-300 rounded-md text-gray-700"
@@ -578,7 +575,7 @@ export default function ProductsPage() {
                             >
                                 Cancel
                             </button>
-                            
+
                             <motion.button
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
@@ -593,5 +590,5 @@ export default function ProductsPage() {
             )}
         </div>
     );
-} 
+}
 

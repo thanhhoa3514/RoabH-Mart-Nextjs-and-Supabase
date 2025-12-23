@@ -6,7 +6,7 @@ import { ArrowLeft, Upload, X, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useAlert } from '@/providers/alert-provider';
 import { useRouter } from 'next/navigation';
-import { getCategories } from '@/lib/supabase/categories/category.service';
+import { getCategories } from '@/services/supabase/categories/category.service';
 import { getSubcategories } from '@/lib/supabase/subcategories/subcategory.service';
 
 interface Category {
@@ -24,11 +24,11 @@ export default function AddProductPage() {
     const { showAlert } = useAlert();
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    
+
     const [categories, setCategories] = useState<Category[]>([]);
     const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
     const [filteredSubcategories, setFilteredSubcategories] = useState<Subcategory[]>([]);
-    
+
     const [formData, setFormData] = useState({
         name: '',
         category_id: '',
@@ -39,12 +39,12 @@ export default function AddProductPage() {
         status: 'In Stock',
         featured: false
     });
-    
+
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
-    
+
     // Fetch categories and subcategories
     useEffect(() => {
         const fetchCategoriesAndSubcategories = async () => {
@@ -53,7 +53,7 @@ export default function AddProductPage() {
                 if (categoriesData) {
                     setCategories(categoriesData);
                 }
-                
+
                 const { data: subcategoriesData } = await getSubcategories();
                 if (subcategoriesData) {
                     setSubcategories(subcategoriesData);
@@ -63,27 +63,27 @@ export default function AddProductPage() {
                 showAlert('error', 'Failed to load categories', 3000);
             }
         };
-        
+
         fetchCategoriesAndSubcategories();
     }, [showAlert]);
-    
+
     // Filter subcategories when category changes
     useEffect(() => {
         if (formData.category_id) {
             const categoryId = parseInt(formData.category_id);
             const filtered = subcategories.filter(sub => sub.category_id === categoryId);
             setFilteredSubcategories(filtered);
-            
+
             // Reset subcategory selection when category changes
             setFormData(prev => ({ ...prev, subcategory_id: '' }));
         } else {
             setFilteredSubcategories([]);
         }
     }, [formData.category_id, subcategories]);
-    
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
-        
+
         if (type === 'checkbox') {
             const checked = (e.target as HTMLInputElement).checked;
             setFormData(prev => ({ ...prev, [name]: checked }));
@@ -91,36 +91,36 @@ export default function AddProductPage() {
             setFormData(prev => ({ ...prev, [name]: value }));
         }
     };
-    
+
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        
+
         // Show image preview
         const reader = new FileReader();
         reader.onloadend = () => {
             setImagePreview(reader.result as string);
         };
         reader.readAsDataURL(file);
-        
+
         // Upload image to server
         try {
             setIsUploadingImage(true);
-            
+
             const formData = new FormData();
             formData.append('file', file);
-            
+
             const response = await fetch('/api/upload', {
                 method: 'POST',
                 body: formData,
             });
-            
+
             const result = await response.json();
-            
+
             if (!response.ok) {
                 throw new Error(result.error || 'Upload failed');
             }
-            
+
             // Save the uploaded image URL
             setUploadedImageUrl(result.url);
             showAlert('success', 'Image uploaded successfully', 2000);
@@ -131,27 +131,27 @@ export default function AddProductPage() {
             setIsUploadingImage(false);
         }
     };
-    
+
     const removeImage = () => {
         setImagePreview(null);
         setUploadedImageUrl(null);
-        
+
         // Clear the file input
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
     };
-    
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
-        
+
         if (!formData.subcategory_id) {
             showAlert('error', 'Please select a subcategory', 3000);
             setIsSubmitting(false);
             return;
         }
-        
+
         try {
             // Create product data object for the API
             const productData = {
@@ -164,7 +164,7 @@ export default function AddProductPage() {
                 status: formData.status,
                 featured: formData.featured
             };
-            
+
             // Call the API endpoint to create the product
             const response = await fetch('/api/products', {
                 method: 'POST',
@@ -173,13 +173,13 @@ export default function AddProductPage() {
                 },
                 body: JSON.stringify(productData),
             });
-            
+
             const result = await response.json();
-            
+
             if (!response.ok) {
                 throw new Error(result.error || 'Failed to add product');
             }
-            
+
             // If we have an uploaded image, associate it with the product
             if (uploadedImageUrl && result.data && result.data.product_id) {
                 const imageData = {
@@ -187,7 +187,7 @@ export default function AddProductPage() {
                     image_url: uploadedImageUrl,
                     is_primary: true
                 };
-                
+
                 const imageResponse = await fetch('/api/product-images', {
                     method: 'POST',
                     headers: {
@@ -195,17 +195,17 @@ export default function AddProductPage() {
                     },
                     body: JSON.stringify(imageData),
                 });
-                
+
                 if (!imageResponse.ok) {
                     const imageError = await imageResponse.json();
                     console.error('Error adding product image:', imageError);
                     // Continue even if image association fails
                 }
             }
-            
+
             // Show success message
             showAlert('success', 'Product added successfully!', 3000);
-            
+
             // Redirect to products page
             router.push('/admin/products');
         } catch (error) {
@@ -215,7 +215,7 @@ export default function AddProductPage() {
             setIsSubmitting(false);
         }
     };
-    
+
     return (
         <div className="p-6">
             <div className="mb-6">
@@ -224,11 +224,11 @@ export default function AddProductPage() {
                     Back to Products
                 </Link>
             </div>
-            
+
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold">Add New Product</h1>
             </div>
-            
+
             <motion.div
                 className="bg-white rounded-lg shadow-md p-6"
                 initial={{ opacity: 0, y: 20 }}
@@ -254,7 +254,7 @@ export default function AddProductPage() {
                                     placeholder="Enter product name"
                                 />
                             </div>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label htmlFor="category_id" className="block text-sm font-medium text-gray-700 mb-1">
@@ -276,7 +276,7 @@ export default function AddProductPage() {
                                         ))}
                                     </select>
                                 </div>
-                                
+
                                 <div>
                                     <label htmlFor="subcategory_id" className="block text-sm font-medium text-gray-700 mb-1">
                                         Subcategory *
@@ -299,7 +299,7 @@ export default function AddProductPage() {
                                     </select>
                                 </div>
                             </div>
-                            
+
                             <div>
                                 <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
                                     Price ($) *
@@ -315,7 +315,7 @@ export default function AddProductPage() {
                                     placeholder="0.00"
                                 />
                             </div>
-                            
+
                             <div>
                                 <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
                                     Description *
@@ -331,7 +331,7 @@ export default function AddProductPage() {
                                     placeholder="Enter product description"
                                 ></textarea>
                             </div>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-1">
@@ -349,7 +349,7 @@ export default function AddProductPage() {
                                         placeholder="0"
                                     />
                                 </div>
-                                
+
                                 <div>
                                     <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
                                         Status
@@ -367,7 +367,7 @@ export default function AddProductPage() {
                                     </select>
                                 </div>
                             </div>
-                            
+
                             <div className="flex items-center">
                                 <input
                                     type="checkbox"
@@ -382,18 +382,18 @@ export default function AddProductPage() {
                                 </label>
                             </div>
                         </div>
-                        
+
                         {/* Right Column - Product Image */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Product Image
                             </label>
-                            
+
                             {imagePreview ? (
                                 <div className="relative rounded-lg overflow-hidden h-64 mb-4">
-                                    <img 
-                                        src={imagePreview} 
-                                        alt="Product preview" 
+                                    <img
+                                        src={imagePreview}
+                                        alt="Product preview"
                                         className="w-full h-full object-cover"
                                     />
                                     {isUploadingImage && (
@@ -422,7 +422,7 @@ export default function AddProductPage() {
                                     </p>
                                 </div>
                             )}
-                            
+
                             <input
                                 type="file"
                                 id="image"
@@ -433,23 +433,22 @@ export default function AddProductPage() {
                                 ref={fileInputRef}
                                 disabled={isUploadingImage}
                             />
-                            
+
                             <label
                                 htmlFor="image"
-                                className={`block w-full text-center py-2 px-4 border border-gray-300 rounded-md text-sm font-medium ${
-                                    isUploadingImage 
-                                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+                                className={`block w-full text-center py-2 px-4 border border-gray-300 rounded-md text-sm font-medium ${isUploadingImage
+                                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                                         : 'text-gray-700 bg-white hover:bg-gray-50 cursor-pointer'
-                                }`}
+                                    }`}
                             >
-                                {isUploadingImage 
+                                {isUploadingImage
                                     ? "Uploading..."
-                                    : imagePreview 
-                                        ? "Change Image" 
+                                    : imagePreview
+                                        ? "Change Image"
                                         : "Select Image"
                                 }
                             </label>
-                            
+
                             {uploadedImageUrl && (
                                 <p className="mt-2 text-xs text-green-600">
                                     ✓ Image uploaded successfully
@@ -457,15 +456,15 @@ export default function AddProductPage() {
                             )}
                         </div>
                     </div>
-                    
+
                     <div className="mt-8 flex justify-end">
-                        <Link 
+                        <Link
                             href="/admin/products"
                             className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md mr-4 hover:bg-gray-200"
                         >
                             Cancel
                         </Link>
-                        
+
                         <motion.button
                             type="submit"
                             className="bg-amber-500 text-white px-6 py-2 rounded-md hover:bg-amber-600 flex items-center justify-center min-w-[100px]"
@@ -485,5 +484,5 @@ export default function AddProductPage() {
             </motion.div>
         </div>
     );
-} 
+}
 

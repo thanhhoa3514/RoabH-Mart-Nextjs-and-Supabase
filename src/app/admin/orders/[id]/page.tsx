@@ -22,7 +22,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useAlert } from '@/providers/alert-provider';
-import { getOrderById, updateOrderStatus } from '@/lib/supabase';
+import { getOrderById, updateOrderStatus } from '@/services/supabase';
 
 // Define interfaces for order data
 interface OrderItem {

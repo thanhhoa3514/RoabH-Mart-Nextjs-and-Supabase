@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient, updateProduct, getProductById } from '@/lib/supabase';
+import { getSupabaseClient, updateProduct, getProductById } from '@/services/supabase';
 
 type Context = {
   params: {
