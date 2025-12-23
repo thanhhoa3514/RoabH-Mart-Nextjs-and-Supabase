@@ -28,7 +28,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    
+
     console.log('Starting registration process...');
 
     // Validate password match
@@ -40,7 +40,7 @@ export default function RegisterPage() {
 
     try {
       console.log('Calling signUp with email:', email);
-      
+
       // 1. Register with Supabase Auth
       const { data, error: authError } = await signUp(email, password);
 
@@ -61,10 +61,10 @@ export default function RegisterPage() {
       if (data?.user?.id) {
         try {
           // Import registerUser function để sử dụng
-          const { registerUser } = await import('@/lib/supabase');
-          
+          const { registerUser } = await import('@/services/supabase');
+
           console.log('Creating user record in database with ID:', data.user.id);
-          
+
           // Tạo người dùng trong database với đầy đủ thông tin
           const { error } = await registerUser({
             email: data.user.email || '',
@@ -97,17 +97,17 @@ export default function RegisterPage() {
         showAlert('success', 'Đăng ký thành công! Bạn có thể đăng nhập ngay bây giờ.', 5000);
         router.push('/auth/login?verified=true');
       }
-      
+
       // Stop loading
       setLoading(false);
-      
+
       console.log('Registration process completed successfully');
       return;
 
     } catch (err: unknown) {
       console.error('Registration error:', err);
-      const errorMessage = err && typeof err === 'object' && 'message' in err 
-        ? (err.message as string) 
+      const errorMessage = err && typeof err === 'object' && 'message' in err
+        ? (err.message as string)
         : 'Đã xảy ra lỗi trong quá trình đăng ký. Vui lòng thử lại.';
       setError(errorMessage);
       showAlert('error', errorMessage || 'Đăng ký thất bại. Vui lòng thử lại.');
