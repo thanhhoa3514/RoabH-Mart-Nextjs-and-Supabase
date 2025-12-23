@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { Star } from 'lucide-react';
-import { useAuth } from '@/lib/auth/AuthContext';
-import { useAlert } from '@/lib/context/alert-context';
-import { addReview, updateReview, hasUserReviewed } from '@/lib/supabase/reviews/reviews.model';
-import { getUserId } from '@/lib/helpers/user-helpers';
+import { useAuth } from '@/providers/auth-provider';
+import { useAlert } from '@/providers/alert-provider';
+import { addReview, updateReview, hasUserReviewed } from '@/services/supabase/reviews/review.service';
+
 
 interface ReviewFormProps {
   productId: number;
@@ -19,26 +19,26 @@ export default function ReviewForm({ productId, onReviewSubmitted }: ReviewFormP
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingReview, setExistingReview] = useState<{ reviewId: number | null, rating: number, comment: string } | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  
+
   const { showAlert } = useAlert();
   const { user, userData } = useAuth();
-  
+
   // Kiểm tra xem user đã đánh giá sản phẩm chưa
   useEffect(() => {
     async function checkExistingReview() {
       if (!user) return;
-      
-      const userId = getUserId(userData);
+
+      const userId = userData?.user_id;
       if (!userId) return;
-      
+
       try {
         const { hasReviewed, reviewId, error } = await hasUserReviewed(productId, userId);
-        
+
         if (error) {
           console.error('Error checking existing review:', error);
           return;
         }
-        
+
         if (hasReviewed && reviewId) {
           // Nếu đã có review, hiển thị thông tin review cũ
           // TODO: Có thể lấy dữ liệu review cũ ở đây
@@ -52,31 +52,31 @@ export default function ReviewForm({ productId, onReviewSubmitted }: ReviewFormP
         console.error('Error checking existing review:', err);
       }
     }
-    
+
     checkExistingReview();
   }, [user, userData, productId]);
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user) {
       showAlert('warning', 'Vui lòng đăng nhập để đánh giá sản phẩm', 3000);
       return;
     }
-    
+
     if (rating === 0) {
       showAlert('warning', 'Vui lòng chọn số sao cho đánh giá', 3000);
       return;
     }
-    
-    const userId = getUserId(userData);
+
+    const userId = userData?.user_id;
     if (!userId) {
       showAlert('error', 'Không thể xác định người dùng', 3000);
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
       const reviewData = {
         product_id: productId,
@@ -84,9 +84,9 @@ export default function ReviewForm({ productId, onReviewSubmitted }: ReviewFormP
         rating,
         comment: comment.trim(),
       };
-      
+
       let result;
-      
+
       if (existingReview && existingReview.reviewId && isEditing) {
         // Cập nhật review cũ
         result = await updateReview(existingReview.reviewId, reviewData);
@@ -96,35 +96,35 @@ export default function ReviewForm({ productId, onReviewSubmitted }: ReviewFormP
         result = await addReview(reviewData);
         showAlert('success', 'Đánh giá của bạn đã được ghi nhận', 3000);
       }
-      
+
       if (result.error) {
         throw new Error(result.error.message);
       }
-      
+
       // Reset form
       setRating(0);
       setComment('');
       setIsEditing(false);
-      
+
       // Thông báo cho component cha là đã có review mới
       onReviewSubmitted();
-      
+
     } catch (err) {
-      console.error('Error submitting review:', err);
+
       showAlert('error', 'Có lỗi xảy ra khi gửi đánh giá', 3000);
     } finally {
       setIsSubmitting(false);
     }
   };
-  
+
   const handleRatingClick = (value: number) => {
     setRating(value);
   };
-  
+
   const handleRatingHover = (value: number) => {
     setHoverRating(value);
   };
-  
+
   const handleEditClick = () => {
     if (existingReview) {
       setRating(existingReview.rating);
@@ -132,13 +132,13 @@ export default function ReviewForm({ productId, onReviewSubmitted }: ReviewFormP
       setIsEditing(true);
     }
   };
-  
+
   const handleCancelEdit = () => {
     setRating(0);
     setComment('');
     setIsEditing(false);
   };
-  
+
   // Nếu không đăng nhập, hiển thị thông báo
   if (!user) {
     return (
@@ -149,7 +149,7 @@ export default function ReviewForm({ productId, onReviewSubmitted }: ReviewFormP
       </div>
     );
   }
-  
+
   // Nếu đã có đánh giá và không trong chế độ chỉnh sửa
   if (existingReview && !isEditing) {
     return (
@@ -164,7 +164,7 @@ export default function ReviewForm({ productId, onReviewSubmitted }: ReviewFormP
       </div>
     );
   }
-  
+
   return (
     <div className="bg-gray-50 p-6 rounded-lg mt-8">
       <h3 className="text-xl font-semibold mb-4">{isEditing ? 'Chỉnh sửa đánh giá' : 'Viết đánh giá'}</h3>
@@ -178,11 +178,10 @@ export default function ReviewForm({ productId, onReviewSubmitted }: ReviewFormP
             {[1, 2, 3, 4, 5].map((value) => (
               <Star
                 key={value}
-                className={`h-8 w-8 cursor-pointer ${
-                  (hoverRating || rating) >= value
-                    ? 'fill-amber-400 text-amber-400'
-                    : 'text-gray-300'
-                }`}
+                className={`h-8 w-8 cursor-pointer ${(hoverRating || rating) >= value
+                  ? 'fill-amber-400 text-amber-400'
+                  : 'text-gray-300'
+                  }`}
                 onClick={() => handleRatingClick(value)}
                 onMouseEnter={() => handleRatingHover(value)}
                 onMouseLeave={() => handleRatingHover(0)}
@@ -195,7 +194,7 @@ export default function ReviewForm({ productId, onReviewSubmitted }: ReviewFormP
             </p>
           )}
         </div>
-        
+
         {/* Comment */}
         <div className="mb-4">
           <label htmlFor="comment" className="block text-sm font-medium text-gray-700 mb-2">
@@ -211,19 +210,18 @@ export default function ReviewForm({ productId, onReviewSubmitted }: ReviewFormP
             className="w-full border border-gray-300 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-amber-300"
           ></textarea>
         </div>
-        
+
         {/* Submit button */}
         <div className="flex items-center">
           <button
             type="submit"
             disabled={isSubmitting || rating === 0}
-            className={`px-4 py-2 bg-primary text-white rounded-md hover:bg-amber-600 transition-colors ${
-              isSubmitting || rating === 0 ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
+            className={`px-4 py-2 bg-primary text-white rounded-md hover:bg-amber-600 transition-colors ${isSubmitting || rating === 0 ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
           >
             {isSubmitting ? 'Đang gửi...' : isEditing ? 'Cập nhật đánh giá' : 'Gửi đánh giá'}
           </button>
-          
+
           {isEditing && (
             <button
               type="button"
@@ -237,4 +235,5 @@ export default function ReviewForm({ productId, onReviewSubmitted }: ReviewFormP
       </form>
     </div>
   );
-} 
+}
+
