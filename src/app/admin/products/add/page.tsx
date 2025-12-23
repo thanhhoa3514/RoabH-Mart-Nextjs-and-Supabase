@@ -6,8 +6,7 @@ import { ArrowLeft, Upload, X, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useAlert } from '@/providers/alert-provider';
 import { useRouter } from 'next/navigation';
-import { getCategories } from '@/services/supabase/categories/category.service';
-import { getSubcategories } from '@/lib/supabase/subcategories/subcategory.service';
+import { getCategories, getSubcategories } from '@/services/supabase';
 
 interface Category {
     category_id: number;
@@ -437,8 +436,8 @@ export default function AddProductPage() {
                             <label
                                 htmlFor="image"
                                 className={`block w-full text-center py-2 px-4 border border-gray-300 rounded-md text-sm font-medium ${isUploadingImage
-                                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                                        : 'text-gray-700 bg-white hover:bg-gray-50 cursor-pointer'
+                                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                                    : 'text-gray-700 bg-white hover:bg-gray-50 cursor-pointer'
                                     }`}
                             >
                                 {isUploadingImage
