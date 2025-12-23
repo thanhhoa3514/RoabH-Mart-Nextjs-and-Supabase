@@ -2,16 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-    Search, 
-    Filter, 
-    Eye, 
-    Mail, 
-    Phone, 
-    Calendar, 
+import {
+    Search,
+    Filter,
+    Eye,
+    Mail,
+    Phone,
+    Calendar,
 
-    ChevronDown, 
-    ChevronUp, 
+    ChevronDown,
+    ChevronUp,
     User,
     MapPin,
     Plus,
@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAlert } from '@/providers/alert-provider';
-import { getCustomers, searchCustomers } from '@/lib/supabase/customers/customer.service';
+import { getCustomers, searchCustomers } from '@/services/supabase/customers/customer.service';
 import { DbCustomer } from '@/types/user/customer.model';
 
 // Animation variants
@@ -39,22 +39,22 @@ const itemVariants = {
 };
 
 // Customer card component
-const CustomerCard = ({ customer }: { 
+const CustomerCard = ({ customer }: {
     customer: DbCustomer
 }) => {
     // Format name for initials
-    const initials = customer.first_name && customer.last_name 
-        ? `${customer.first_name[0]}${customer.last_name[0]}` 
+    const initials = customer.first_name && customer.last_name
+        ? `${customer.first_name[0]}${customer.last_name[0]}`
         : customer.username.substring(0, 2).toUpperCase();
-    
+
     // Format display name
-    const displayName = customer.first_name && customer.last_name 
-        ? `${customer.first_name} ${customer.last_name}` 
+    const displayName = customer.first_name && customer.last_name
+        ? `${customer.first_name} ${customer.last_name}`
         : customer.username;
 
     // Format join date
     const joinDate = new Date(customer.created_at).toLocaleDateString();
-    
+
     return (
         <motion.div
             variants={itemVariants}
@@ -74,15 +74,14 @@ const CustomerCard = ({ customer }: {
                             </div>
                         </div>
                     </div>
-                    <div className={`px-2 py-1 text-xs rounded-full ${
-                        customer.is_active 
-                            ? 'bg-green-100 text-green-800' 
+                    <div className={`px-2 py-1 text-xs rounded-full ${customer.is_active
+                            ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
-                    }`}>
+                        }`}>
                         {customer.is_active ? 'Active' : 'Inactive'}
                     </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="flex items-center text-sm">
                         <Phone className="h-4 w-4 text-gray-400 mr-2" />
@@ -97,7 +96,7 @@ const CustomerCard = ({ customer }: {
                         <span>{customer.city ? `${customer.city}, ${customer.country || ''}` : 'No address provided'}</span>
                     </div>
                 </div>
-                
+
                 <div className="mt-4 pt-4 border-t flex justify-end">
                     <Link href={`/admin/customers/${customer.user_id}`}>
                         <motion.button
@@ -123,36 +122,36 @@ export default function CustomersPage() {
     const [sortBy, setSortBy] = useState('newest');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [viewType, setViewType] = useState('grid'); // 'grid' or 'list'
-    
+
     // Pagination state
     const [page, setPage] = useState(1);
     const pageSize = 10;
     const [totalCustomers, setTotalCustomers] = useState(0);
-    
+
     // Data fetching state
     const [customers, setCustomers] = useState<DbCustomer[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    
+
     // Fetch customers data
     useEffect(() => {
         async function fetchCustomers() {
             setLoading(true);
             setError(null);
-            
+
             try {
                 let result;
-                
+
                 if (searchQuery) {
                     result = await searchCustomers(searchQuery, page, pageSize);
                 } else {
                     result = await getCustomers(page, pageSize);
                 }
-                
+
                 if (result.error) {
                     throw new Error(result.error.message);
                 }
-                
+
                 setCustomers(result.data || []);
                 setTotalCustomers(result.count || 0);
             } catch (err) {
@@ -162,7 +161,7 @@ export default function CustomersPage() {
                 setLoading(false);
             }
         }
-        
+
         fetchCustomers();
     }, [page, pageSize, searchQuery, showAlert]);
 
@@ -177,12 +176,12 @@ export default function CustomersPage() {
             const isActive = selectedStatus === 'Active';
             if (customer.is_active !== isActive) return false;
         }
-        
+
         // Join date filter - simplified for demo
         if (selectedJoinDate !== 'All Time') {
             const customerDate = new Date(customer.created_at);
             const now = new Date();
-            
+
             if (selectedJoinDate === 'Last 30 Days') {
                 const thirtyDaysAgo = new Date();
                 thirtyDaysAgo.setDate(now.getDate() - 30);
@@ -196,7 +195,7 @@ export default function CustomersPage() {
                 if (customerDate < firstDayOfYear) return false;
             }
         }
-        
+
         return true;
     });
 
@@ -242,24 +241,24 @@ export default function CustomersPage() {
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
-                    
+
                     <div className="flex items-center space-x-4">
                         <div className="flex border rounded-md overflow-hidden">
-                            <button 
+                            <button
                                 className={`px-3 py-1 ${viewType === 'grid' ? 'bg-amber-500 text-white' : 'bg-white text-gray-700'}`}
                                 onClick={() => setViewType('grid')}
                             >
                                 Grid
                             </button>
-                            <button 
+                            <button
                                 className={`px-3 py-1 ${viewType === 'list' ? 'bg-amber-500 text-white' : 'bg-white text-gray-700'}`}
                                 onClick={() => setViewType('list')}
                             >
                                 List
                             </button>
                         </div>
-                        
-                        <button 
+
+                        <button
                             className="flex items-center text-gray-600 hover:text-amber-500"
                             onClick={() => setIsFilterOpen(!isFilterOpen)}
                         >
@@ -273,10 +272,10 @@ export default function CustomersPage() {
                         </button>
                     </div>
                 </div>
-                
+
                 {/* Expanded Filters */}
                 {isFilterOpen && (
-                    <motion.div 
+                    <motion.div
                         className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
@@ -337,7 +336,7 @@ export default function CustomersPage() {
                     <div className="bg-red-50 text-red-600 p-4 rounded-md my-4">
                         <p className="font-medium">Failed to load customers</p>
                         <p className="text-sm">{error}</p>
-                        <button 
+                        <button
                             className="mt-2 text-sm bg-red-100 px-3 py-1 rounded-md hover:bg-red-200"
                             onClick={() => window.location.reload()}
                         >
@@ -363,17 +362,17 @@ export default function CustomersPage() {
                         variants={containerVariants}
                         initial="hidden"
                         animate="visible"
-                        className={viewType === 'grid' 
-                            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" 
+                        className={viewType === 'grid'
+                            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                             : "space-y-4"
                         }
                     >
                         {viewType === 'grid' ? (
                             // Grid view
                             sortedCustomers.map((customer) => (
-                                <CustomerCard 
-                                    key={customer.user_id} 
-                                    customer={customer} 
+                                <CustomerCard
+                                    key={customer.user_id}
+                                    customer={customer}
                                 />
                             ))
                         ) : (
@@ -407,14 +406,14 @@ export default function CustomersPage() {
                                             <td className="px-4 py-4 whitespace-nowrap">
                                                 <div className="flex items-center">
                                                     <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 font-bold mr-4">
-                                                        {customer.first_name && customer.last_name 
-                                                            ? `${customer.first_name[0]}${customer.last_name[0]}` 
+                                                        {customer.first_name && customer.last_name
+                                                            ? `${customer.first_name[0]}${customer.last_name[0]}`
                                                             : customer.username.substring(0, 2).toUpperCase()}
                                                     </div>
                                                     <div>
                                                         <h3 className="font-medium">
-                                                            {customer.first_name && customer.last_name 
-                                                                ? `${customer.first_name} ${customer.last_name}` 
+                                                            {customer.first_name && customer.last_name
+                                                                ? `${customer.first_name} ${customer.last_name}`
                                                                 : customer.username}
                                                         </h3>
                                                     </div>
@@ -430,11 +429,10 @@ export default function CustomersPage() {
                                                 <div className="text-sm">{new Date(customer.created_at).toLocaleDateString()}</div>
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap hidden md:table-cell">
-                                                <div className={`px-2 py-1 text-xs inline-block rounded-full ${
-                                                    customer.is_active 
-                                                        ? 'bg-green-100 text-green-800' 
+                                                <div className={`px-2 py-1 text-xs inline-block rounded-full ${customer.is_active
+                                                        ? 'bg-green-100 text-green-800'
                                                         : 'bg-gray-100 text-gray-800'
-                                                }`}>
+                                                    }`}>
                                                     {customer.is_active ? 'Active' : 'Inactive'}
                                                 </div>
                                             </td>
@@ -452,7 +450,7 @@ export default function CustomersPage() {
                         )}
                     </motion.div>
                 )}
-                
+
                 {/* Pagination */}
                 {!loading && !error && totalCustomers > 0 && (
                     <div className="mt-6 flex justify-between items-center">
@@ -460,14 +458,14 @@ export default function CustomersPage() {
                             Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, totalCustomers)} of {totalCustomers} customers
                         </div>
                         <div className="flex space-x-2">
-                            <button 
+                            <button
                                 className={`px-3 py-1 rounded-md ${page === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-amber-100 text-amber-600 hover:bg-amber-200'}`}
                                 onClick={() => setPage(p => Math.max(1, p - 1))}
                                 disabled={page === 1}
                             >
                                 Previous
                             </button>
-                            <button 
+                            <button
                                 className={`px-3 py-1 rounded-md ${page * pageSize >= totalCustomers ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-amber-100 text-amber-600 hover:bg-amber-200'}`}
                                 onClick={() => setPage(p => p + 1)}
                                 disabled={page * pageSize >= totalCustomers}
@@ -480,5 +478,5 @@ export default function CustomersPage() {
             </div>
         </div>
     );
-} 
+}
 

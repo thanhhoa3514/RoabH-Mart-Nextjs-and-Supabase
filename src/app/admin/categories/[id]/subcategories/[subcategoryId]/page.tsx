@@ -20,7 +20,7 @@ import {
     getSubcategoryById,
     updateSubcategory,
     deleteSubcategory
-} from '@/lib/supabase/categories/category.service';
+} from '@/services/supabase/categories/category.service';
 import { Category, Subcategory } from '@/types';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -48,8 +48,8 @@ export default function SubcategoryDetailPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Get category ID and subcategory ID from URL params
-    const categoryId = typeof params.id === 'string' ? params.id : '';
-    const subcategoryId = typeof params.subcategoryId === 'string' ? params.subcategoryId : '';
+    const categoryId = typeof params.id === 'number' ? params.id : 0;
+    const subcategoryId = typeof params.subcategoryId === 'number' ? params.subcategoryId : 0;
 
     const [isEditing, setIsEditing] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);

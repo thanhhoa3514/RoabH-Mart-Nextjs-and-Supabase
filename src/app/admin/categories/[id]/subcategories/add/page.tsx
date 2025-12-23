@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Upload, X, Check, Loader2 } from 'lucide-react';
 import { useAlert } from '@/providers/alert-provider';
-import { getCategoryById, createSubcategory } from '@/lib/supabase';
+import { getCategoryById, createSubcategory } from '@/services/supabase';
 
 import Image from 'next/image';
 
@@ -16,7 +16,7 @@ export default function AddSubcategoryPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Get category ID from URL params
-    const categoryId = typeof params.id === 'string' ? params.id : '';
+    const categoryId = typeof params.id === 'number' ? params.id : 0;
 
     const [categoryName, setCategoryName] = useState('');
     const [isLoading, setIsLoading] = useState(true);
