@@ -8,6 +8,7 @@ import { useAlert } from '@/providers/alert-provider';
 import { getCategoryById, createSubcategory } from '@/services/supabase';
 
 import Image from 'next/image';
+import { CreateSubcategoryDTO } from '@/types/category';
 
 export default function AddSubcategoryPage() {
     const params = useParams();
@@ -50,8 +51,7 @@ export default function AddSubcategoryPage() {
                 if (data) {
                     setCategoryName(data.name);
                 }
-            } catch (error) {
-
+            } catch {
                 showAlert('error', 'Failed to load parent category', 3000);
             } finally {
                 setIsLoading(false);
@@ -154,8 +154,7 @@ export default function AddSubcategoryPage() {
             setUploadedImageUrl(result.url);
             showAlert('success', 'Image uploaded successfully', 2000);
         } catch (error) {
-
-            showAlert('error', `Failed to upload image: ${(error as Error).message}`, 5000);
+            showAlert('error', `Failed to upload image: ${error instanceof Error ? error.message : 'Unknown error'}`, 5000);
         } finally {
             setIsUploadingImage(false);
         }
@@ -198,7 +197,7 @@ export default function AddSubcategoryPage() {
 
         try {
             // Use the URL of the uploaded image
-            const subcategoryData = {
+            const subcategoryData: CreateSubcategoryDTO = {
                 name: formData.name,
                 description: formData.description || null,
                 image: uploadedImageUrl,

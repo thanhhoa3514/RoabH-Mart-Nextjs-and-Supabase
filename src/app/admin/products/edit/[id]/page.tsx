@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { useAlert } from '@/providers/alert-provider';
 import { useParams, useRouter } from 'next/navigation';
 import { getProductById, getProductImages } from '@/services/supabase/products/product.service';
+import { ProductImage } from '@/types';
 
 export default function EditProductPage() {
     const { id } = useParams();
@@ -29,10 +30,9 @@ export default function EditProductPage() {
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
-    const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
-    const [existingImages, setExistingImages] = useState<any[]>([]);
+    const [existingImages, setExistingImages] = useState<ProductImage[]>([]);
     const [error, setError] = useState<string | null>(null);
 
     // Fetch product data
@@ -99,7 +99,7 @@ export default function EditProductPage() {
     }, [id, showAlert]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value, type } = e.target;
+        const { name, value } = e.target;
 
         if ((e.target as HTMLInputElement).type === 'checkbox') {
             const checked = (e.target as HTMLInputElement).checked;
@@ -120,8 +120,6 @@ export default function EditProductPage() {
                 setImagePreview(reader.result as string);
             };
             reader.readAsDataURL(file);
-
-            setImageFile(file);
 
             // Upload image to server via API
             setIsUploadingImage(true);
@@ -155,7 +153,6 @@ export default function EditProductPage() {
     const removeImage = () => {
         setImagePreview(null);
         setUploadedImageUrl(null);
-        setImageFile(null);
 
         // Clear the file input
         if (fileInputRef.current) {
@@ -258,7 +255,7 @@ export default function EditProductPage() {
                 <div className="flex items-center justify-center h-64">
                     <div className="text-center">
                         <h2 className="text-xl font-medium text-gray-900">Product not found</h2>
-                        <p className="mt-2 text-gray-500">The product you're looking for doesn't exist or has been removed.</p>
+                        <p className="mt-2 text-gray-500">The product you&apos;re looking for doesn&apos;t exist or has been removed.</p>
                         <button
                             onClick={() => router.push('/admin/products')}
                             className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-amber-500 hover:bg-amber-600"

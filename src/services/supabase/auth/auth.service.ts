@@ -1,5 +1,5 @@
 import { getSupabaseClient } from '../client.factory';
-import { AuthError, User } from '@supabase/supabase-js';
+import { User } from '@supabase/supabase-js';
 import { AUTH_REDIRECT_PATH_COOKIE } from '@/services/constants';
 
 export type LoginCredentials = {

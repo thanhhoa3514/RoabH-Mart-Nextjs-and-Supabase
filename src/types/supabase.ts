@@ -1,7 +1,7 @@
-import { Category, Subcategory } from "./category/index";
 import { DbUser, DbUserProfile, DbUserAddress } from "./user/user.model";
 import { DbOrder, DbOrderItem, DbPayment, DbShippingInfo } from "./order/index";
 import { Product } from "./product/product.model";
+import { User } from "@supabase/supabase-js";
 
 // Export base types for convenience in this file's consumers
 export type { Product, DbUser as User, DbUserProfile as UserProfile, DbUserAddress as Address };

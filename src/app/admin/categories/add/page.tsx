@@ -8,6 +8,7 @@ import { useAlert } from '@/providers/alert-provider';
 import { createCategory } from '@/services/supabase';
 
 import Image from 'next/image';
+import { CreateCategoryDTO } from '@/types/category';
 
 export default function AddCategoryPage() {
     const router = useRouter();
@@ -179,7 +180,13 @@ export default function AddCategoryPage() {
             };
 
             // Ensure there's no category_id in the data
-            const { category_id, ...dataToSubmit } = categoryData as any;
+            const dataToSubmit: CreateCategoryDTO = {
+                name: categoryData.name,
+                description: categoryData.description,
+                image: categoryData.image,
+                is_active: categoryData.is_active,
+                display_order: categoryData.display_order
+            };
 
             console.log('Creating category with data:', dataToSubmit);
             const { data, error } = await createCategory(dataToSubmit);

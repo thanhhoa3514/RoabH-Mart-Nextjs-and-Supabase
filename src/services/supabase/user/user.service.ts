@@ -1,5 +1,5 @@
 import { getSupabaseClient } from '../client.factory';
-import { Address, User, UserProfile } from '@/types/supabase';
+import { Address, UserProfile } from '@/types/supabase';
 
 // --- User Profile Functions ---
 

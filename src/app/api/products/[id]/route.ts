@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient, updateProduct, getProductById } from '@/services/supabase';
+import { ProductImage } from '@/types';
 
 type Context = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 export async function DELETE(
@@ -12,7 +13,7 @@ export async function DELETE(
   context: Context
 ): Promise<NextResponse> {
   try {
-    const productId = context.params.id;
+    const { id: productId } = await context.params;
     const supabase = await getSupabaseClient();
 
     if (!productId) {
@@ -145,7 +146,7 @@ export async function PUT(
   context: Context
 ): Promise<NextResponse> {
   try {
-    const productId = context.params.id;
+    const { id: productId } = await context.params;
 
     if (!productId) {
       return NextResponse.json(
@@ -217,10 +218,10 @@ export async function PUT(
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const productId = params.id;
+    const { id: productId } = await params;
     const supabase = await getSupabaseClient();
 
     if (!productId) {
@@ -257,7 +258,7 @@ export async function GET(
     }
 
     // Format product for frontend
-    const formattedProduct: any = {
+    const formattedProduct = {
       id: product.product_id,
       product_id: product.product_id,
       name: product.name,
@@ -266,10 +267,12 @@ export async function GET(
       stock: product.stock_quantity,
       stock_quantity: product.stock_quantity,
       discount_percentage: product.discount_percentage || 0,
-      images: product.product_images?.map((img: any) => img.image_url) || [],
+      images: (product.product_images as ProductImage[])?.map((img) => img.image_url) || [],
       category: product.subcategory_id?.toString(),
       createdAt: new Date(product.created_at || Date.now()).toISOString(),
-      updatedAt: new Date(product.updated_at || Date.now()).toISOString()
+      updatedAt: new Date(product.updated_at || Date.now()).toISOString(),
+      rating: 0 as number | undefined,
+      reviews_count: 0 as number | undefined
     };
 
     // Get reviews count and average rating
@@ -279,7 +282,7 @@ export async function GET(
       .eq('product_id', productId);
 
     if (!ratingError && ratingData && ratingData.length > 0) {
-      const ratings = ratingData.map((r: any) => r.rating);
+      const ratings = (ratingData as { rating: number }[]).map((r) => r.rating);
       const averageRating = ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length;
 
       formattedProduct.rating = parseFloat(averageRating.toFixed(1));

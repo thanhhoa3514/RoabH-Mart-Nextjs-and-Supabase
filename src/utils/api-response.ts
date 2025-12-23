@@ -45,7 +45,7 @@ export class ResponseHelper {
     static error(
         message: string,
         code: ErrorCode = ErrorCode.INTERNAL_SERVER_ERROR,
-        details?: any,
+        details?: unknown,
         customStatus?: number
     ): NextResponse<ApiResponse<null>> {
         const status = customStatus || ERROR_STATUS_MAP[code] || 500;
@@ -85,7 +85,7 @@ export class ResponseHelper {
      */
     static badRequest(
         message: string = 'Bad request',
-        details?: any
+        details?: unknown
     ): NextResponse<ApiResponse<null>> {
         return this.error(message, ErrorCode.BAD_REQUEST, details);
     }
@@ -95,7 +95,7 @@ export class ResponseHelper {
      */
     static unauthorized(
         message: string = 'Unauthorized',
-        details?: any
+        details?: unknown
     ): NextResponse<ApiResponse<null>> {
         return this.error(message, ErrorCode.UNAUTHORIZED, details);
     }
@@ -105,7 +105,7 @@ export class ResponseHelper {
      */
     static forbidden(
         message: string = 'Forbidden',
-        details?: any
+        details?: unknown
     ): NextResponse<ApiResponse<null>> {
         return this.error(message, ErrorCode.FORBIDDEN, details);
     }
@@ -115,7 +115,7 @@ export class ResponseHelper {
      */
     static notFound(
         message: string = 'Not found',
-        details?: any
+        details?: unknown
     ): NextResponse<ApiResponse<null>> {
         return this.error(message, ErrorCode.NOT_FOUND, details);
     }
@@ -125,7 +125,7 @@ export class ResponseHelper {
      */
     static internalServerError(
         message: string = 'Internal server error',
-        details?: any
+        details?: unknown
     ): NextResponse<ApiResponse<null>> {
         return this.error(message, ErrorCode.INTERNAL_SERVER_ERROR, details);
     }
@@ -134,7 +134,7 @@ export class ResponseHelper {
    */
     static conflict(
         message: string = 'Resource already exists',
-        details?: any
+        details?: unknown
     ): NextResponse<ApiResponse<null>> {
         return this.error(message, ErrorCode.CONFLICT, details);
     }
@@ -144,7 +144,7 @@ export class ResponseHelper {
      */
     static validationError(
         message: string = 'Validation failed',
-        errors: any
+        errors: unknown
     ): NextResponse<ApiResponse<null>> {
         return this.error(message, ErrorCode.VALIDATION_ERROR, { errors });
     }

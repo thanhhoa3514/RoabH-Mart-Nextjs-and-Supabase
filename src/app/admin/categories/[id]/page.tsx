@@ -11,7 +11,6 @@ import {
     Save,
     Loader2,
     Plus,
-    Image as ImageIcon,
     Upload,
     X
 } from 'lucide-react';
@@ -64,8 +63,7 @@ export default function CategoryDetailPage() {
         image: ''
     });
 
-    // State for image preview and file
-    const [imageFile, setImageFile] = useState<File | null>(null);
+    // State for image preview
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
 
@@ -154,8 +152,6 @@ export default function CategoryDetailPage() {
         };
         reader.readAsDataURL(file);
 
-        setImageFile(file);
-
         // Upload image to server via API
         try {
             setIsUploadingImage(true);
@@ -190,7 +186,6 @@ export default function CategoryDetailPage() {
     const removeImage = () => {
         setImagePreview(null);
         setUploadedImageUrl(null);
-        setImageFile(null);
         setFormData(prev => ({ ...prev, image: '' }));
 
         // Clear the file input
@@ -221,7 +216,6 @@ export default function CategoryDetailPage() {
                 image: categoryData.image || ''
             });
             setImagePreview(categoryData.image || null);
-            setImageFile(null);
             setUploadedImageUrl(null);
         }
         setIsEditing(false);
@@ -274,7 +268,6 @@ export default function CategoryDetailPage() {
 
             showAlert('success', 'Category updated successfully', 3000);
             setIsEditing(false);
-            setImageFile(null);
         } catch (error) {
             showAlert('error', error instanceof Error ? error.message : 'Failed to update category', 3000);
         } finally {
@@ -508,10 +501,11 @@ export default function CategoryDetailPage() {
 
                                     {imagePreview ? (
                                         <div className="relative rounded-lg overflow-hidden h-64 mb-4">
-                                            <img
+                                            <Image
                                                 src={imagePreview}
                                                 alt="Category preview"
-                                                className="w-full h-full object-cover"
+                                                className="object-cover"
+                                                fill
                                             />
                                             {isUploadingImage && (
                                                 <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">

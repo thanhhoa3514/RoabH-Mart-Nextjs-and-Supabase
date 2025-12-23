@@ -4,10 +4,10 @@ import { getSupabaseClient } from '@/services/supabase';
 // Update cart item quantity
 export async function PATCH(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const cartItemId = params.id;
+        const { id: cartItemId } = await params;
         const { quantity } = await request.json();
         const supabase = await getSupabaseClient();
 
@@ -23,12 +23,19 @@ export async function PATCH(
         const { data: cartItem, error: fetchError } = await supabase
             .from('cart_items')
             .select(`
-        cart_id,
-        product_id,
-        products (stock_quantity)
-      `)
+                cart_id,
+                product_id,
+                products (stock_quantity)
+            `)
             .eq('cart_item_id', cartItemId)
             .single();
+
+        // Casting to a specific type to avoid any
+        const item = cartItem as {
+            cart_id: number;
+            product_id: number;
+            products: { stock_quantity: number } | null;
+        } | null;
 
         if (fetchError || !cartItem) {
             return NextResponse.json(
@@ -38,9 +45,9 @@ export async function PATCH(
         }
 
         // Check if quantity exceeds available stock
-        if ((cartItem.products as any).stock_quantity < quantity) {
+        if (!item?.products || item.products.stock_quantity < quantity) {
             return NextResponse.json(
-                { error: 'Not enough items in stock', available: (cartItem.products as any).stock_quantity },
+                { error: 'Not enough items in stock', available: item?.products?.stock_quantity || 0 },
                 { status: 400 }
             );
         }
@@ -84,10 +91,10 @@ export async function PATCH(
 // Delete cart item
 export async function DELETE(
     request: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const cartItemId = params.id;
+        const { id: cartItemId } = await params;
         const supabase = await getSupabaseClient();
 
         if (!cartItemId) {

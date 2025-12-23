@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Upload, X, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAlert } from '@/providers/alert-provider';
 import { useRouter } from 'next/navigation';
 import { getCategories, getSubcategories } from '@/services/supabase';
@@ -390,10 +391,11 @@ export default function AddProductPage() {
 
                             {imagePreview ? (
                                 <div className="relative rounded-lg overflow-hidden h-64 mb-4">
-                                    <img
+                                    <Image
                                         src={imagePreview}
                                         alt="Product preview"
-                                        className="w-full h-full object-cover"
+                                        className="object-cover"
+                                        fill
                                     />
                                     {isUploadingImage && (
                                         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">

@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { getCategories } from '@/services/supabase/categories/category.service';
+import { getCategories } from '@/services/supabase';
 import { Category } from '@/types';
 
 interface ProductFiltersProps {
@@ -28,7 +28,7 @@ export default function ProductFilters({ selectedCategory, selectedSort = 'newes
 
         if (data) {
           // Filter to only active categories and sort by display order
-          const activeCategories = data
+          const activeCategories = (data as Category[])
             .filter(cat => cat.is_active)
             .sort((a, b) => a.display_order - b.display_order);
 
@@ -85,8 +85,8 @@ export default function ProductFilters({ selectedCategory, selectedSort = 'newes
           <div className="flex items-center">
             <button
               className={`text-left w-full py-2 px-3 rounded-md transition-colors ${!selectedCategory
-                  ? 'bg-primary text-white'
-                  : 'hover:bg-secondary'
+                ? 'bg-primary text-white'
+                : 'hover:bg-secondary'
                 }`}
               onClick={() => handleCategoryChange('all')}
             >
@@ -107,8 +107,8 @@ export default function ProductFilters({ selectedCategory, selectedSort = 'newes
               <div key={category.category_id} className="flex items-center">
                 <button
                   className={`text-left w-full py-2 px-3 rounded-md transition-colors ${category.name.toLowerCase() === selectedCategory
-                      ? 'bg-primary text-white'
-                      : 'hover:bg-secondary'
+                    ? 'bg-primary text-white'
+                    : 'hover:bg-secondary'
                     }`}
                   onClick={() => handleCategoryChange(category.name.toLowerCase())}
                 >
@@ -128,8 +128,8 @@ export default function ProductFilters({ selectedCategory, selectedSort = 'newes
             <div key={option.id} className="flex items-center">
               <button
                 className={`text-left w-full py-2 px-3 rounded-md transition-colors ${option.id === selectedSort
-                    ? 'bg-primary text-white'
-                    : 'hover:bg-secondary'
+                  ? 'bg-primary text-white'
+                  : 'hover:bg-secondary'
                   }`}
                 onClick={() => handleSortChange(option.id)}
               >

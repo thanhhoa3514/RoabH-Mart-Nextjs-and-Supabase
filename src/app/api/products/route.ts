@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       categoryId: category || undefined,
       subcategoryId: subcategory || undefined,
       search: search || undefined,
-      sort: sort as any,
+      sort: (sort || 'newest') as string,
       page: page,
       limit: limit,
     });
@@ -37,7 +37,8 @@ export async function GET(request: NextRequest) {
     // If there's an exclude ID, filter out that product
     let filteredData = data;
     if (excludeId && data) {
-      filteredData = data.filter(product => product.id !== excludeId);
+      const numericExcludeId = parseInt(excludeId, 10);
+      filteredData = data.filter(product => product.id !== numericExcludeId);
 
       // If we need to maintain the limit after filtering
       if (filteredData.length < limit) {
@@ -51,9 +52,7 @@ export async function GET(request: NextRequest) {
       count: count,
       totalPages: totalPages,
     });
-
-  } catch (error) {
-
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -125,8 +124,7 @@ export async function POST(request: NextRequest) {
       data: productResult[0],
       message: 'Product added successfully'
     });
-
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

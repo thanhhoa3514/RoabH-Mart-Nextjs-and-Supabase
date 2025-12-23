@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { updateOrderStatus, getOrderById } from '@/services/supabase';
 
 type Context = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 // Lấy thông tin đơn hàng
@@ -13,7 +13,8 @@ export async function GET(
   context: Context
 ): Promise<NextResponse> {
   try {
-    const orderId = parseInt(context.params.id);
+    const { id } = await context.params;
+    const orderId = parseInt(id);
 
     if (isNaN(orderId)) {
       return NextResponse.json(
@@ -54,7 +55,8 @@ export async function PATCH(
   context: Context
 ): Promise<NextResponse> {
   try {
-    const orderId = parseInt(context.params.id);
+    const { id } = await context.params;
+    const orderId = parseInt(id);
 
     if (isNaN(orderId)) {
       return NextResponse.json(

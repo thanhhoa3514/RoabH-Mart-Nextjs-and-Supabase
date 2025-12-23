@@ -52,7 +52,7 @@ export default function AddToCartButton({
                 try {
                     // Try to parse the error response
                     errorData = JSON.parse(errorText);
-                } catch (e) {
+                } catch {
                     console.error('Failed to parse error response:', errorText);
                     throw new Error('Failed to add to cart');
                 }
@@ -70,8 +70,8 @@ export default function AddToCartButton({
 
             // Optionally refresh the page data to update stock counts
             router.refresh();
-        } catch (error) {
-            console.error('Error adding to cart:', error);
+        } catch {
+            console.error('Error adding to cart');
             showAlert('error', 'Failed to add to cart. Please try again.', 3000);
         } finally {
             setIsAdding(false);

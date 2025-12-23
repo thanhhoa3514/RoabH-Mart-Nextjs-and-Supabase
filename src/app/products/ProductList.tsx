@@ -24,7 +24,6 @@ interface PaginationData {
 
 export default function ProductList({
   category,
-  subcategory,
   search,
   sort = 'newest',
   page = 1,
@@ -57,7 +56,7 @@ export default function ProductList({
         const { data, error, count, totalPages } = await getProducts({
           categoryId: category,
           search,
-          sort: sort as any,
+          sort: sort as string,
           page,
           limit: itemsPerPage
         });
@@ -67,11 +66,7 @@ export default function ProductList({
           setProducts([]);
         } else if (data && data.length > 0) {
           // Data successfully fetched
-          setProducts(data.map(item => ({
-            ...item,
-            product_id: item.id,
-            stock_quantity: item.stock
-          })));
+          setProducts(data as Product[]);
           setError(null);
           setPagination({
             count: count || 0,
@@ -84,7 +79,7 @@ export default function ProductList({
           setProducts([]);
           setError(null);
         }
-      } catch (err) {
+      } catch {
         setError('An unexpected error occurred. Please try again later.');
         setProducts([]);
       } finally {
@@ -174,7 +169,7 @@ export default function ProductList({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.map(product => (
-          <ProductCard key={product.id} product={product} />
+          <ProductCard key={product.product_id} product={product} />
         ))}
       </div>
 
