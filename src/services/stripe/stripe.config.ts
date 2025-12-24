@@ -6,10 +6,19 @@ if (!process.env.STRIPE_SECRET_KEY) {
 
 /**
  * Stripe client instance configured with secret key
- * Uses the latest API version for consistency
+ * API version is NOT explicitly set - uses the SDK's default pinned version
+ * stripe-node v20.1.0 is pinned to '2024-11-20.acacia'
+ * This ensures compatibility and prevents version-specific feature mismatches
+ * 
+ * Note: Explicitly setting apiVersion to a newer version than the SDK supports
+ * can cause TypeScript errors and runtime issues. Always use the SDK's default
+ * unless you have a specific, tested reason to override it.
+ * 
+ * @see https://github.com/stripe/stripe-node/blob/master/CHANGELOG.md
  */
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2025-12-15.clover',
+    // apiVersion omitted - uses SDK's default (2024-11-20.acacia for v20.1.0)
+    // Explicitly setting a newer version causes type errors and potential runtime issues
     typescript: true,
 });
 

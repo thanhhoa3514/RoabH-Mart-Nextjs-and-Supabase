@@ -81,10 +81,15 @@ export async function createCheckoutSession(
             payment_method_types: ['card'],
             line_items: lineItems,
             mode: 'payment',
-            success_url: `${STRIPE_CONFIG.successUrl}?order_number={CHECKOUT_SESSION_ID}`,
+            // Success URL uses the actual ORDER NUMBER (not session ID) for user-friendly confirmation page
+            // The order number is passed to allow the confirmation page to fetch order details
+            // Format: /order-confirmation?order_number=ORD-2024-ABC123
+            success_url: `${STRIPE_CONFIG.successUrl}?order_number=${params.orderNumber}`,
             cancel_url: STRIPE_CONFIG.cancelUrl,
             customer_email: params.customerEmail,
+            // client_reference_id stores the order number for Stripe dashboard reference
             client_reference_id: params.orderNumber,
+            // Metadata is used by webhooks to identify the order when payment completes
             metadata: {
                 order_id: params.orderId.toString(),
                 order_number: params.orderNumber,
