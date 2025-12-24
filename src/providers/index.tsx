@@ -5,7 +5,7 @@ import { AuthProvider } from './auth-provider';
 import { CartProvider } from './cart-provider';
 import { AlertProvider } from './alert-provider';
 import SupabaseProvider from './supabase-provider';
-// import { ThemeProvider } from './theme-provider';
+import { ThemeProvider } from './theme-provider';
 
 export function Providers({ children }: { children: React.ReactNode }) {
     return (
@@ -13,9 +13,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <AuthProvider>
                 <AlertProvider>
                     <CartProvider>
-                        {/* <ThemeProvider defaultTheme="light"> */}
-                        {children}
-                        {/* </ThemeProvider> */}
+                        <ThemeProvider defaultTheme="light">
+                            {children}
+                        </ThemeProvider>
                     </CartProvider>
                 </AlertProvider>
             </AuthProvider>

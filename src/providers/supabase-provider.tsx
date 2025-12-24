@@ -41,14 +41,16 @@ export default function SupabaseProvider({
     };
   }, [supabase]);
 
-  // Don't render children until client is ready
-  if (!mounted || !supabase) {
-    return <>{children}</>;
-  }
-
+  // Always wrap children with Provider, but show loading state if not ready
   return (
     <Context.Provider value={{ supabase }}>
-      {children}
+      {!mounted || !supabase ? (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        children
+      )}
     </Context.Provider>
   );
 }
