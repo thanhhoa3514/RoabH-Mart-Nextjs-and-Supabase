@@ -1,6 +1,11 @@
 import { CartItem } from '@/types/supabase';
+import { OrderStatus } from '@/types/order/order-status.enum';
 
-export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+/**
+ * @deprecated Use OrderStatus enum from '@/types/order/order-status.enum' instead
+ * This type is kept for backward compatibility but will be removed in future versions
+ */
+export type OrderStatusLegacy = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 
 /**
  * Transform cart items to order items
@@ -40,19 +45,37 @@ export const calculateOrderTotal = (cartItems: CartItem[]): number => {
 
 /**
  * Get readable status label
+ * @deprecated Use getOrderStatusLabel from '@/types/order/order-status.enum' instead
+ * This function is kept for backward compatibility but will be removed in future versions
  */
-export const getOrderStatusLabel = (status: OrderStatus): string => {
-    switch (status) {
+export const getOrderStatusLabelLegacy = (status: OrderStatus | string): string => {
+    const statusLower = typeof status === 'string' ? status.toLowerCase() : status;
+
+    switch (statusLower) {
+        case OrderStatus.PENDING:
         case 'pending':
             return 'Awaiting Payment';
+        case OrderStatus.PROCESSING:
         case 'processing':
             return 'Processing';
+        case OrderStatus.SHIPPED:
         case 'shipped':
             return 'Shipped';
+        case OrderStatus.DELIVERED:
         case 'delivered':
             return 'Delivered';
+        case OrderStatus.CANCELLED:
         case 'cancelled':
             return 'Cancelled';
+        case OrderStatus.PAID:
+        case 'paid':
+            return 'Paid';
+        case OrderStatus.FAILED:
+        case 'failed':
+            return 'Payment Failed';
+        case OrderStatus.REFUNDED:
+        case 'refunded':
+            return 'Refunded';
         default:
             return 'Unknown Status';
     }
@@ -61,9 +84,13 @@ export const getOrderStatusLabel = (status: OrderStatus): string => {
 /**
  * Check if an order can be cancelled
  */
-export const canCancelOrder = (status: OrderStatus): boolean => {
+export const canCancelOrder = (status: OrderStatus | string): boolean => {
+    const statusLower = typeof status === 'string' ? status.toLowerCase() : status;
     // Only pending and processing orders can be cancelled
-    return status === 'pending' || status === 'processing';
+    return statusLower === OrderStatus.PENDING ||
+        statusLower === OrderStatus.PROCESSING ||
+        statusLower === 'pending' ||
+        statusLower === 'processing';
 };
 
 /**
@@ -77,3 +104,4 @@ export const generateOrderReference = (orderId: string): string => {
 
     return `RM-${year}${month}-${shortId}`;
 };
+

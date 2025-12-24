@@ -9,14 +9,67 @@ import {
 import { getSupabaseClient } from '@/services/supabase/client.factory';
 import { OrderStatus, PaymentStatus } from '@/types/order/order-status.enum';
 
-// Store processed event IDs to prevent duplicate processing
-const processedEvents = new Set<string>();
+/**
+ * Check if webhook event has already been processed (database-backed idempotency)
+ * This works across serverless function invocations and multiple server instances
+ */
+async function isEventProcessed(eventId: string): Promise<boolean> {
+    const supabase = await getSupabaseClient();
+
+    const { data, error } = await supabase
+        .from('webhook_events')
+        .select('event_id')
+        .eq('event_id', eventId)
+        .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error('Error checking event idempotency:', error);
+        // On error, assume not processed to avoid missing events
+        return false;
+    }
+
+    return !!data;
+}
+
+/**
+ * Mark webhook event as processed in database
+ */
+async function markEventAsProcessed(
+    eventId: string,
+    eventType: string,
+    payload?: any,
+    status: 'processed' | 'failed' = 'processed',
+    errorMessage?: string
+): Promise<void> {
+    const supabase = await getSupabaseClient();
+
+    const { error } = await supabase
+        .from('webhook_events')
+        .insert({
+            event_id: eventId,
+            event_type: eventType,
+            payload: payload || null,
+            status,
+            error_message: errorMessage || null,
+            processed_at: new Date().toISOString(),
+        });
+
+    if (error) {
+        // If duplicate key error (event already exists), that's fine - it means another instance processed it
+        if (error.code !== '23505') { // 23505 = unique_violation
+            console.error('Error marking event as processed:', error);
+        }
+    }
+}
 
 /**
  * POST /api/webhooks/stripe
- * Handle Stripe webhook events
+ * Handle Stripe webhook events with database-backed idempotency
  */
 export async function POST(request: NextRequest) {
+    let eventId: string | undefined;
+    let eventType: string | undefined;
+
     try {
         // Get the raw body as text
         const body = await request.text();
@@ -42,16 +95,21 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Check for duplicate events (idempotency)
-        if (processedEvents.has(event.id)) {
-            console.log(`Duplicate event ${event.id} detected, skipping`);
-            return NextResponse.json({ received: true });
+        eventId = event.id;
+        eventType = event.type;
+
+        // Check for duplicate events using database (idempotency)
+        const alreadyProcessed = await isEventProcessed(eventId);
+
+        if (alreadyProcessed) {
+            console.log(`Duplicate event ${eventId} detected (found in database), skipping`);
+            return NextResponse.json({ received: true, duplicate: true });
         }
 
-        console.log(`Processing webhook event: ${event.type} (${event.id})`);
+        console.log(`Processing webhook event: ${eventType} (${eventId})`);
 
         // Handle different event types
-        switch (event.type) {
+        switch (eventType) {
             case 'checkout.session.completed':
                 await handleCheckoutSessionCompleted(event);
                 break;
@@ -65,22 +123,27 @@ export async function POST(request: NextRequest) {
                 break;
 
             default:
-                console.log(`Unhandled event type: ${event.type}`);
+                console.log(`Unhandled event type: ${eventType}`);
         }
 
-        // Mark event as processed
-        processedEvents.add(event.id);
-
-        // Clean up old processed events (keep last 1000)
-        if (processedEvents.size > 1000) {
-            const eventsArray = Array.from(processedEvents);
-            processedEvents.clear();
-            eventsArray.slice(-500).forEach((id) => processedEvents.add(id));
-        }
+        // Mark event as processed in database
+        await markEventAsProcessed(eventId, eventType, event, 'processed');
 
         return NextResponse.json({ received: true });
     } catch (error) {
         console.error('Webhook handler error:', error);
+
+        // Mark event as failed if we have the event ID
+        if (eventId && eventType) {
+            await markEventAsProcessed(
+                eventId,
+                eventType,
+                undefined,
+                'failed',
+                error instanceof Error ? error.message : 'Unknown error'
+            );
+        }
+
         return NextResponse.json(
             { error: 'Webhook handler failed' },
             { status: 500 }

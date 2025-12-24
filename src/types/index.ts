@@ -33,11 +33,14 @@ export interface ThemeConfig {
     backgroundColor: string;
 }
 
-// Order Status Enum (consistent with DB values)
-export enum OrderStatus {
-    PENDING = 'pending',
-    PROCESSING = 'processing',
-    SHIPPED = 'shipped',
-    DELIVERED = 'delivered',
-    CANCELLED = 'cancelled',
-}
+// Re-export order status enums from the single source of truth
+export {
+    OrderStatus,
+    PaymentStatus,
+    ShippingStatus,
+    getOrderStatusLabel,
+    getOrderStatusColor,
+    isValidStatusTransition,
+    VALID_ORDER_STATUS_TRANSITIONS
+} from './order/order-status.enum';
+
