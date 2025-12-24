@@ -72,14 +72,12 @@ export function ThemeProvider({
     setTheme,
   };
 
-  // Prevent flash of unstyled content
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
+  // Always wrap with Provider, hide content until mounted to prevent FOUC
   return (
     <ThemeProviderContext.Provider value={value}>
-      {mounted ? <>{children}</> : <div style={{ visibility: 'hidden' }}>{children}</div>}
+      <div style={{ visibility: mounted ? 'visible' : 'hidden' }}>
+        {children}
+      </div>
     </ThemeProviderContext.Provider>
   );
 }
