@@ -2,34 +2,41 @@
 
 import Link from 'next/link';
 import { useState, FormEvent } from 'react';
-import { ShoppingCart, User, Search, Menu, X, LogOut, ShoppingBag, Smartphone, Shirt, Home } from 'lucide-react';
+import { User, Search, Menu, LogOut, ShoppingBag, Smartphone, Shirt, Home, Package } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
 import { useRouter } from 'next/navigation';
-import Modal from '@/components/ui/Modal';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import CartCount from './CartCount';
 
 export default function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
   const { user, signOut } = useAuth();
 
-  const handleLogoutClick = () => {
-    setIsUserMenuOpen(false);
-    setIsLogoutModalOpen(true);
-  };
-
   const handleSignOut = async () => {
     await signOut();
-    setIsLogoutModalOpen(false);
-    setIsUserMenuOpen(false);
-  };
-
-  const handleCancelLogout = () => {
-    setIsLogoutModalOpen(false);
+    setIsLogoutDialogOpen(false);
   };
 
   const handleSearch = (e: FormEvent) => {
@@ -38,259 +45,241 @@ export default function Header() {
       router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setIsSearchOpen(false);
       setSearchQuery('');
+      setMobileMenuOpen(false);
     }
   };
 
+  const categories = [
+    { name: 'All Products', href: '/products', icon: ShoppingBag },
+    { name: 'Electronics', href: '/products?category=electronics', icon: Smartphone },
+    { name: 'Clothing', href: '/products?category=clothing', icon: Shirt },
+    { name: 'Home & Garden', href: '/products?category=home', icon: Home },
+  ];
+
   return (
-    <header className="bg-primary text-white shadow-md">
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        {/* Logo */}
-        <Link href="/" className="text-2xl font-bold">
-          RoabH Mart
-        </Link>
-
-        {/* Modal Xác nhận đăng xuất */}
-        <Modal
-          isOpen={isLogoutModalOpen}
-          onClose={handleCancelLogout}
-          title="Xác nhận đăng xuất"
-        >
-          <div className="py-2">
-            <p className="text-gray-600 mb-6">Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?</p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={handleCancelLogout}
-                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleSignOut}
-                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
-              >
-                Đăng xuất
-              </button>
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto px-4">
+        <div className="flex h-16 items-center justify-between">
+          {/* Logo */}
+          <Link href="/" className="flex items-center space-x-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
+              <Package className="h-6 w-6 text-primary-foreground" />
             </div>
-          </div>
-        </Modal>
+            <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+              RoabH Mart
+            </span>
+          </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-8">
-          <Link href="/products" className="hover:underline hover:opacity-90 transition-all flex items-center gap-2">
-            <ShoppingBag className="w-5 h-5" />
-            All Products
-          </Link>
-          <Link href="/products?category=electronics" className="hover:underline hover:opacity-90 transition-all flex items-center gap-2">
-            <Smartphone className="w-5 h-5" />
-            Electronics
-          </Link>
-          <Link href="/products?category=clothing" className="hover:underline hover:opacity-90 transition-all flex items-center gap-2">
-            <Shirt className="w-5 h-5" />
-            Clothing
-          </Link>
-          <Link href="/products?category=home" className="hover:underline hover:opacity-90 transition-all flex items-center gap-2">
-            <Home className="w-5 h-5" />
-            Home & Garden
-          </Link>
-        </nav>
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center space-x-1">
+            {categories.map((category) => (
+              <Button
+                key={category.name}
+                variant="ghost"
+                asChild
+                className="text-sm font-medium"
+              >
+                <Link href={category.href} className="flex items-center gap-2">
+                  <category.icon className="h-4 w-4" />
+                  {category.name}
+                </Link>
+              </Button>
+            ))}
+          </nav>
 
-        {/* Search, Cart, and User */}
-        <div className="hidden md:flex items-center space-x-6">
-          <div className="relative">
-            <button
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className="hover:opacity-80 transition-all"
-              aria-label="Search"
-            >
-              <Search className="w-6 h-6" />
-            </button>
-            
-            {/* Desktop Search Dropdown */}
-            {isSearchOpen && (
-              <div className="absolute right-0 mt-2 w-72 bg-white rounded-md shadow-lg p-2 z-10">
-                <form onSubmit={handleSearch} className="flex">
-                  <input
+          {/* Desktop Actions */}
+          <div className="hidden md:flex items-center space-x-2">
+            {/* Search */}
+            <DropdownMenu open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Search className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80">
+                <form onSubmit={handleSearch} className="flex gap-2 p-2">
+                  <Input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search products..."
-                    className="flex-grow p-2 text-gray-900 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="flex-1"
                     autoFocus
                   />
-                  <button
-                    type="submit"
-                    className="bg-primary text-white p-2 rounded-r-md hover:bg-opacity-90"
-                  >
-                    <Search className="w-5 h-5" />
-                  </button>
+                  <Button type="submit" size="icon">
+                    <Search className="h-4 w-4" />
+                  </Button>
                 </form>
-              </div>
-            )}
-          </div>
-          
-                    <CartCount />
-          
-          {/* User Menu */}
-          <div className="relative">
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Cart */}
+            <CartCount />
+
+            {/* User Menu */}
             {user ? (
-              <div>
-                <button 
-                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="hover:text-secondary-foreground transition-colors focus:outline-none"
-                >
-                  <User className="w-6 h-6" />
-                </button>
-                
-                {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
-                    <div className="px-4 py-2 border-b">
-                      <p className="text-sm font-medium text-gray-900">{user.email}</p>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="relative">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium">My Account</p>
+                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     </div>
-                    <Link 
-                      href="/account" 
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsUserMenuOpen(false)}
-                    >
-                      My Account
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/account" className="cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
                     </Link>
-                    <Link 
-                      href="/account/orders" 
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={() => setIsUserMenuOpen(false)}
-                    >
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/account/orders" className="cursor-pointer">
+                      <Package className="mr-2 h-4 w-4" />
                       My Orders
                     </Link>
-                    <button 
-                      onClick={handleLogoutClick}
-                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Sign Out
-                    </button>
-                  </div>
-                )}
-              </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setIsLogoutDialogOpen(true)}
+                    className="text-destructive focus:text-destructive cursor-pointer"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
-              <Link href="/auth/login" className="hover:text-secondary-foreground transition-colors">
-                <User className="w-6 h-6" />
-              </Link>
+              <Button asChild variant="default">
+                <Link href="/auth/login">Sign In</Link>
+              </Button>
             )}
           </div>
-        </div>
 
-        {/* Mobile Menu Button */}
-        <button
-          className="md:hidden text-white"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-        >
-          {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+          {/* Mobile Menu */}
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger asChild className="md:hidden">
+              <Button variant="ghost" size="icon">
+                <Menu className="h-6 w-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-80">
+              <SheetHeader>
+                <SheetTitle>Menu</SheetTitle>
+              </SheetHeader>
+              <div className="flex flex-col space-y-4 mt-6">
+                {/* Mobile Search */}
+                <form onSubmit={handleSearch} className="flex gap-2">
+                  <Input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search products..."
+                    className="flex-1"
+                  />
+                  <Button type="submit" size="icon">
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </form>
+
+                {/* Mobile Navigation */}
+                <div className="flex flex-col space-y-2">
+                  {categories.map((category) => (
+                    <Button
+                      key={category.name}
+                      variant="ghost"
+                      asChild
+                      className="justify-start"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <Link href={category.href} className="flex items-center gap-2">
+                        <category.icon className="h-4 w-4" />
+                        {category.name}
+                      </Link>
+                    </Button>
+                  ))}
+                </div>
+
+                {/* Mobile User Section */}
+                <div className="border-t pt-4">
+                  {user ? (
+                    <div className="flex flex-col space-y-2">
+                      <div className="px-2 py-1.5">
+                        <p className="text-sm font-medium">Signed in as</p>
+                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        asChild
+                        className="justify-start"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <Link href="/account">
+                          <User className="mr-2 h-4 w-4" />
+                          Profile
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        asChild
+                        className="justify-start"
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <Link href="/account/orders">
+                          <Package className="mr-2 h-4 w-4" />
+                          My Orders
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="justify-start text-destructive hover:text-destructive"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          setIsLogoutDialogOpen(true);
+                        }}
+                      >
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Sign Out
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button asChild className="w-full">
+                      <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
+                        Sign In
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
 
-      {/* Mobile Menu */}
-      {isMenuOpen && (
-        <div className="md:hidden bg-primary border-t border-primary-foreground">
-          <div className="container mx-auto px-4 py-4 flex flex-col space-y-4">
-            {/* Mobile Search Form */}
-            <form onSubmit={handleSearch} className="flex mb-2">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search products..."
-                className="flex-grow p-2 text-gray-900 border border-gray-300 rounded-l-md focus:outline-none"
-              />
-              <button
-                type="submit"
-                className="bg-white text-primary p-2 rounded-r-md"
-              >
-                <Search className="w-5 h-5" />
-              </button>
-            </form>
-            
-            <Link
-              href="/products"
-              className="text-white hover:underline hover:opacity-90 transition-all flex items-center gap-2"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <ShoppingBag className="w-5 h-5" />
-              All Products
-            </Link>
-            <Link
-              href="/products?category=electronics"
-              className="text-white hover:underline hover:opacity-90 transition-all flex items-center gap-2"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <Smartphone className="w-5 h-5" />
-              Electronics
-            </Link>
-            <Link
-              href="/products?category=clothing"
-              className="text-white hover:underline hover:opacity-90 transition-all flex items-center gap-2"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <Shirt className="w-5 h-5" />
-              Clothing
-            </Link>
-            <Link
-              href="/products?category=home"
-              className="text-white hover:underline hover:opacity-90 transition-all flex items-center gap-2"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              <Home className="w-5 h-5" />
-              Home & Garden
-            </Link>
-
-            <div className="flex items-center space-x-6 pt-2 border-t border-primary-foreground">
-              <Link
-                href="/cart"
-                className="text-white hover:opacity-80 transition-all relative"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <ShoppingCart className="w-6 h-6" />
-                <span className="absolute -top-2 -right-2 bg-accent-foreground text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                  0
-                </span>
-              </Link>
-              
-              {user ? (
-                <div className="flex flex-col space-y-2 pt-2 border-t border-primary-foreground w-full">
-                  <p className="text-sm text-white">{user.email}</p>
-                  <Link
-                    href="/account"
-                    className="text-white hover:text-secondary-foreground transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    My Account
-                  </Link>
-                  <Link
-                    href="/account/orders"
-                    className="text-white hover:text-secondary-foreground transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    My Orders
-                  </Link>
-                  <button 
-                    onClick={handleLogoutClick}
-                    className="text-left text-red-300 hover:text-red-100 transition-colors flex items-center"
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign Out
-                  </button>
-                </div>
-              ) : (
-                <Link
-                  href="/auth/login"
-                  className="text-white hover:text-secondary-foreground transition-colors"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  <User className="w-6 h-6" />
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Logout Confirmation Dialog */}
+      <Dialog open={isLogoutDialogOpen} onOpenChange={setIsLogoutDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Sign Out</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to sign out of your account?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsLogoutDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleSignOut}>
+              Sign Out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </header>
   );
-} 
+}
