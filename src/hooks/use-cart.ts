@@ -3,7 +3,7 @@
 import { useCart as useCartContext } from '@/providers/cart-provider';
 import { useCallback } from 'react';
 import { toast } from 'react-hot-toast';
-import { Product } from '@/types/supabase';
+import { Product } from '@/types';
 
 export function useCart() {
   const {
