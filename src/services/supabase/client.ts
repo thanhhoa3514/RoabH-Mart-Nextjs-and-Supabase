@@ -1,16 +1,22 @@
 import { createBrowserClient } from '@supabase/ssr';
-import { supabaseUrl, supabaseAnonKey } from './config';
+import { supabaseUrl, supabasePublishableKey } from './config';
 
 /**
  * Creates a Supabase client for use in the browser.
+ * This should only be called on the client-side.
  */
 export const createClient = () => {
-  return createBrowserClient(supabaseUrl, supabaseAnonKey, {
+  // Safety check - should never be called on server
+  if (typeof window === 'undefined') {
+    throw new Error('createBrowserClient should only be called on the client-side');
+  }
+
+  return createBrowserClient(supabaseUrl, supabasePublishableKey, {
     auth: {
       flowType: 'pkce',
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
+      persistSession: typeof window !== 'undefined', // Chỉ persist nếu là browser
+      autoRefreshToken: typeof window !== 'undefined',
+      detectSessionInUrl: typeof window !== 'undefined',
     },
   });
 };
