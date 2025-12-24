@@ -137,6 +137,7 @@ export const getOrderByStripeSessionId = async (sessionId: string) => {
 
 /**
  * Update order and payment status together (for webhook processing)
+ * Uses atomic RPC function to prevent data inconsistency
  */
 export const updateOrderPaymentStatus = async (
     orderId: string | number,
@@ -146,36 +147,21 @@ export const updateOrderPaymentStatus = async (
 ) => {
     const supabase = await getSupabaseClient();
 
-    // Update order status
-    const { error: orderError } = await supabase
-        .from('orders')
-        .update({ status: orderStatus })
-        .eq('order_id', orderId);
+    // Call the atomic RPC function to update both order and payment status
+    // This ensures both updates succeed or fail together (transaction)
+    const { data, error: rpcError } = await supabase.rpc('update_order_payment_status_v1', {
+        p_order_id: orderId,
+        p_order_status: orderStatus,
+        p_payment_status: paymentStatus,
+        p_transaction_id: transactionId || null
+    });
 
-    if (orderError) {
-        return { error: orderError };
+    if (rpcError) {
+        console.error('Error updating order and payment status:', rpcError);
+        return { error: rpcError };
     }
 
-    // Update payment status
-    const updateData: any = {
-        status: paymentStatus,
-        payment_date: new Date().toISOString()
-    };
-
-    if (transactionId) {
-        updateData.transaction_id = transactionId;
-    }
-
-    const { error: paymentError } = await supabase
-        .from('payments')
-        .update(updateData)
-        .eq('order_id', orderId);
-
-    if (paymentError) {
-        return { error: paymentError };
-    }
-
-    return { error: null };
+    return { data, error: null };
 };
 
 /**
