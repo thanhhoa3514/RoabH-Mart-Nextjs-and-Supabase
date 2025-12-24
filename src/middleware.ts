@@ -1,6 +1,5 @@
-import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { supabaseUrl, supabaseAnonKey } from '@/services/supabase/config';
+import { createClient } from '@/services/supabase/server';
 
 // This middleware protects routes that require authentication
 export async function middleware(request: NextRequest) {
@@ -12,37 +11,8 @@ export async function middleware(request: NextRequest) {
         },
     });
 
-    // Khởi tạo Supabase client
-    const supabase = createServerClient(
-        supabaseUrl,
-        supabaseAnonKey,
-        {
-            cookies: {
-                get(name) {
-                    const cookie = request.cookies.get(name);
-                    console.log(`Getting cookie ${name}:`, cookie?.value ? 'exists' : 'not found');
-                    return cookie?.value;
-                },
-                set(name, value, options) {
-                    console.log(`Setting cookie ${name}`);
-                    response.cookies.set({
-                        name,
-                        value,
-                        ...options,
-                    });
-                },
-                remove(name, options) {
-                    console.log(`Removing cookie ${name}`);
-                    response.cookies.set({
-                        name,
-                        value: '',
-                        ...options,
-                        maxAge: 0,
-                    });
-                },
-            },
-        }
-    );
+    // Khởi tạo Supabase client sử dụng shared function
+    const supabase = await createClient();
 
     // Đường dẫn hiện tại
     const pathname = request.nextUrl.pathname;
@@ -79,12 +49,6 @@ export async function middleware(request: NextRequest) {
 
         const session = data.session;
         const isAuthenticated = !!session;
-
-        // Kiểm tra tất cả cookies
-        const allCookies: Record<string, string> = {};
-        request.cookies.getAll().forEach(cookie => {
-            allCookies[cookie.name] = 'exists';
-        });
 
         // Kiểm tra đường dẫn bảo vệ
         if (pathname.startsWith('/account') || pathname.startsWith('/orders') || pathname.startsWith('/checkout')) {
@@ -127,4 +91,4 @@ export const config = {
         '/orders/:path*',
         '/checkout/:path*'
     ],
-}; 
+};

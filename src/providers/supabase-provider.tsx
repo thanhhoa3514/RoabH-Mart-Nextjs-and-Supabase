@@ -6,7 +6,7 @@ import { type SupabaseClient } from '@supabase/supabase-js';
 import { type Database } from '@/types/database';
 
 type SupabaseContext = {
-  supabase: SupabaseClient<Database>;
+  supabase: SupabaseClient<Database> | null;
 };
 
 const Context = createContext<SupabaseContext | undefined>(undefined);
@@ -16,9 +16,20 @@ export default function SupabaseProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [supabase] = useState(() => createClient());
+  const [supabase, setSupabase] = useState<SupabaseClient<Database> | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // Create client only on client-side
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== 'undefined') {
+      setSupabase(createClient());
+    }
+  }, []);
 
   useEffect(() => {
+    if (!supabase) return;
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(() => {
@@ -29,6 +40,11 @@ export default function SupabaseProvider({
       subscription.unsubscribe();
     };
   }, [supabase]);
+
+  // Don't render children until client is ready
+  if (!mounted || !supabase) {
+    return <>{children}</>;
+  }
 
   return (
     <Context.Provider value={{ supabase }}>

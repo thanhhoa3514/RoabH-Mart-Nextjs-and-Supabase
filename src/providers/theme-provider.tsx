@@ -26,10 +26,25 @@ export function ThemeProvider({
   defaultTheme = 'system',
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(defaultTheme);
+  const [mounted, setMounted] = useState(false);
 
+  // Load theme from localStorage on mount
   useEffect(() => {
+    setMounted(true);
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('theme') as Theme | null;
+      if (savedTheme) {
+        setTheme(savedTheme);
+      }
+    }
+  }, []);
+
+  // Apply theme to document
+  useEffect(() => {
+    if (!mounted) return;
+
     const root = window.document.documentElement;
-    
+
     // Remove all existing theme classes
     root.classList.remove('light', 'dark');
 
@@ -43,29 +58,28 @@ export function ThemeProvider({
     }
 
     root.classList.add(theme);
-  }, [theme]);
-
-  // Load theme from localStorage
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as Theme | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-    }
-  }, []);
+  }, [theme, mounted]);
 
   // Save theme to localStorage
   useEffect(() => {
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+    if (mounted && typeof window !== 'undefined') {
+      localStorage.setItem('theme', theme);
+    }
+  }, [theme, mounted]);
 
   const value = {
     theme,
     setTheme,
   };
 
+  // Prevent flash of unstyled content
+  if (!mounted) {
+    return <>{children}</>;
+  }
+
   return (
     <ThemeProviderContext.Provider value={value}>
-      {children}
+      {mounted ? <>{children}</> : <div style={{ visibility: 'hidden' }}>{children}</div>}
     </ThemeProviderContext.Provider>
   );
 }
