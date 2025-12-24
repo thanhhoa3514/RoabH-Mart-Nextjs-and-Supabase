@@ -5,7 +5,8 @@ const nextConfig = {
       'placekitten.com',
       'example.com',
       'dituqzgjijnwjroetrqj.supabase.co',
-      'ufmejreyxbojrvzxgztz.supabase.co' // Add your actual Supabase project domain
+      'ufmejreyxbojrvzxgztz.supabase.co',
+      'images.unsplash.com' // Unsplash images
     ],
   },
   // Uncomment this after resolving build issues
