@@ -17,7 +17,7 @@ import {
     Loader2
 } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
+
 import { OrderStatus, PaymentStatus, getOrderStatusLabel, getOrderStatusColor } from '@/types/order/order-status.enum';
 
 // Animation variants
@@ -37,6 +37,46 @@ const itemVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 }
 };
+
+/**
+ * Get complete Tailwind class names for order status badge
+ * Note: Tailwind requires complete class names at build time - no dynamic interpolation!
+ */
+function getOrderStatusBadgeClasses(status: OrderStatus | string): string {
+    const statusLower = typeof status === 'string' ? status.toLowerCase() : status;
+
+    // Return complete class names (not dynamic) for Tailwind JIT compiler
+    const baseClasses = 'inline-block px-3 py-1 rounded-full text-sm font-medium';
+
+    switch (statusLower) {
+        case OrderStatus.PENDING:
+        case 'pending':
+            return `${baseClasses} bg-yellow-100 text-yellow-800`;
+        case OrderStatus.PAID:
+        case 'paid':
+            return `${baseClasses} bg-green-100 text-green-800`;
+        case OrderStatus.PROCESSING:
+        case 'processing':
+            return `${baseClasses} bg-blue-100 text-blue-800`;
+        case OrderStatus.SHIPPED:
+        case 'shipped':
+            return `${baseClasses} bg-purple-100 text-purple-800`;
+        case OrderStatus.DELIVERED:
+        case 'delivered':
+            return `${baseClasses} bg-green-100 text-green-800`;
+        case OrderStatus.CANCELLED:
+        case 'cancelled':
+            return `${baseClasses} bg-red-100 text-red-800`;
+        case OrderStatus.FAILED:
+        case 'failed':
+            return `${baseClasses} bg-red-100 text-red-800`;
+        case OrderStatus.REFUNDED:
+        case 'refunded':
+            return `${baseClasses} bg-gray-100 text-gray-800`;
+        default:
+            return `${baseClasses} bg-gray-100 text-gray-800`;
+    }
+}
 
 interface OrderData {
     order: {
@@ -208,7 +248,7 @@ function OrderConfirmationContent() {
 
                     <motion.div variants={itemVariants}>
                         <h2 className="text-sm text-gray-500">Order Status</h2>
-                        <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium bg-${getOrderStatusColor(orderData.order.status as OrderStatus)}-100 text-${getOrderStatusColor(orderData.order.status as OrderStatus)}-800`}>
+                        <span className={getOrderStatusBadgeClasses(orderData.order.status as OrderStatus)}>
                             {getOrderStatusLabel(orderData.order.status as OrderStatus)}
                         </span>
                     </motion.div>
