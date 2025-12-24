@@ -105,7 +105,81 @@ export const getOrderById = async (orderId: string | number) => {
 };
 
 /**
- * Update order status
+ * Get order by Stripe session ID
+ */
+export const getOrderByStripeSessionId = async (sessionId: string) => {
+    const supabase = await getSupabaseClient();
+    const { data: order, error } = await supabase
+        .from('orders')
+        .select(`
+            *,
+            order_items(*, products(*)),
+            shipping_info(*),
+            payments(*)
+        `)
+        .eq('stripe_session_id', sessionId)
+        .single();
+
+    if (error || !order) {
+        return { data: null, error: error || { message: 'Order not found' } };
+    }
+
+    return {
+        data: {
+            order: order,
+            orderItems: order.order_items,
+            payment: order.payments?.[0] || null,
+            shipping: order.shipping_info?.[0] || null
+        },
+        error: null
+    };
+};
+
+/**
+ * Update order and payment status together (for webhook processing)
+ */
+export const updateOrderPaymentStatus = async (
+    orderId: string | number,
+    orderStatus: string,
+    paymentStatus: string,
+    transactionId?: string
+) => {
+    const supabase = await getSupabaseClient();
+
+    // Update order status
+    const { error: orderError } = await supabase
+        .from('orders')
+        .update({ status: orderStatus })
+        .eq('order_id', orderId);
+
+    if (orderError) {
+        return { error: orderError };
+    }
+
+    // Update payment status
+    const updateData: any = {
+        status: paymentStatus,
+        payment_date: new Date().toISOString()
+    };
+
+    if (transactionId) {
+        updateData.transaction_id = transactionId;
+    }
+
+    const { error: paymentError } = await supabase
+        .from('payments')
+        .update(updateData)
+        .eq('order_id', orderId);
+
+    if (paymentError) {
+        return { error: paymentError };
+    }
+
+    return { error: null };
+};
+
+/**
+ * Update order status with validation
  */
 export const updateOrderStatus = async (orderId: string | number, status: string) => {
     const supabase = await getSupabaseClient();
@@ -115,4 +189,43 @@ export const updateOrderStatus = async (orderId: string | number, status: string
         .eq('order_id', orderId)
         .select()
         .single();
+};
+
+/**
+ * Get order by order number
+ */
+export const getOrderByOrderNumber = async (orderNumber: string) => {
+    const supabase = await getSupabaseClient();
+    const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .select(`
+            *,
+            order_items(*, products(*)),
+            shipping_info(*),
+            payments(*)
+        `)
+        .eq('order_number', orderNumber)
+        .single();
+
+    if (orderError || !order) {
+        return { data: null, error: orderError || { message: 'Order not found' } };
+    }
+
+    // Get user profile for the order
+    const { data: userProfile } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', order.user_id)
+        .single();
+
+    return {
+        data: {
+            order: order,
+            user: userProfile,
+            orderItems: order.order_items,
+            payment: order.payments?.[0] || null,
+            shipping: order.shipping_info?.[0] || null
+        },
+        error: null
+    };
 };
