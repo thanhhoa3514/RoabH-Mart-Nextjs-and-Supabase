@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createCheckoutSession, CheckoutCartItem } from '@/services/stripe/stripe.service';
+import { createCheckoutSession } from '@/services/stripe/stripe.service';
 import { createOrder } from '@/services/supabase/orders/order.service';
-import { OrderStatus } from '@/types/order/order-status.enum';
 
 /**
  * Checkout request body interface
@@ -30,6 +29,14 @@ interface CheckoutRequest {
         total: number;
     };
     userId: number;
+}
+
+interface CheckoutCartItem {
+    product_id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    image?: string;
 }
 
 /**
