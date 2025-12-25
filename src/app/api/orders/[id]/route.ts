@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateOrderStatus, getOrderById } from '@/services/supabase';
+import { createClient } from '@/services/supabase/server';
+import { requireRole } from '@/lib/auth/role-utils';
 
 type Context = {
   params: Promise<{
@@ -49,61 +51,74 @@ export async function GET(
   }
 }
 
-// Cập nhật trạng thái đơn hàng
+/**
+ * PATCH /api/orders/[id]
+ * Update order status
+ * Requires authentication and admin/manager role
+ */
 export async function PATCH(
   request: NextRequest,
-  context: Context
-): Promise<NextResponse> {
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id } = await context.params;
-    const orderId = parseInt(id);
+    const { id } = params;
+    const body = await request.json();
+    const { status } = body;
 
-    if (isNaN(orderId)) {
+    if (!id) {
       return NextResponse.json(
-        { error: 'Invalid order ID' },
+        { error: 'Order ID is required' },
         { status: 400 }
       );
     }
 
-    // Lấy dữ liệu từ request body
-    const requestBody = await request.json();
-
-    if (!requestBody.status) {
+    if (!status) {
       return NextResponse.json(
         { error: 'Status is required' },
         { status: 400 }
       );
     }
 
-    // Kiểm tra status có hợp lệ không
-    const validStatuses = ['pending', 'processing', 'shipped', 'completed', 'cancelled'];
-    if (!validStatuses.includes(requestBody.status.toLowerCase())) {
+    // SECURITY: Verify user is authenticated
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
       return NextResponse.json(
-        { error: 'Invalid status. Status must be one of: pending, processing, shipped, completed, cancelled' },
-        { status: 400 }
+        { error: 'Unauthorized - Please log in' },
+        { status: 401 }
       );
     }
 
-    // Cập nhật trạng thái đơn hàng
-    const { data, error } = await updateOrderStatus(orderId, requestBody.status.toLowerCase());
+    // SECURITY: Verify user has admin/manager role (type-safe)
+    const roleError = await requireRole(user.id, ['admin', 'manager']);
 
-    if (error) {
+    if (roleError) {
       return NextResponse.json(
-        { error: error.message },
+        { error: roleError.error },
+        { status: roleError.status }
+      );
+    }
+
+    // Update order status
+    const result = await updateOrderStatus(parseInt(id, 10), status);
+
+    if (result.error) {
+      return NextResponse.json(
+        { error: 'Failed to update order status' },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
-      success: true,
-      message: `Order status updated to ${requestBody.status}`,
-      data
+      message: 'Order status updated successfully',
+      order: result.data
     });
   } catch (error) {
-    console.error('Error in PATCH order API:', error);
+    console.error('Error updating order status:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
   }
-} 
+}

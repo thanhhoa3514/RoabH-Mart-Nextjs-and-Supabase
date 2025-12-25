@@ -10,15 +10,15 @@ import {
     ArrowRight,
     Clock,
     Calendar,
-    MapPin,
+
     CreditCard,
     Package,
     AlertCircle,
-    Loader2
+
 } from 'lucide-react';
 import Link from 'next/link';
 
-import { OrderStatus, PaymentStatus, getOrderStatusLabel, getOrderStatusColor } from '@/types/order/order-status.enum';
+import { OrderStatus, PaymentStatus, getOrderStatusLabel } from '@/types/order/order-status.enum';
 
 // Animation variants
 const containerVariants = {
