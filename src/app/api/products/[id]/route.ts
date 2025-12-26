@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient, updateProduct, getProductById } from '@/services/supabase';
 import { ProductImage } from '@/types';
+import { ResponseHelper } from '@/utils/api-response';
 
 type Context = {
   params: Promise<{
@@ -17,27 +18,18 @@ export async function DELETE(
     const supabase = await getSupabaseClient();
 
     if (!productId) {
-      return NextResponse.json(
-        { error: 'Product ID is required' },
-        { status: 400 }
-      );
+      return ResponseHelper.badRequest('Product ID is required');
     }
 
     // Check if product exists
     const { data: product, error: productError } = await getProductById(productId);
 
     if (productError) {
-      return NextResponse.json(
-        { error: `Error checking product: ${productError.message} ` },
-        { status: 500 }
-      );
+      return ResponseHelper.internalServerError(`Error checking product: ${productError.message}`, productError);
     }
 
     if (!product) {
-      return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
-      );
+      return ResponseHelper.notFound('Product not found');
     }
 
     // Delete related cart items first
@@ -48,10 +40,7 @@ export async function DELETE(
 
     if (cartItemsError) {
       console.error('Error deleting cart items:', cartItemsError);
-      return NextResponse.json(
-        { error: `Failed to delete product from carts: ${cartItemsError.message} ` },
-        { status: 500 }
-      );
+      return ResponseHelper.internalServerError(`Failed to delete product from carts: ${cartItemsError.message}`, cartItemsError);
     }
 
     // Delete related reviews
@@ -62,10 +51,7 @@ export async function DELETE(
 
     if (reviewsError) {
       console.error('Error deleting reviews:', reviewsError);
-      return NextResponse.json(
-        { error: `Failed to delete product reviews: ${reviewsError.message} ` },
-        { status: 500 }
-      );
+      return ResponseHelper.internalServerError(`Failed to delete product reviews: ${reviewsError.message}`, reviewsError);
     }
 
     // Check if product is in any orders
@@ -77,10 +63,7 @@ export async function DELETE(
 
     if (orderItemsCheckError) {
       console.error('Error checking order items:', orderItemsCheckError);
-      return NextResponse.json(
-        { error: `Failed to check if product is in orders: ${orderItemsCheckError.message} ` },
-        { status: 500 }
-      );
+      return ResponseHelper.internalServerError(`Failed to check if product is in orders: ${orderItemsCheckError.message}`, orderItemsCheckError);
     }
 
     // If product is in orders, don't delete it but mark as inactive instead
@@ -88,14 +71,10 @@ export async function DELETE(
       const { error: updateError } = await updateProduct(productId, { is_active: false });
 
       if (updateError) {
-        return NextResponse.json(
-          { error: `Failed to mark product as inactive: ${updateError.message} ` },
-          { status: 500 }
-        );
+        return ResponseHelper.internalServerError(`Failed to mark product as inactive: ${updateError.message}`, updateError);
       }
 
-      return NextResponse.json({
-        success: true,
+      return ResponseHelper.success({
         message: 'Product has been marked inactive as it exists in orders',
         wasDeactivated: true
       });
@@ -109,10 +88,7 @@ export async function DELETE(
 
     if (imagesError) {
       console.error('Error deleting product images:', imagesError);
-      return NextResponse.json(
-        { error: `Failed to delete product images: ${imagesError.message} ` },
-        { status: 500 }
-      );
+      return ResponseHelper.internalServerError(`Failed to delete product images: ${imagesError.message}`, imagesError);
     }
 
     // Delete the product
@@ -122,22 +98,15 @@ export async function DELETE(
       .eq('product_id', productId);
 
     if (error) {
-      return NextResponse.json(
-        { error: `Failed to delete product: ${error.message} ` },
-        { status: 500 }
-      );
+      return ResponseHelper.internalServerError(`Failed to delete product: ${error.message}`, error);
     }
 
-    return NextResponse.json({
-      success: true,
+    return ResponseHelper.success({
       message: 'Product deleted successfully'
     });
   } catch (error) {
     console.error('Error in DELETE product API:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return ResponseHelper.internalServerError('Internal server error', error);
   }
 }
 
@@ -149,10 +118,7 @@ export async function PUT(
     const { id: productId } = await context.params;
 
     if (!productId) {
-      return NextResponse.json(
-        { error: 'Product ID is required' },
-        { status: 400 }
-      );
+      return ResponseHelper.badRequest('Product ID is required');
     }
 
     // Parse the request body
@@ -160,24 +126,15 @@ export async function PUT(
 
     // Validate required fields
     if (!requestBody.name || requestBody.name.trim() === '') {
-      return NextResponse.json(
-        { error: 'Product name is required' },
-        { status: 400 }
-      );
+      return ResponseHelper.badRequest('Product name is required');
     }
 
     if (typeof requestBody.price !== 'undefined' && (isNaN(Number(requestBody.price)) || Number(requestBody.price) < 0)) {
-      return NextResponse.json(
-        { error: 'Price must be a valid number greater than or equal to 0' },
-        { status: 400 }
-      );
+      return ResponseHelper.badRequest('Price must be a valid number greater than or equal to 0');
     }
 
     if (typeof requestBody.stock_quantity !== 'undefined' && (isNaN(Number(requestBody.stock_quantity)) || Number(requestBody.stock_quantity) < 0)) {
-      return NextResponse.json(
-        { error: 'Stock quantity must be a valid number greater than or equal to 0' },
-        { status: 400 }
-      );
+      return ResponseHelper.badRequest('Stock quantity must be a valid number greater than or equal to 0');
     }
 
     // Prepare the product data for update
@@ -196,23 +153,16 @@ export async function PUT(
     const { data, error } = await updateProduct(productId, productData);
 
     if (error) {
-      return NextResponse.json(
-        { error: `Failed to update product: ${error.message} ` },
-        { status: 500 }
-      );
+      return ResponseHelper.internalServerError(`Failed to update product: ${error.message}`, error);
     }
 
-    return NextResponse.json({
-      success: true,
+    return ResponseHelper.success({
       message: 'Product updated successfully',
-      data
+      ...data
     });
   } catch (error) {
     console.error('Error in PUT product API:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return ResponseHelper.internalServerError('Internal server error', error);
   }
 }
 
@@ -225,10 +175,7 @@ export async function GET(
     const supabase = await getSupabaseClient();
 
     if (!productId) {
-      return NextResponse.json(
-        { error: 'Product ID is required' },
-        { status: 400 }
-      );
+      return ResponseHelper.badRequest('Product ID is required');
     }
 
 
@@ -244,17 +191,11 @@ export async function GET(
 
     if (productError) {
       console.error('Error fetching product:', productError);
-      return NextResponse.json(
-        { error: productError.message || 'Failed to fetch product' },
-        { status: 404 }
-      );
+      return ResponseHelper.notFound(productError.message || 'Product not found');
     }
 
     if (!product) {
-      return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
-      );
+      return ResponseHelper.notFound('Product not found');
     }
 
     // Format product for frontend
@@ -289,16 +230,10 @@ export async function GET(
       formattedProduct.reviews_count = ratings.length;
     }
 
-    return NextResponse.json({
-      data: formattedProduct,
-      success: true
-    });
+    return ResponseHelper.success(formattedProduct);
 
   } catch (error) {
     console.error('Error in product API:', error);
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    );
+    return ResponseHelper.internalServerError('An unexpected error occurred', error);
   }
 }
