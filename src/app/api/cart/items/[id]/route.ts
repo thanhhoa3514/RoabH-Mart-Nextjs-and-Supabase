@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/services/supabase';
+import { ResponseHelper } from '@/utils/api-response';
 
 // Update cart item quantity
 export async function PATCH(
@@ -13,10 +14,7 @@ export async function PATCH(
 
         // Validate request
         if (!cartItemId || quantity === undefined || quantity < 1) {
-            return NextResponse.json(
-                { error: 'Invalid request data' },
-                { status: 400 }
-            );
+            return ResponseHelper.badRequest('Invalid request data');
         }
 
         // Get cart item to verify it exists and check product stock
@@ -38,18 +36,14 @@ export async function PATCH(
         } | null;
 
         if (fetchError || !cartItem) {
-            return NextResponse.json(
-                { error: 'Cart item not found' },
-                { status: 404 }
-            );
+            return ResponseHelper.notFound('Cart item not found');
         }
 
         // Check if quantity exceeds available stock
         if (!item?.products || item.products.stock_quantity < quantity) {
-            return NextResponse.json(
-                { error: 'Not enough items in stock', available: item?.products?.stock_quantity || 0 },
-                { status: 400 }
-            );
+            return ResponseHelper.badRequest('Not enough items in stock', {
+                available: item?.products?.stock_quantity || 0
+            });
         }
 
         // Update cart item quantity
@@ -72,8 +66,7 @@ export async function PATCH(
 
         const totalItems = cartItems.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0);
 
-        return NextResponse.json({
-            success: true,
+        return ResponseHelper.success({
             message: 'Cart item updated',
             quantity,
             total_items: totalItems
@@ -81,10 +74,7 @@ export async function PATCH(
 
     } catch (error) {
         console.error('Error updating cart item:', error);
-        return NextResponse.json(
-            { error: 'Failed to update cart item' },
-            { status: 500 }
-        );
+        return ResponseHelper.internalServerError('Failed to update cart item', error);
     }
 }
 
@@ -98,10 +88,7 @@ export async function DELETE(
         const supabase = await getSupabaseClient();
 
         if (!cartItemId) {
-            return NextResponse.json(
-                { error: 'Cart item ID is required' },
-                { status: 400 }
-            );
+            return ResponseHelper.badRequest('Cart item ID is required');
         }
 
         // Get cart ID before deletion for total count update
@@ -113,8 +100,7 @@ export async function DELETE(
 
         if (fetchError) {
             // Item might already be deleted
-            return NextResponse.json({
-                success: true,
+            return ResponseHelper.success({
                 message: 'Cart item not found or already deleted'
             });
         }
@@ -139,17 +125,13 @@ export async function DELETE(
 
         const totalItems = cartItems.reduce((sum: number, item: { quantity: number }) => sum + item.quantity, 0);
 
-        return NextResponse.json({
-            success: true,
+        return ResponseHelper.success({
             message: 'Cart item removed',
             total_items: totalItems
         });
 
     } catch (error) {
         console.error('Error removing cart item:', error);
-        return NextResponse.json(
-            { error: 'Failed to remove cart item' },
-            { status: 500 }
-        );
+        return ResponseHelper.internalServerError('Failed to remove cart item', error);
     }
 }

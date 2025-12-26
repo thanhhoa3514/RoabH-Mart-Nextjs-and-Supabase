@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOrderByOrderNumber } from '@/services/supabase/orders/order.service';
 import { createClient } from '@/services/supabase/server';
+import { ResponseHelper } from '@/utils/api-response';
 
 /**
- * GET /api/orders/[orderNumber]
+ * GET /api/orders/by-number/[orderNumber]
  * Fetch order details by order number
  * Requires authentication and verifies user owns the order
  */
@@ -15,10 +16,7 @@ export async function GET(
         const { orderNumber } = params;
 
         if (!orderNumber) {
-            return NextResponse.json(
-                { error: 'Order number is required' },
-                { status: 400 }
-            );
+            return ResponseHelper.badRequest('Order number is required');
         }
 
         // SECURITY: Verify user is authenticated
@@ -26,36 +24,24 @@ export async function GET(
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
         if (authError || !user) {
-            return NextResponse.json(
-                { error: 'Unauthorized - Please log in' },
-                { status: 401 }
-            );
+            return ResponseHelper.unauthorized('Please log in');
         }
 
         // Fetch order data
         const result = await getOrderByOrderNumber(orderNumber);
 
         if (result.error || !result.data) {
-            return NextResponse.json(
-                { error: 'Order not found' },
-                { status: 404 }
-            );
+            return ResponseHelper.notFound('Order not found');
         }
 
         // SECURITY: Verify user owns this order
         if (result.data.order.user_id !== user.id) {
-            return NextResponse.json(
-                { error: 'Forbidden - You do not have permission to view this order' },
-                { status: 403 }
-            );
+            return ResponseHelper.forbidden('You do not have permission to view this order');
         }
 
-        return NextResponse.json(result.data);
+        return ResponseHelper.success(result.data);
     } catch (error) {
         console.error('Error fetching order:', error);
-        return NextResponse.json(
-            { error: 'Internal server error' },
-            { status: 500 }
-        );
+        return ResponseHelper.internalServerError('Internal server error', error);
     }
 }
