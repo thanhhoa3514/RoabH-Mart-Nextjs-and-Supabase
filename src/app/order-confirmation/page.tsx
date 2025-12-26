@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
@@ -10,15 +10,15 @@ import {
     ArrowRight,
     Clock,
     Calendar,
-    MapPin,
+
     CreditCard,
     Package,
     AlertCircle,
-    Loader2
+
 } from 'lucide-react';
 import Link from 'next/link';
 
-import { OrderStatus, PaymentStatus, getOrderStatusLabel, getOrderStatusColor } from '@/types/order/order-status.enum';
+import { OrderStatus, PaymentStatus, getOrderStatusLabel } from '@/types/order/order-status.enum';
 
 // Animation variants
 const containerVariants = {
@@ -128,6 +128,27 @@ function OrderConfirmationContent() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const fetchOrderData = useCallback(async () => {
+        if (!orderNumber) return;
+
+        try {
+            setIsLoading(true);
+            const response = await fetch(`/api/orders/by-number/${orderNumber}`);
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch order');
+            }
+
+            const data = await response.json();
+            setOrderData(data);
+        } catch (err) {
+            console.error('Error fetching order:', err);
+            setError('Failed to load order details');
+        } finally {
+            setIsLoading(false);
+        }
+    }, [orderNumber]);
+
     useEffect(() => {
         if (!orderNumber) {
             setError('No order number provided');
@@ -136,26 +157,7 @@ function OrderConfirmationContent() {
         }
 
         fetchOrderData();
-    }, [orderNumber]);
-
-    const fetchOrderData = async () => {
-        try {
-            setIsLoading(true);
-            const response = await fetch(`/api/orders/${orderNumber}`);
-
-            if (!response.ok) {
-                throw new Error('Failed to fetch order details');
-            }
-
-            const data = await response.json();
-            setOrderData(data);
-        } catch (err) {
-            console.error('Error fetching order:', err);
-            setError('Failed to load order details. Please try again.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    }, [orderNumber, fetchOrderData]);
 
     if (isLoading) {
         return (
@@ -262,7 +264,7 @@ function OrderConfirmationContent() {
                             <div>
                                 <h3 className="font-medium text-yellow-800">Payment Pending</h3>
                                 <p className="text-sm text-yellow-700 mt-1">
-                                    Your order is awaiting payment confirmation. If you haven't completed payment, please return to the checkout page.
+                                    Your order is awaiting payment confirmation. If you haven&apos;t completed payment, please return to the checkout page.
                                 </p>
                             </div>
                         </div>

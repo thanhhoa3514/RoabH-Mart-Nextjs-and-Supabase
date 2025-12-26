@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createCheckoutSession, CheckoutCartItem } from '@/services/stripe/stripe.service';
+import { createCheckoutSession } from '@/services/stripe/stripe.service';
 import { createOrder } from '@/services/supabase/orders/order.service';
-import { OrderStatus } from '@/types/order/order-status.enum';
+import { ResponseHelper } from '@/utils/api-response';
 
 /**
  * Checkout request body interface
@@ -32,6 +32,14 @@ interface CheckoutRequest {
     userId: number;
 }
 
+interface CheckoutCartItem {
+    product_id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    image?: string;
+}
+
 /**
  * POST /api/checkout
  * Create a pending order and Stripe Checkout session
@@ -42,24 +50,15 @@ export async function POST(request: NextRequest) {
 
         // Validate request body
         if (!body.cartItems || body.cartItems.length === 0) {
-            return NextResponse.json(
-                { error: 'Cart is empty' },
-                { status: 400 }
-            );
+            return ResponseHelper.badRequest('Cart is empty');
         }
 
         if (!body.userId) {
-            return NextResponse.json(
-                { error: 'User ID is required' },
-                { status: 400 }
-            );
+            return ResponseHelper.badRequest('User ID is required');
         }
 
         if (!body.shippingInfo || !body.shippingInfo.email) {
-            return NextResponse.json(
-                { error: 'Shipping information is required' },
-                { status: 400 }
-            );
+            return ResponseHelper.badRequest('Shipping information is required');
         }
 
         // Prepare order data
@@ -88,10 +87,7 @@ export async function POST(request: NextRequest) {
 
         if (orderResult.error || !orderResult.data) {
             console.error('Error creating order:', orderResult.error);
-            return NextResponse.json(
-                { error: 'Failed to create order' },
-                { status: 500 }
-            );
+            return ResponseHelper.internalServerError('Failed to create order', orderResult.error);
         }
 
         const order = orderResult.data.order;
@@ -118,14 +114,11 @@ export async function POST(request: NextRequest) {
 
         if (stripeSession.error || !stripeSession.sessionUrl) {
             console.error('Error creating Stripe session:', stripeSession.error);
-            return NextResponse.json(
-                { error: 'Failed to create payment session' },
-                { status: 500 }
-            );
+            return ResponseHelper.internalServerError('Failed to create payment session', stripeSession.error);
         }
 
         // Return session details
-        return NextResponse.json({
+        return ResponseHelper.success({
             sessionId: stripeSession.sessionId,
             sessionUrl: stripeSession.sessionUrl,
             orderId: order.order_id,
@@ -133,9 +126,6 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         console.error('Checkout API error:', error);
-        return NextResponse.json(
-            { error: 'Internal server error' },
-            { status: 500 }
-        );
+        return ResponseHelper.internalServerError('Internal server error', error);
     }
 }

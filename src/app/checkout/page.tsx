@@ -15,7 +15,6 @@ import { useAlert } from '@/providers/alert-provider';
 import { useAuth } from '@/providers/auth-provider';
 import { useCart } from '@/hooks/use-cart';
 import Link from 'next/link';
-import Image from 'next/image';
 
 // Animation variants
 const containerVariants = {

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateOrderStatus, getOrderById } from '@/services/supabase';
+import { createClient } from '@/services/supabase/server';
+import { requireRole } from '@/lib/auth/role-utils';
+import { ResponseHelper } from '@/utils/api-response';
 
 type Context = {
   params: Promise<{
@@ -7,7 +10,7 @@ type Context = {
   }>;
 };
 
-// Lấy thông tin đơn hàng
+// Get order by ID
 export async function GET(
   request: NextRequest,
   context: Context
@@ -17,93 +20,76 @@ export async function GET(
     const orderId = parseInt(id);
 
     if (isNaN(orderId)) {
-      return NextResponse.json(
-        { error: 'Invalid order ID' },
-        { status: 400 }
-      );
+      return ResponseHelper.badRequest('Invalid order ID');
     }
 
     const { data, error } = await getOrderById(orderId);
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
+      return ResponseHelper.internalServerError('Failed to fetch order', error);
     }
 
     if (!data) {
-      return NextResponse.json(
-        { error: 'Order not found' },
-        { status: 404 }
-      );
+      return ResponseHelper.notFound('Order not found');
     }
 
-    return NextResponse.json({ data });
+    return ResponseHelper.success(data);
   } catch (error) {
     console.error('Error in GET order API:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return ResponseHelper.internalServerError('Internal server error', error);
   }
 }
 
-// Cập nhật trạng thái đơn hàng
+/**
+ * PATCH /api/orders/[id]
+ * Update order status
+ * Requires authentication and admin/manager role
+ */
 export async function PATCH(
   request: NextRequest,
-  context: Context
-): Promise<NextResponse> {
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id } = await context.params;
-    const orderId = parseInt(id);
+    const { id } = params;
+    const body = await request.json();
+    const { status } = body;
 
-    if (isNaN(orderId)) {
-      return NextResponse.json(
-        { error: 'Invalid order ID' },
-        { status: 400 }
-      );
+    if (!id) {
+      return ResponseHelper.badRequest('Order ID is required');
     }
 
-    // Lấy dữ liệu từ request body
-    const requestBody = await request.json();
-
-    if (!requestBody.status) {
-      return NextResponse.json(
-        { error: 'Status is required' },
-        { status: 400 }
-      );
+    if (!status) {
+      return ResponseHelper.badRequest('Status is required');
     }
 
-    // Kiểm tra status có hợp lệ không
-    const validStatuses = ['pending', 'processing', 'shipped', 'completed', 'cancelled'];
-    if (!validStatuses.includes(requestBody.status.toLowerCase())) {
-      return NextResponse.json(
-        { error: 'Invalid status. Status must be one of: pending, processing, shipped, completed, cancelled' },
-        { status: 400 }
-      );
+    // SECURITY: Verify user is authenticated
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return ResponseHelper.unauthorized('Please log in');
     }
 
-    // Cập nhật trạng thái đơn hàng
-    const { data, error } = await updateOrderStatus(orderId, requestBody.status.toLowerCase());
+    // SECURITY: Verify user has admin/manager role (type-safe)
+    const roleError = await requireRole(user.id, ['admin', 'manager']);
 
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
+    if (roleError) {
+      return ResponseHelper.forbidden(roleError.error);
     }
 
-    return NextResponse.json({
-      success: true,
-      message: `Order status updated to ${requestBody.status}`,
-      data
+    // Update order status
+    const result = await updateOrderStatus(parseInt(id, 10), status);
+
+    if (result.error) {
+      return ResponseHelper.internalServerError('Failed to update order status', result.error);
+    }
+
+    return ResponseHelper.success({
+      message: 'Order status updated successfully',
+      order: result.data
     });
   } catch (error) {
-    console.error('Error in PATCH order API:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Error updating order status:', error);
+    return ResponseHelper.internalServerError('Internal server error', error);
   }
-} 
+}
