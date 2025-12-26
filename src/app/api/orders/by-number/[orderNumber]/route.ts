@@ -10,10 +10,10 @@ import { ResponseHelper } from '@/utils/api-response';
  */
 export async function GET(
     request: NextRequest,
-    { params }: { params: { orderNumber: string } }
+    { params }: { params: Promise<{ orderNumber: string }> }
 ) {
     try {
-        const { orderNumber } = params;
+        const { orderNumber } = await params;
 
         if (!orderNumber) {
             return ResponseHelper.badRequest('Order number is required');
