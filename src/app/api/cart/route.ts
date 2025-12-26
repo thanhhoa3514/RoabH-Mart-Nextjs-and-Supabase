@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/services/supabase';
+import { ResponseHelper } from '@/utils/api-response';
 
 export async function POST(request: Request) {
     try {
@@ -9,27 +10,14 @@ export async function POST(request: Request) {
 
         // Validate request body
         if (!product_id || !quantity || quantity < 1) {
-            return NextResponse.json(
-                { error: 'Product ID and quantity are required' },
-                { status: 400 }
-            );
+            return ResponseHelper.badRequest('Product ID and quantity are required');
         }
-
-        console.log('Adding product to cart:', {
-            product_id,
-            quantity,
-            productIdType: typeof product_id,
-            isNumeric: !isNaN(Number(product_id))
-        });
 
         // Ensure product_id is a number
         const numericProductId = Number(product_id);
         if (isNaN(numericProductId)) {
             console.error('Invalid product_id format:', product_id);
-            return NextResponse.json(
-                { error: 'Product ID must be a number' },
-                { status: 400 }
-            );
+            return ResponseHelper.badRequest('Product ID must be a number');
         }
 
         // Check if user is logged in
@@ -113,18 +101,11 @@ export async function POST(request: Request) {
             .single();
 
         if (productError || !product) {
-
-            return NextResponse.json(
-                { error: 'Product not found' },
-                { status: 404 }
-            );
+            return ResponseHelper.notFound('Product not found');
         }
 
         if (product.stock_quantity < quantity) {
-            return NextResponse.json(
-                { error: 'Not enough items in stock' },
-                { status: 400 }
-            );
+            return ResponseHelper.badRequest('Not enough items in stock');
         }
 
         // Check if the item is already in the cart
@@ -168,18 +149,14 @@ export async function POST(request: Request) {
 
         const totalItems = (cartItems as { quantity: number }[]).reduce((sum, item) => sum + item.quantity, 0);
 
-        return NextResponse.json({
-            success: true,
+        return ResponseHelper.success({
             message: 'Item added to cart',
             cart_id,
             total_items: totalItems
         });
 
-    } catch {
-        return NextResponse.json(
-            { error: 'Failed to add item to cart' },
-            { status: 500 }
-        );
+    } catch (error) {
+        return ResponseHelper.internalServerError('Failed to add item to cart', error);
     }
 }
 
@@ -223,7 +200,7 @@ export async function GET() {
         }
 
         if (!cart_id) {
-            return NextResponse.json({
+            return ResponseHelper.success({
                 items: [],
                 total_items: 0,
                 total_price: 0
@@ -284,17 +261,14 @@ export async function GET() {
             };
         });
 
-        return NextResponse.json({
+        return ResponseHelper.success({
             items: formattedItems,
             total_items: totalItems,
             total_price: totalPrice
         });
 
-    } catch {
-        return NextResponse.json(
-            { error: 'Failed to fetch cart' },
-            { status: 500 }
-        );
+    } catch (error) {
+        return ResponseHelper.internalServerError('Failed to fetch cart', error);
     }
 }
 
@@ -323,8 +297,7 @@ export async function DELETE() {
         }
 
         if (!cart_id) {
-            return NextResponse.json({
-                success: true,
+            return ResponseHelper.success({
                 message: 'Cart is already empty'
             });
         }
@@ -338,15 +311,11 @@ export async function DELETE() {
             throw new Error(deleteError.message);
         }
 
-        return NextResponse.json({
-            success: true,
+        return ResponseHelper.success({
             message: 'Cart cleared successfully'
         });
 
-    } catch {
-        return NextResponse.json(
-            { error: 'Failed to clear cart' },
-            { status: 500 }
-        );
+    } catch (error) {
+        return ResponseHelper.internalServerError('Failed to clear cart', error);
     }
 }

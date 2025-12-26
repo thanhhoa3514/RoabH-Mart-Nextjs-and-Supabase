@@ -37,7 +37,7 @@ async function isEventProcessed(eventId: string): Promise<boolean> {
 async function markEventAsProcessed(
     eventId: string,
     eventType: string,
-    payload?: any,
+    payload?: unknown,
     status: 'processed' | 'failed' = 'processed',
     errorMessage?: string
 ): Promise<void> {
