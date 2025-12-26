@@ -1,6 +1,7 @@
 import { addProductImage } from '@/services/supabase/products/product.service';
 import { NextRequest, NextResponse } from 'next/server';
 import { getProducts, createProduct } from '@/services/supabase';
+import { ResponseHelper } from '@/utils/api-response';
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,11 +28,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (error) {
-
-      return NextResponse.json(
-        { error: 'Failed to fetch products' },
-        { status: 500 }
-      );
+      return ResponseHelper.internalServerError('Failed to fetch products', error);
     }
 
     // If there's an exclude ID, filter out that product
@@ -46,17 +43,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      data: filteredData,
-      count: count,
-      totalPages: totalPages,
-    });
-  } catch {
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    // Calculate pagination metadata
+    const pagination = ResponseHelper.calculatePagination(page, limit, count || 0);
+
+    return ResponseHelper.success(filteredData, 200, { pagination });
+  } catch (error) {
+    return ResponseHelper.internalServerError('Internal server error', error);
   }
 }
 
@@ -67,10 +59,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!data.name || !data.price || !data.description || !data.subcategory_id || !data.seller_id) {
-      return NextResponse.json(
-        { error: 'Required fields are missing' },
-        { status: 400 }
-      );
+      return ResponseHelper.badRequest('Required fields are missing');
     }
 
     // Prepare product data for insertion
@@ -90,18 +79,11 @@ export async function POST(request: NextRequest) {
     const { data: productResult, error } = await createProduct(productData);
 
     if (error) {
-
-      return NextResponse.json(
-        { error: 'Failed to add product' },
-        { status: 500 }
-      );
+      return ResponseHelper.internalServerError('Failed to add product', error);
     }
 
     if (!productResult || productResult.length === 0) {
-      return NextResponse.json(
-        { error: 'Product was created but no data was returned' },
-        { status: 500 }
-      );
+      return ResponseHelper.internalServerError('Product was created but no data was returned');
     }
 
     // If there's an image, add it to product_images
@@ -119,15 +101,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      data: productResult[0],
+    return ResponseHelper.created({
+      ...productResult[0],
       message: 'Product added successfully'
     });
-  } catch {
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+  } catch (error) {
+    return ResponseHelper.internalServerError('Internal server error', error);
   }
 } 
