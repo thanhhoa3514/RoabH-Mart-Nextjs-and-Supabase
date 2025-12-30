@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/services/supabase';
 import { ResponseHelper } from '@/utils/api-response';
 
@@ -21,15 +20,47 @@ export async function POST(request: Request) {
         }
 
         // Check if user is logged in
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+        if (authError) {
+            console.error('Auth error in cart POST:', authError);
+            return ResponseHelper.unauthorized('Authentication failed');
+        }
+
         let cart_id;
 
-        if (session?.user) {
-            // User is logged in, get their cart or create one
+        if (user) {
+            // User is logged in, ensure they exist in public.users table (FK requirement)
+            const { data: publicUser, error: publicUserError } = await supabase
+                .from('users')
+                .select('user_id')
+                .eq('user_id', user.id)
+                .single();
+
+            if (publicUserError || !publicUser) {
+                console.warn(`User ${user.id} not found in public.users. Creating record.`);
+                // Note: In a real app, this should be handled by a database trigger
+                // but for now we'll ensure the record exists to satisfy FK.
+                const { error: syncError } = await supabase
+                    .from('users')
+                    .upsert({
+                        user_id: user.id,
+                        email: user.email,
+                        username: user.email?.split('@')[0] || 'user',
+                        password_hash: 'supabase_auth' // Dummy value for NOT NULL constraint
+                    });
+
+                if (syncError) {
+                    console.error('Failed to sync user to public schema:', syncError);
+                    return ResponseHelper.internalServerError('Failed to synchronize user account');
+                }
+            }
+
+            // Get their cart or create one
             const { data: existingCart } = await supabase
                 .from('carts')
                 .select('cart_id')
-                .eq('user_id', session.user.id)
+                .eq('user_id', user.id)
                 .single();
 
             if (existingCart) {
@@ -39,7 +70,7 @@ export async function POST(request: Request) {
                 const { data: insertResult, error: insertError } = await supabase
                     .from('carts')
                     .insert({
-                        user_id: session.user.id
+                        user_id: user.id
                     })
                     .select('cart_id')
                     .single();
@@ -53,43 +84,14 @@ export async function POST(request: Request) {
                 console.log('Created new user cart with ID:', cart_id);
             }
         } else {
-            // Guest user - handle cart ID via service logic if possible or cookies
-            // For now, let's keep it simple and use a cookie if session is missing
-            // But ideally we'd use the service which handles this.
-            // Actually, the current route logic for guests is complex.
-            // Let's stick to using supabase client as desired.
-
-            // Note: If we use getSupabaseClient(), it already handles cookies internally.
-            // But the 'cart_id' cookie is custom for RoabH Mart guest carts.
-
-            // I'll keep the custom cookie logic but use the factory supabase.
+            // Guest user - use cookie-based cart ID only
             const { cookies } = await import('next/headers');
             const cookieStore = await cookies();
             const cartCookie = cookieStore.get('cart_id');
             cart_id = cartCookie?.value;
 
             if (!cart_id) {
-                const GUEST_USER_ID = 9999;
-                const { data: insertResult, error: insertError } = await supabase
-                    .from('carts')
-                    .insert({
-                        user_id: GUEST_USER_ID
-                    })
-                    .select('cart_id')
-                    .single();
-
-                if (insertError) {
-                    console.error('Error creating guest cart:', insertError);
-                    throw new Error(insertError.message);
-                }
-
-                cart_id = insertResult.cart_id;
-
-
-                cookieStore.set('cart_id', cart_id.toString(), {
-                    maxAge: 60 * 60 * 24 * 30, // 30 days
-                    path: '/'
-                });
+                return ResponseHelper.unauthorized('Please log in to add items to cart');
             }
         }
 
@@ -167,14 +169,14 @@ export async function GET() {
         const cookieStore = await cookies();
 
         // Check if user is logged in
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { user } } = await supabase.auth.getUser();
         let cart_id;
 
-        if (session?.user) {
+        if (user) {
             const { data: userCart } = await supabase
                 .from('carts')
                 .select('cart_id')
-                .eq('user_id', session.user.id)
+                .eq('user_id', user.id)
                 .single();
 
             cart_id = userCart?.cart_id;
@@ -278,14 +280,14 @@ export async function DELETE() {
         const { cookies } = await import('next/headers');
         const cookieStore = await cookies();
 
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { user } } = await supabase.auth.getUser();
         let cart_id;
 
-        if (session?.user) {
+        if (user) {
             const { data: userCart } = await supabase
                 .from('carts')
                 .select('cart_id')
-                .eq('user_id', session.user.id)
+                .eq('user_id', user.id)
                 .single();
 
             cart_id = userCart?.cart_id;

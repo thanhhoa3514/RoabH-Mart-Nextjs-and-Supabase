@@ -2,7 +2,7 @@ import { getSupabaseClient } from '../client.factory';
 
 interface ReviewData {
     product_id: number;
-    user_id: number;
+    user_id: string;
     rating: number;
     comment: string;
     is_verified_purchase?: boolean;
@@ -64,7 +64,7 @@ export async function deleteReview(reviewId: number) {
 }
 
 // Kiểm tra user đã review sản phẩm chưa
-export async function hasUserReviewed(productId: number, userId: number) {
+export async function hasUserReviewed(productId: number, userId: string) {
     const supabase = await getSupabaseClient();
     const { data, error } = await supabase
         .from('reviews')
