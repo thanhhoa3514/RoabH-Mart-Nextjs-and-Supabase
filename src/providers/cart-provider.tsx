@@ -1,6 +1,8 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useSupabase } from '@/providers/supabase-provider';
+import { useAuth } from '@/providers/auth-provider';
 
 interface CartItem {
   cart_item_id: number;
@@ -34,11 +36,40 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [totalPrice, setTotalPrice] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { supabase } = useSupabase();
+  const { user } = useAuth();
 
-  // Fetch cart on initial load
+  // Fetch cart on initial load or user change
   useEffect(() => {
     fetchCart();
-  }, []);
+  }, [user]);
+
+  // Realtime subscription for cart items
+  useEffect(() => {
+    if (!supabase || !user) return;
+
+    const channel = supabase
+      .channel(`user_cart_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen for all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'cart_items'
+        },
+        async (payload) => {
+          console.log('Cart change detected via Realtime:', payload);
+          // Only refresh if the change belongs to one of our carts
+          // (RLS should handle this, but adding silent refresh)
+          await fetchCart();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, user]);
 
   const fetchCart = async () => {
     try {

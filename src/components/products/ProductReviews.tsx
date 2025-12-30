@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import { Star, User } from 'lucide-react';
+import { Star, User, RefreshCw } from 'lucide-react';
 import { getReviewsByProductId, getProductRatingSummary } from '@/services/supabase/reviews/review.service';
+import { useSupabase } from '@/providers/supabase-provider';
 
 interface ProductReviewsProps {
   productId: number;
@@ -23,7 +24,7 @@ interface Review {
   rating: number;
   comment: string;
   review_date: string;
-  user_id: number;
+  user_id: string;
   users?: User;
   is_verified_purchase?: boolean;
 }
@@ -31,7 +32,7 @@ interface Review {
 interface ApiReview {
   review_id: number;
   product_id: number;
-  user_id: number;
+  user_id: string;
   rating: number;
   comment: string;
   review_date: string;
@@ -57,63 +58,96 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRealtimeUpdate, setIsRealtimeUpdate] = useState(false);
+  const { supabase } = useSupabase();
+
+  const loadReviews = useCallback(async (isSilent = false) => {
+    try {
+      if (!isSilent) setIsLoading(true);
+      else setIsRealtimeUpdate(true);
+
+      // Ensure we have a valid number for productId
+      const productIdNumber = typeof productId === 'string' ? parseInt(productId, 10) : productId;
+
+      if (isNaN(productIdNumber)) {
+        console.error('Invalid product ID');
+        if (!isSilent) setError('Invalid product ID');
+        setIsLoading(false);
+        setIsRealtimeUpdate(false);
+        return;
+      }
+
+      // Lấy dữ liệu đánh giá
+      const { data: reviewsData, error: reviewsError } = await getReviewsByProductId(productIdNumber);
+
+      // Lấy tổng quan đánh giá
+      const {
+        averageRating,
+        totalReviews,
+        ratingDistribution,
+        error: summaryError
+      } = await getProductRatingSummary(productIdNumber);
+
+      if (reviewsError) throw new Error(reviewsError.message);
+      if (summaryError) throw new Error(summaryError.message);
+
+      // Chuyển đổi kiểu dữ liệu từ API sang đúng định dạng Review[]
+      const formattedReviews: Review[] = reviewsData ? reviewsData.map((review: ApiReview) => ({
+        review_id: review.review_id,
+        rating: review.rating,
+        comment: review.comment,
+        review_date: review.review_date,
+        user_id: review.user_id,
+        is_verified_purchase: review.is_verified_purchase,
+        users: review.users[0] // Get the first user from the array
+      })) : [];
+
+      setReviews(formattedReviews);
+      setRatingSummary({
+        averageRating,
+        totalReviews,
+        ratingDistribution
+      });
+    } catch (err) {
+      console.error('Error loading reviews:', err);
+      if (!isSilent) setError(err instanceof Error ? err.message : 'Failed to load reviews');
+    } finally {
+      setIsLoading(false);
+      setIsRealtimeUpdate(false);
+    }
+  }, [productId]);
 
   useEffect(() => {
-    async function loadReviews() {
-      try {
-        setIsLoading(true);
-
-        // Ensure we have a valid number for productId
-        const productIdNumber = typeof productId === 'string' ? parseInt(productId, 10) : productId;
-
-        if (isNaN(productIdNumber)) {
-          console.error('Invalid product ID');
-          setError('Invalid product ID');
-          setIsLoading(false);
-          return;
-        }
-
-        // Lấy dữ liệu đánh giá
-        const { data: reviewsData, error: reviewsError } = await getReviewsByProductId(productIdNumber);
-
-        // Lấy tổng quan đánh giá
-        const {
-          averageRating,
-          totalReviews,
-          ratingDistribution,
-          error: summaryError
-        } = await getProductRatingSummary(productIdNumber);
-
-        if (reviewsError) throw new Error(reviewsError.message);
-        if (summaryError) throw new Error(summaryError.message);
-
-        // Chuyển đổi kiểu dữ liệu từ API sang đúng định dạng Review[]
-        const formattedReviews: Review[] = reviewsData ? reviewsData.map((review: ApiReview) => ({
-          review_id: review.review_id,
-          rating: review.rating,
-          comment: review.comment,
-          review_date: review.review_date,
-          user_id: review.user_id,
-          is_verified_purchase: review.is_verified_purchase,
-          users: review.users[0] // Get the first user from the array
-        })) : [];
-
-        setReviews(formattedReviews);
-        setRatingSummary({
-          averageRating,
-          totalReviews,
-          ratingDistribution
-        });
-      } catch (err) {
-        console.error('Error loading reviews:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load reviews');
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
     loadReviews();
-  }, [productId]);
+  }, [loadReviews]);
+
+  // Realtime subscription
+  useEffect(() => {
+    if (!supabase || !productId) return;
+
+    const productIdNumber = typeof productId === 'string' ? parseInt(productId, 10) : productId;
+
+    const channel = supabase
+      .channel(`product_reviews_${productIdNumber}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'reviews',
+          filter: `product_id=eq.${productIdNumber}`
+        },
+        (payload) => {
+          console.log('New review received via Realtime:', payload);
+          loadReviews(true); // Silent refresh
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, productId, loadReviews]);
 
   // Render stars based on rating
   const renderStars = (rating: number) => {
@@ -170,7 +204,15 @@ export default function ProductReviews({ productId }: ProductReviewsProps) {
 
   return (
     <div className="mt-12">
-      <h2 className="text-2xl font-bold mb-6">Đánh giá sản phẩm</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold">Đánh giá sản phẩm</h2>
+        {isRealtimeUpdate && (
+          <div className="flex items-center text-sm text-amber-600 animate-pulse">
+            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            Đang cập nhật đánh giá mới...
+          </div>
+        )}
+      </div>
 
       {ratingSummary.totalReviews === 0 ? (
         <div className="bg-gray-50 p-6 rounded-lg text-center">

@@ -14,7 +14,7 @@ export interface Role {
 }
 
 export interface UserRole {
-  user_id: number;
+  user_id: string;
   role_id: number;
 }
 
@@ -31,7 +31,7 @@ export interface RolePermission {
 
 export interface PaymentMethod {
   payment_method_id: number;
-  user_id: number;
+  user_id: string;
   payment_type: string;
   expiry_date: string | null;
   card_holder_name: string | null;
@@ -42,7 +42,7 @@ export interface PaymentMethod {
 
 export interface Seller {
   seller_id: number;
-  user_id: number;
+  user_id: string;
   shop_name: string;
   description: string | null;
   contact_info: string | null;
@@ -61,7 +61,7 @@ export interface ProductImage {
 
 export interface Cart {
   cart_id: number;
-  user_id: number;
+  user_id: string;
   created_at: string;
   updated_at: string;
   items?: CartItem[];
@@ -92,7 +92,7 @@ export type ShippingInfo = DbShippingInfo;
 export interface Review {
   review_id: number;
   product_id: number;
-  user_id: number;
+  user_id: string;
   rating: number;
   comment: string | null;
   review_date: string;
@@ -107,13 +107,13 @@ export interface InventoryLog {
   quantity_change: number;
   previous_quantity: number;
   new_quantity: number;
-  created_by: number | null;
+  created_by: string | null;
   created_at: string;
 }
 
 export interface Notification {
   notification_id: number;
-  user_id: number;
+  user_id: string;
   type: string;
   title: string;
   message: string;

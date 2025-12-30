@@ -30,32 +30,6 @@ export async function POST(request: Request) {
         let cart_id;
 
         if (user) {
-            // User is logged in, ensure they exist in public.users table (FK requirement)
-            const { data: publicUser, error: publicUserError } = await supabase
-                .from('users')
-                .select('user_id')
-                .eq('user_id', user.id)
-                .single();
-
-            if (publicUserError || !publicUser) {
-                console.warn(`User ${user.id} not found in public.users. Creating record.`);
-                // Note: In a real app, this should be handled by a database trigger
-                // but for now we'll ensure the record exists to satisfy FK.
-                const { error: syncError } = await supabase
-                    .from('users')
-                    .upsert({
-                        user_id: user.id,
-                        email: user.email,
-                        username: user.email?.split('@')[0] || 'user',
-                        password_hash: 'supabase_auth' // Dummy value for NOT NULL constraint
-                    });
-
-                if (syncError) {
-                    console.error('Failed to sync user to public schema:', syncError);
-                    return ResponseHelper.internalServerError('Failed to synchronize user account');
-                }
-            }
-
             // Get their cart or create one
             const { data: existingCart } = await supabase
                 .from('carts')
