@@ -39,10 +39,11 @@ export default function RelatedProducts({ category, currentProductId }: RelatedP
         try {
           const data = JSON.parse(text);
           if (data.data) {
-            // Make sure products have the product_id property for consistency
+            // Ensure products have consistent IDs without overwriting existing ones
             const productsWithConsistentIds = data.data.map((p: Product) => ({
               ...p,
-              product_id: p.id
+              // If product_id is missing but id exists, fill it in (legacy support)
+              product_id: p.product_id || p.id || 0
             }));
             setProducts(productsWithConsistentIds);
           } else {
@@ -86,8 +87,11 @@ export default function RelatedProducts({ category, currentProductId }: RelatedP
     <div className="mt-16">
       <h2 className="text-2xl font-bold mb-6">Related Products</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {products.map((product) => (
-          <ProductCard key={product.product_id || product.id} product={product} />
+        {products.map((product, index) => (
+          <ProductCard
+            key={product.product_id || product.id || `related-${index}`}
+            product={product}
+          />
         ))}
       </div>
     </div>

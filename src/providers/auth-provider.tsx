@@ -219,11 +219,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Sign out
     const signOut = async () => {
-        const supabase = await getSupabaseClient();
-        await supabase.auth.signOut();
-        setUserData(null);
-        router.push('/');
-        toast.success('You have been signed out successfully');
+        try {
+            const supabase = await getSupabaseClient();
+            await supabase.auth.signOut();
+            setUser(null);
+            setUserData(null);
+            router.push('/');
+            router.refresh(); // Ensure server session is updated
+            toast.success('You have been signed out successfully');
+        } catch (error) {
+            console.error('Error during sign out:', error);
+            // Even if logout fails, we should clear local state
+            setUser(null);
+            setUserData(null);
+            router.push('/');
+            toast.error('There was an issue signing out, but we have cleared your local session');
+        }
     };
 
     // Forgot password
