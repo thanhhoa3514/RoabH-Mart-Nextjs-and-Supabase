@@ -1,13 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { User, Search, Menu, LogOut, ShoppingBag, Smartphone, Shirt, Home, Package } from 'lucide-react';
 import { useAuth } from '@/providers/auth-provider';
+import { useSupabase } from '@/providers/supabase-provider';
+import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,10 +35,46 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
   const { user, signOut } = useAuth();
+  const { supabase } = useSupabase();
+
+  // Realtime notifications
+  useEffect(() => {
+    if (!supabase || !user) return;
+
+    const channel = supabase
+      .channel(`user_notifications_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('New notification received:', payload);
+          toast(payload.new.message, {
+            icon: '🔔',
+            duration: 5000,
+            position: 'top-right',
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, user]);
 
   const handleSignOut = async () => {
-    await signOut();
-    setIsLogoutDialogOpen(false);
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    } finally {
+      setIsLogoutDialogOpen(false);
+    }
   };
 
   const handleSearch = (e: FormEvent) => {
@@ -171,6 +209,9 @@ export default function Header() {
             <SheetContent side="right" className="w-80">
               <SheetHeader>
                 <SheetTitle>Menu</SheetTitle>
+                <SheetDescription className="sr-only">
+                  Navigation menu for mobile devices
+                </SheetDescription>
               </SheetHeader>
               <div className="flex flex-col space-y-4 mt-6">
                 {/* Mobile Search */}

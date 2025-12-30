@@ -6,7 +6,8 @@ const nextConfig = {
       'example.com',
       'dituqzgjijnwjroetrqj.supabase.co',
       'ufmejreyxbojrvzxgztz.supabase.co',
-      'images.unsplash.com' // Unsplash images
+      'images.unsplash.com', // Unsplash images
+      'picsum.photos' // Picsum placeholder images
     ],
   },
   // Uncomment this after resolving build issues

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { createCheckoutSession } from '@/services/stripe/stripe.service';
 import { createOrder } from '@/services/supabase/orders/order.service';
 import { ResponseHelper } from '@/utils/api-response';
