@@ -1,5 +1,5 @@
 import { addProductImage } from '@/services/supabase/products/product.service';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getProducts, createProduct } from '@/services/supabase';
 import { ResponseHelper } from '@/utils/api-response';
 
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const limit = limitParam ? parseInt(limitParam, 10) : 4;
 
     // Get products
-    const { data, error, count, totalPages } = await getProducts({
+    const { data, error, count } = await getProducts({
       categoryId: category || undefined,
       subcategoryId: subcategory || undefined,
       search: search || undefined,
