@@ -154,7 +154,7 @@ export default function ProductPage() {
         items={[
           { label: 'Home', href: '/' },
           { label: product.category || 'Products', href: `/categories/${encodeURIComponent(product.category || '')}` },
-          { label: product.name, href: `/products/${product.id}` },
+          { label: product.name, href: `/products/${product.product_id || product.id}` },
         ]}
       />
 
@@ -167,6 +167,7 @@ export default function ProductPage() {
                 src={selectedImage}
                 alt={product.name}
                 fill
+                sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-contain"
               />
             )}
@@ -185,6 +186,7 @@ export default function ProductPage() {
                   src={image}
                   alt={`${product.name} - Thumbnail ${index + 1}`}
                   fill
+                  sizes="10vw"
                   className="object-cover"
                 />
               </div>

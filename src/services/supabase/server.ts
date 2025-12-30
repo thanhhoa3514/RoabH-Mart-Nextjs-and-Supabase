@@ -1,4 +1,3 @@
-import '@/lib/localStorage-polyfill';
 import { createServerClient } from '@supabase/ssr';
 import { supabaseUrl, supabasePublishableKey } from './config';
 
@@ -30,14 +29,9 @@ export const createClient = async () => {
         },
       },
       auth: {
-        persistSession: false, // Don't persist session on server
+        persistSession: false,
         autoRefreshToken: false,
         detectSessionInUrl: false,
-        storage: {
-          getItem: () => null,
-          setItem: () => { },
-          removeItem: () => { },
-        },
       },
     }
   );

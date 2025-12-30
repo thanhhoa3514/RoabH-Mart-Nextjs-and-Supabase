@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getOrderByOrderNumber } from '@/services/supabase/orders/order.service';
 import { createClient } from '@/services/supabase/server';
 import { ResponseHelper } from '@/utils/api-response';

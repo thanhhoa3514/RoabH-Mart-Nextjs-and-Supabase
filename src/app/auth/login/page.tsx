@@ -56,30 +56,20 @@ function LoginForm() {
         e.preventDefault();
         setLoading(true);
 
-        console.log('Login attempt starting for email:', email);
-
         try {
-            console.log('Calling signIn method...');
             const { error } = await signIn(email, password);
 
             if (error) {
-                console.error('Login error details:', error);
                 throw error;
             }
 
-            // Show success alert
-            console.log('Login successful, preparing to redirect...');
             showAlert('success', 'Login successful! Redirecting...', 2000);
 
-            // Successfully logged in
-            // Redirect to the stored path or default to account
             setTimeout(() => {
-                console.log('Redirecting to:', redirectPath || '/');
                 router.push(redirectPath || '/');
                 router.refresh();
             }, 1000);
         } catch (err: unknown) {
-            console.error('Login error:', err);
             const errorMessage = err && typeof err === 'object' && 'message' in err
                 ? (err.message as string)
                 : 'Invalid email or password. Please try again.';

@@ -14,13 +14,14 @@ export default function ProductCard({ product }: ProductCardProps) {
     : 'https://placekitten.com/300/300'; // Placeholder
 
   return (
-    <Link href={`/products/${product.id}`} className="group">
+    <Link href={`/products/${product.product_id || product.id}`} className="group">
       <div className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
         <div className="relative h-48 bg-gray-100">
           <Image
             src={imageUrl}
             alt={product.name}
             fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
             className="object-contain"
           />
           {product.discount_percentage && product.discount_percentage > 0 && (

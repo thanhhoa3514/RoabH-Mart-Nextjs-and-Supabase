@@ -33,7 +33,7 @@ export const getProducts = async (options: {
     if (subcategoryId) {
         query = query.eq('subcategory_id', subcategoryId);
     } else if (categoryId) {
-        query = query.eq('subcategory.category_id', categoryId);
+        query = query.eq('subcategories.categories.category_id', categoryId);
     }
 
     if (search) {
